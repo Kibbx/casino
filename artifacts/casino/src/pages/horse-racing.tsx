@@ -1064,7 +1064,7 @@ export default function HorseRacing() {
           height: 60, display: "flex", alignItems: "center", gap: 14,
         }}>
           <button
-            onClick={() => setLocation("/live-events")}
+            onClick={() => setLocation("/lobby")}
             style={{
               all: "unset", cursor: "pointer",
               width: 34, height: 34, borderRadius: "50%",
