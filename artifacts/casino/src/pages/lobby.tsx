@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import {
   Coins, User, Users, LogOut, Menu, Clock, Search,
-  Home, Spade, CircleDot, Trophy, Gift, Crown, Zap, Gamepad2,
+  Home, Spade, CircleDot, Trophy, Gift, Crown, Zap, Gamepad2, Flag,
   Star, Target, BarChart2, ShoppingBag, Volume2, VolumeX,
   TrendingUp, Package, Gavel, History, ArrowLeftRight,
   Tag, Settings, ListOrdered, Store, AlertTriangle, Activity, Layers,
@@ -87,9 +87,10 @@ const navGroups: NavGroup[] = [
   {
     section: "Events",
     items: [
-      { id: "tournaments", label: "Tournaments", icon: Trophy, route: "/tournaments" },
-      { id: "lottery",     label: "Lottery",     icon: Zap,    route: "/lottery"     },
-      { id: "bingo",       label: "Bingo",       icon: Gift,   route: "/bingo"       },
+      { id: "tournaments",   label: "Tournaments",  icon: Trophy, route: "/tournaments"    },
+      { id: "horse-racing", label: "Horse Racing", icon: Flag,  route: "/horse-racing"   },
+      { id: "lottery",      label: "Lottery",      icon: Zap,   route: "/lottery"        },
+      { id: "bingo",        label: "Bingo",         icon: Gift,  route: "/bingo"          },
     ],
   },
   {
@@ -349,12 +350,13 @@ export function Lobby() {
 
   useEffect(() => {
     const routeToNav: Record<string, string> = {
-      "/lobby":      "home",
-      "/tablegames": "table-games",
-      "/sportsbook": "sportsbook",
-      "/minigames":  "mini-games",
-      "/poker-tables": "poker",
-      "/slots":      "slots",
+      "/lobby":         "home",
+      "/tablegames":    "table-games",
+      "/sportsbook":    "sportsbook",
+      "/minigames":     "mini-games",
+      "/poker-tables":  "poker",
+      "/slots":         "slots",
+      "/horse-racing":  "horse-racing",
     };
     const mapped = routeToNav[location];
     if (mapped) setActiveNav(mapped);
