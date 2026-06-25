@@ -354,7 +354,7 @@ export default function MobTower() {
       <div style={{ borderBottom: "1px solid rgba(212,160,23,0.2)", background: "rgba(6,2,10,0.97)", position: "absolute", top: 0, left: 0, right: 0, zIndex: 50, boxShadow: "0 2px 20px rgba(0,0,0,0.8)" }}>
         <div style={{ maxWidth: "1400px", margin: "0 auto", padding: "0 20px", height: "54px", display: "flex", alignItems: "center", gap: "14px" }}>
           {/* Back */}
-          <button onClick={() => setLocation("/lobby")} style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "6px 10px", borderRadius: 8 }}
+          <button onClick={() => setLocation("/minigames")} style={{ display: "flex", alignItems: "center", gap: 5, color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "6px 10px", borderRadius: 8 }}
             onMouseEnter={e => (e.currentTarget.style.color = "#94a3b8")} onMouseLeave={e => (e.currentTarget.style.color = "#64748b")}>
             <ChevronLeft size={15} /> Mini Games
           </button>

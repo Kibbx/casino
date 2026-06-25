@@ -332,7 +332,7 @@ export default function Mines() {
       {/* Header */}
       <div style={{ borderBottom: "1px solid rgba(160,34,58,0.2)", background: "rgba(6,2,10,0.97)", position: "sticky", top: 0, zIndex: 20, boxShadow: "0 2px 20px rgba(0,0,0,0.8)" }}>
         <div style={{ maxWidth: "700px", margin: "0 auto", padding: "0 20px", height: "54px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <button onClick={() => setLocation("/lobby")} style={{ display: "flex", alignItems: "center", gap: "5px", color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "13px", padding: "6px 10px", borderRadius: "8px", transition: "color 0.15s" }}
+          <button onClick={() => setLocation("/minigames")} style={{ display: "flex", alignItems: "center", gap: "5px", color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "13px", padding: "6px 10px", borderRadius: "8px", transition: "color 0.15s" }}
             onMouseEnter={e => (e.currentTarget.style.color = "#94a3b8")} onMouseLeave={e => (e.currentTarget.style.color = "#64748b")}>
             <ChevronLeft size={15} /> Mini Games
           </button>

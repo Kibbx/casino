@@ -349,7 +349,7 @@ export default function Keno() {
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 12px", height: "42px", flexShrink: 0, background: "#0b0c12", borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <button
-          onClick={() => setLocation("/lobby")}
+          onClick={() => setLocation("/minigames")}
           style={{ display: "flex", alignItems: "center", gap: "3px", color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "12px", padding: "4px 8px", borderRadius: "6px" }}
         >
           <ChevronLeft size={14} /> Mini Games

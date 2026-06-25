@@ -635,7 +635,7 @@ export default function CasesPage() {
         background: "rgba(0,0,0,0.3)",
       }}>
         <button
-          onClick={() => setLocation("/lobby")}
+          onClick={() => setLocation("/minigames")}
           style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 13 }}
         >
           <ChevronLeft size={16} /> Mini Games
