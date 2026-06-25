@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PageWrapper } from "./shared";
+import { useStore } from "../store";
+import {
+  ChevronDown, Trophy, Ticket, Coins, Users,
+  Info, Clock, TrendingUp,
+} from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const fmt = (n: number) => n.toLocaleString();
@@ -12,198 +18,483 @@ function fmtCountdown(ms: number): string {
   const d = Math.floor(h / 24);
   if (d > 0) return `${d}d ${h % 24}h`;
   if (h > 0) return `${h}h ${m % 60}m`;
-  return `${m}m ${s % 60}s`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
 }
 
-interface LiveDraw {
-  jackpot: number;
-  consolation: number;
-  totalTickets: number;
-  drawTime: string;
-  ticketCloseAt: string;
-  status: string;
-}
-interface LiveSettings {
-  ticketCost: number;
-  maxTicketsPerPlayer: number;
+function fmtDrawLabel(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) +
+    " at " + d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 }
 
-interface CardData {
-  id: number;
-  name: string;
-  schedule: string;
-  ticketPrice: string;
-  jackpot: string;
-  ticketsSold: number;
-  maxTickets: number;
-  prizes: string[];
-  neonColor: string;
-  timeLeft: string;
-  featured?: boolean;
-  live?: boolean;
+function fmtShortDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-const staticCards: CardData[] = [
-  {
-    id: 2, name: "Weekly Mega Draw", schedule: "Every Friday at 10:00 PM",
-    ticketPrice: "$20", jackpot: "$75,000", ticketsSold: 2847, maxTickets: 5000,
-    prizes: ["$75,000", "$15,000", "$5,000", "$1,000 ×5"],
-    neonColor: "#f5c518", timeLeft: "2d 14h", featured: true, live: true,
-  },
-];
+interface Draw {
+  id: number; status: string; ticketCloseAt: string; drawTime: string;
+  jackpot: number; consolation: number; totalTickets: number;
+}
+interface Settings {
+  enabled: boolean; ticketCost: number; maxTicketsPerPlayer: number;
+  numbersPerTicket: number; numberMin: number; numberMax: number;
+}
+interface LotteryTicket {
+  id: number; draw_id: number; status: string; ticket_cost: number;
+  purchased_at: string; result_tier: string | null;
+}
 
-function LotteryCard({ d }: { d: CardData }) {
-  const [hov, setHov] = useState(false);
-  const [qty, setQty] = useState(1);
-  const pct = Math.round((d.ticketsSold / d.maxTickets) * 100);
-  const ticketCostNum = parseInt(d.ticketPrice.replace(/[^0-9]/g, ""), 10) || 0;
+/* ── Left card: Weekly Mega Draw ─────────────────────────────── */
+function WeeklyMegaDraw({
+  draw, settings, now, qty, setQty, onBuy, buying, buyMsg,
+}: {
+  draw: Draw | null; settings: Settings | null; now: number;
+  qty: number; setQty: (q: number) => void;
+  onBuy: () => void; buying: boolean; buyMsg: { text: string; ok: boolean } | null;
+}) {
+  const msToDraw = draw ? new Date(draw.drawTime).getTime() - now : 0;
+  const msToClose = draw ? new Date(draw.ticketCloseAt).getTime() - now : 0;
+  const salesOpen = draw?.status === "open" && msToClose > 0;
+  const totalSlots = 1000;
+  const pct = draw ? Math.min(100, (draw.totalTickets / totalSlots) * 100) : 0;
 
   return (
     <div
-      className="rounded-2xl overflow-hidden"
+      className="rounded-2xl overflow-hidden flex flex-col"
       style={{
-        background: "#0c0a0a",
-        border: `1px solid ${d.neonColor}33`,
-        boxShadow: hov ? `0 0 24px ${d.neonColor}22` : "none",
-        transition: "box-shadow 0.2s",
+        background: "linear-gradient(160deg,#0e0b06 0%,#0a0804 100%)",
+        border: "1px solid rgba(245,197,24,0.2)",
+        boxShadow: "0 0 40px rgba(245,197,24,0.04)",
       }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
     >
-      <div className="px-5 py-4" style={{ background: `${d.neonColor}0d`, borderBottom: `1px solid ${d.neonColor}22` }}>
-        <div className="flex items-start justify-between mb-1">
-          <h3 className="font-rajdhani font-black text-lg uppercase tracking-wider text-white">{d.name}</h3>
-          <div className="flex items-center gap-1.5">
-            {d.live && (
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase flex items-center gap-1" style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}>
-                <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                LIVE
-              </span>
-            )}
-            {d.featured && (
-              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase" style={{ background: "#e8400a", color: "#fff" }}>
-                FEATURED
-              </span>
-            )}
-          </div>
+      {/* Header */}
+      <div className="px-6 py-4 flex items-start justify-between"
+        style={{ background: "rgba(245,197,24,0.05)", borderBottom: "1px solid rgba(245,197,24,0.12)" }}>
+        <div>
+          <h2 className="font-rajdhani font-black text-xl uppercase tracking-widest text-white mb-1">
+            Weekly Mega Draw
+          </h2>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+            {draw ? `Draw: ${fmtDrawLabel(draw.drawTime)}` : "Loading…"}
+          </p>
         </div>
-        <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.38)" }}>{d.schedule}</p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase"
+            style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.3)" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+            LIVE
+          </span>
+          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase"
+            style={{ background: "#e8400a", color: "#fff" }}>
+            FEATURED
+          </span>
+        </div>
       </div>
 
-      <div className="px-5 py-4 flex flex-col gap-4">
-        <div className="text-center py-3 rounded-xl" style={{ background: `${d.neonColor}0d`, border: `1px solid ${d.neonColor}22` }}>
-          <p className="text-[10px] uppercase tracking-widest mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Jackpot</p>
-          <p className="text-3xl font-black" style={{ fontFamily: "'Orbitron', sans-serif", color: d.neonColor, textShadow: `0 0 20px ${d.neonColor}66` }}>
-            {d.jackpot}
+      <div className="px-6 py-5 flex flex-col gap-5 flex-1">
+        {/* Jackpot hero */}
+        <div className="rounded-xl py-5 text-center"
+          style={{ background: "rgba(245,197,24,0.06)", border: "1px solid rgba(245,197,24,0.18)" }}>
+          <p className="text-[10px] uppercase tracking-[0.22em] mb-2" style={{ color: "rgba(255,255,255,0.35)" }}>Jackpot</p>
+          <p className="font-black text-4xl leading-none mb-2"
+            style={{ fontFamily: "'Orbitron','Rajdhani',sans-serif", color: "#f5c518", textShadow: "0 0 32px rgba(245,197,24,0.5)" }}>
+            {draw ? `${fmt(draw.jackpot)} chips` : "—"}
           </p>
-          <p className="text-[11px] mt-1 font-bold" style={{ color: "rgba(255,255,255,0.4)" }}>
-            ⏱ Draw in {d.timeLeft}
+          <p className="text-xs font-bold flex items-center justify-center gap-1.5"
+            style={{ color: "rgba(255,255,255,0.4)" }}>
+            <Clock size={12} />
+            {draw ? `Draw in ${fmtCountdown(msToDraw)}` : "Loading…"}
           </p>
         </div>
 
+        {/* Prize tiers */}
         <div>
-          <p className="text-[10px] uppercase tracking-widest mb-2" style={{ color: "rgba(255,255,255,0.30)" }}>Prize Tiers</p>
-          <div className="flex flex-col gap-1">
-            {d.prizes.map((p, i) => (
-              <div key={i} className="flex items-center justify-between">
-                <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-                  {["🥇 1st", "🥈 2nd", "🥉 3rd", "🎁 Others"][i]}
+          <p className="text-[10px] uppercase tracking-[0.18em] mb-3 font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>Prize Tiers</p>
+          <div className="flex flex-col gap-2">
+            {[
+              { place: "1st", icon: "🏆", amount: draw?.jackpot ?? null },
+              { place: "2nd", icon: "🏆", amount: draw?.consolation ?? null },
+            ].map(({ place, icon, amount }) => (
+              <div key={place} className="flex items-center justify-between px-4 py-2.5 rounded-lg"
+                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
+                  <span>{icon}</span>
+                  <span className="font-semibold">{place}</span>
                 </span>
-                <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.7)" }}>{p}</span>
+                <span className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>
+                  {amount !== null ? `${fmt(amount)} chips` : "—"}
+                </span>
               </div>
             ))}
           </div>
         </div>
 
+        {/* Stats row */}
+        <div className="grid grid-cols-2 gap-3">
+          {[
+            { icon: <Ticket size={18} />, label: "Tickets Sold", value: draw ? fmt(draw.totalTickets) : "—" },
+            { icon: <Users size={18} />, label: "Total Tickets", value: fmt(totalSlots) },
+          ].map(({ icon, label, value }) => (
+            <div key={label} className="rounded-xl px-4 py-3 flex items-center gap-3"
+              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <span style={{ color: "#f5c518" }}>{icon}</span>
+              <div>
+                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</p>
+                <p className="text-base font-black text-white">{value}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Progress */}
         <div>
-          <div className="flex justify-between mb-1">
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>Tickets sold</span>
-            <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.45)" }}>
-              {d.ticketsSold.toLocaleString()}{d.maxTickets > 0 ? ` / ${d.maxTickets.toLocaleString()}` : ""}
-            </span>
+          <div className="flex justify-between mb-2">
+            <span className="text-[10px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.35)" }}>Sales progress</span>
+            <span className="text-[10px] font-bold" style={{ color: "rgba(245,197,24,0.7)" }}>{pct.toFixed(1)}%</span>
           </div>
-          <div className="rounded-full h-1.5" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <div className="h-1.5 rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: d.neonColor }} />
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: "linear-gradient(90deg,#f5c518,#e8a800)" }}
+              initial={{ width: 0 }}
+              animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+            />
           </div>
         </div>
 
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center rounded-lg overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.04)" }}>
-            <button className="w-8 h-8 font-bold text-white" onClick={() => setQty(q => Math.max(1, q - 1))}>−</button>
-            <span className="px-3 text-sm font-bold text-white tabular-nums">{qty}</span>
-            <button className="w-8 h-8 font-bold text-white" onClick={() => setQty(q => q + 1)}>+</button>
+        {/* Buy controls */}
+        <div className="flex gap-3 items-center">
+          <div className="flex items-center rounded-lg overflow-hidden shrink-0"
+            style={{ border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)" }}>
+            <button
+              className="w-9 h-10 font-bold text-white text-lg transition-colors hover:bg-white/10"
+              onClick={() => setQty(Math.max(1, qty - 1))}
+            >−</button>
+            <span className="px-4 text-sm font-black text-white tabular-nums">{qty}</span>
+            <button
+              className="w-9 h-10 font-bold text-white text-lg transition-colors hover:bg-white/10"
+              onClick={() => setQty(qty + 1)}
+            >+</button>
           </div>
           <button
-            className="flex-1 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150"
+            onClick={onBuy}
+            disabled={!salesOpen || buying || !settings}
+            className="flex-1 py-2.5 rounded-lg text-sm font-black uppercase tracking-wider transition-all duration-150"
             style={{
-              background: hov ? d.neonColor : `${d.neonColor}22`,
-              color: hov ? "#060404" : d.neonColor,
-              border: `1px solid ${d.neonColor}55`,
+              background: salesOpen ? "rgba(245,197,24,0.15)" : "rgba(255,255,255,0.04)",
+              color: salesOpen ? "#f5c518" : "rgba(255,255,255,0.25)",
+              border: `1px solid ${salesOpen ? "rgba(245,197,24,0.4)" : "rgba(255,255,255,0.08)"}`,
+              cursor: salesOpen ? "pointer" : "not-allowed",
             }}
           >
-            Buy {qty} Ticket{qty > 1 ? "s" : ""} · {ticketCostNum > 0 ? `${fmt(ticketCostNum * qty)} chips` : d.ticketPrice}
+            {buying ? "Buying…" : settings
+              ? `Buy ${qty} Ticket${qty > 1 ? "s" : ""} · ${fmt(settings.ticketCost * qty)} chips`
+              : "Loading…"}
           </button>
         </div>
+
+        <AnimatePresence>
+          {buyMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="px-4 py-2.5 rounded-lg text-xs font-bold text-center"
+              style={{
+                background: buyMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                border: `1px solid ${buyMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                color: buyMsg.ok ? "#22c55e" : "#f87171",
+              }}
+            >
+              {buyMsg.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
 
+/* ── Right card: Your Tickets ─────────────────────────────────── */
+function YourTickets({
+  tickets, settings, loading,
+}: {
+  tickets: LotteryTicket[]; settings: Settings | null; loading: boolean;
+}) {
+  const [ticketsOpen, setTicketsOpen] = useState(true);
+  const [howOpen, setHowOpen] = useState(false);
+
+  const totalSpent = tickets.reduce((s, t) => s + (t.ticket_cost || 0), 0);
+  const totalEntries = tickets.length;
+
+  function statusBadge(t: LotteryTicket) {
+    const tier = t.result_tier;
+    if (tier === "jackpot") return { label: "WINNER", bg: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "rgba(251,191,36,0.3)" };
+    if (tier === "consolation") return { label: "WIN", bg: "rgba(34,197,94,0.15)", color: "#22c55e", border: "rgba(34,197,94,0.3)" };
+    if (tier === "no_win") return { label: "DRAWN", bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", border: "rgba(255,255,255,0.1)" };
+    if (t.status === "submitted" || t.status === "draft") return { label: "ACTIVE", bg: "rgba(34,197,94,0.1)", color: "#22c55e", border: "rgba(34,197,94,0.25)" };
+    return { label: t.status.toUpperCase(), bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.35)", border: "rgba(255,255,255,0.1)" };
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* YOUR TICKETS accordion */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: "linear-gradient(160deg,#0e0b06 0%,#0a0804 100%)",
+          border: "1px solid rgba(245,197,24,0.15)",
+        }}
+      >
+        <button
+          className="w-full px-6 py-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
+          style={{ borderBottom: ticketsOpen ? "1px solid rgba(245,197,24,0.1)" : "none" }}
+          onClick={() => setTicketsOpen(o => !o)}
+        >
+          <span className="font-rajdhani font-black text-base uppercase tracking-widest text-white">Your Tickets</span>
+          <motion.span animate={{ rotate: ticketsOpen ? 0 : -90 }} transition={{ duration: 0.2 }}>
+            <ChevronDown size={18} style={{ color: "rgba(255,255,255,0.4)" }} />
+          </motion.span>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {ticketsOpen && (
+            <motion.div
+              key="tickets-body"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              style={{ overflow: "hidden" }}
+            >
+              <div className="px-6 py-5 flex flex-col gap-5">
+                {/* Summary cards */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { icon: <Ticket size={20} />, label: "Your Tickets", value: tickets.length },
+                    { icon: <Coins size={20} />, label: "Total Spent", value: fmt(totalSpent) },
+                    { icon: <Users size={20} />, label: "Total Entries", value: totalEntries },
+                  ].map(({ icon, label, value }) => (
+                    <div key={label} className="rounded-xl px-3 py-3 flex flex-col items-center gap-1.5 text-center"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                      <span style={{ color: "#f5c518" }}>{icon}</span>
+                      <p className="text-[9px] uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</p>
+                      <p className="text-lg font-black text-white leading-none">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Ticket table */}
+                {loading ? (
+                  <div className="text-center py-6" style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>Loading tickets…</div>
+                ) : tickets.length === 0 ? (
+                  <div className="text-center py-8 flex flex-col items-center gap-2">
+                    <Ticket size={28} style={{ color: "rgba(255,255,255,0.12)" }} />
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>No tickets yet for this draw</p>
+                  </div>
+                ) : (
+                  <div>
+                    {/* Table header */}
+                    <div className="grid grid-cols-4 gap-2 px-3 pb-2 mb-1"
+                      style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                      {["Ticket #", "Entries", "Purchased", "Status"].map(h => (
+                        <span key={h} className="text-[9px] uppercase tracking-wider font-bold"
+                          style={{ color: "rgba(255,255,255,0.3)" }}>{h}</span>
+                      ))}
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      {tickets.map(t => {
+                        const badge = statusBadge(t);
+                        return (
+                          <div key={t.id}
+                            className="grid grid-cols-4 gap-2 px-3 py-2.5 rounded-lg items-center transition-colors hover:bg-white/[0.03]"
+                            style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                            <span className="text-xs font-bold tabular-nums" style={{ color: "rgba(255,255,255,0.65)" }}>
+                              #{String(1000000 + t.id).slice(1)}
+                            </span>
+                            <span className="text-xs font-semibold text-white">1</span>
+                            <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+                              {fmtShortDate(t.purchased_at)}
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase inline-flex items-center gap-1 w-fit"
+                              style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}>
+                              <span style={{ width: 4, height: 4, borderRadius: "50%", background: badge.color, display: "inline-block" }} />
+                              {badge.label}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Info panel */}
+                <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+                  <Info size={14} style={{ color: "rgba(255,255,255,0.35)", flexShrink: 0, marginTop: 1 }} />
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>
+                    Each ticket gives you one entry into the current draw.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* HOW IT WORKS accordion */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: "linear-gradient(160deg,#0e0b06 0%,#0a0804 100%)",
+          border: "1px solid rgba(245,197,24,0.1)",
+        }}
+      >
+        <button
+          className="w-full px-6 py-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
+          style={{ borderBottom: howOpen ? "1px solid rgba(245,197,24,0.1)" : "none" }}
+          onClick={() => setHowOpen(o => !o)}
+        >
+          <span className="font-rajdhani font-black text-base uppercase tracking-widest text-white">How It Works</span>
+          <motion.span animate={{ rotate: howOpen ? 0 : -90 }} transition={{ duration: 0.2 }}>
+            <ChevronDown size={18} style={{ color: "rgba(255,255,255,0.4)" }} />
+          </motion.span>
+        </button>
+
+        <AnimatePresence initial={false}>
+          {howOpen && (
+            <motion.div
+              key="how-body"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              style={{ overflow: "hidden" }}
+            >
+              <div className="px-6 py-5 flex flex-col gap-3">
+                {[
+                  { n: 1, title: "Buy a Ticket", desc: "Purchase one or more entries into the current draw using your chip balance." },
+                  { n: 2, title: "Pick Your Numbers", desc: "Each ticket requires you to choose numbers. Use Quick Pick for a random selection." },
+                  { n: 3, title: "Wait for the Draw", desc: "The draw happens at the scheduled time. All submitted tickets are entered." },
+                  { n: 4, title: "Claim Winnings", desc: "Jackpot and consolation prizes are paid out automatically to winners." },
+                ].map(({ n, title, desc }) => (
+                  <div key={n} className="flex gap-3">
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-black"
+                      style={{ background: "rgba(245,197,24,0.15)", color: "#f5c518", border: "1px solid rgba(245,197,24,0.3)" }}>
+                      {n}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-white mb-0.5">{title}</p>
+                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>{desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+/* ── Page ────────────────────────────────────────────────────── */
 export function LotteryPage() {
-  const [draw, setDraw] = useState<LiveDraw | null>(null);
-  const [settings, setSettings] = useState<LiveSettings | null>(null);
+  const { sessionToken } = useStore();
+  const [draw, setDraw] = useState<Draw | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [tickets, setTickets] = useState<LotteryTicket[]>([]);
+  const [ticketsLoading, setTicketsLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
+  const [qty, setQty] = useState(1);
+  const [buying, setBuying] = useState(false);
+  const [buyMsg, setBuyMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  useEffect(() => {
-    async function poll() {
-      try {
-        const r = await fetch(`${BASE}/api/lottery/active`);
-        const d = await r.json();
-        if (d.draw) setDraw(d.draw);
-        if (d.settings) setSettings(d.settings);
-      } catch {}
-    }
-    poll();
-    const iv = setInterval(poll, 30000);
-    timerRef.current = setInterval(() => setNow(Date.now()), 1000);
-    return () => { clearInterval(iv); if (timerRef.current) clearInterval(timerRef.current); };
-  }, []);
+  const apiFetch = (path: string, opts?: RequestInit) =>
+    fetch(`${BASE}/api${path}`, {
+      ...opts,
+      headers: {
+        "Content-Type": "application/json",
+        ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+        ...(opts?.headers ?? {}),
+      },
+    });
 
-  const cards: CardData[] = staticCards.map(c => {
-    if (!c.live || !draw || !settings) return c;
-    const drawMs = new Date(draw.drawTime).getTime() - now;
-    const timeLeft = fmtCountdown(drawMs);
-    const jackpotStr = `${fmt(draw.jackpot)} chips`;
-    const prizes = [
-      `${fmt(draw.jackpot)} chips`,
-      `${fmt(draw.consolation)} chips`,
-    ];
-    return {
-      ...c,
-      jackpot: jackpotStr,
-      ticketPrice: `${fmt(settings.ticketCost)} chips`,
-      ticketsSold: draw.totalTickets,
-      maxTickets: 0,
-      prizes,
-      timeLeft,
-      schedule: `Draw: ${new Date(draw.drawTime).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })} at ${new Date(draw.drawTime).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`,
+  async function pollDraw() {
+    try {
+      const r = await fetch(`${BASE}/api/lottery/active`);
+      const d = await r.json();
+      if (d.draw) setDraw(d.draw);
+      if (d.settings) setSettings(d.settings);
+    } catch {}
+  }
+
+  async function loadTickets() {
+    if (!sessionToken) return;
+    setTicketsLoading(true);
+    try {
+      const r = await apiFetch("/lottery/my-tickets");
+      const d = await r.json();
+      if (Array.isArray(d)) setTickets(d);
+    } catch {}
+    finally { setTicketsLoading(false); }
+  }
+
+  useEffect(() => {
+    pollDraw();
+    loadTickets();
+    const drawIv = setInterval(pollDraw, 30000);
+    const tktIv = setInterval(loadTickets, 15000);
+    timerRef.current = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      clearInterval(drawIv);
+      clearInterval(tktIv);
+      if (timerRef.current) clearInterval(timerRef.current);
     };
-  });
+  }, [sessionToken]);
+
+  async function handleBuy() {
+    if (!settings || buying) return;
+    setBuying(true);
+    setBuyMsg(null);
+    try {
+      const r = await apiFetch("/lottery/buy", { method: "POST", body: JSON.stringify({ quantity: qty }) });
+      const d = await r.json();
+      if (!r.ok) {
+        setBuyMsg({ text: d.error || "Purchase failed", ok: false });
+      } else {
+        setBuyMsg({ text: `Bought ${d.qty} ticket${d.qty > 1 ? "s" : ""} — ${fmt(d.totalCost)} chips spent`, ok: true });
+        await Promise.all([pollDraw(), loadTickets()]);
+        setTimeout(() => setBuyMsg(null), 4000);
+      }
+    } catch {
+      setBuyMsg({ text: "Network error — try again", ok: false });
+    } finally {
+      setBuying(false);
+    }
+  }
 
   return (
     <PageWrapper title="Lottery" breadcrumb="Events / Lottery" accentColor="#f5c518">
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        gap: 24,
-        maxWidth: 1080,
-        margin: "0 auto",
-        width: "100%",
-      }}>
-        {cards.map((d) => (
-          <LotteryCard key={d.id} d={d} />
-        ))}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 24,
+          maxWidth: 1100,
+          margin: "0 auto",
+          width: "100%",
+          alignItems: "start",
+        }}
+      >
+        <WeeklyMegaDraw
+          draw={draw} settings={settings} now={now}
+          qty={qty} setQty={setQty}
+          onBuy={handleBuy} buying={buying} buyMsg={buyMsg}
+        />
+        <YourTickets tickets={tickets} settings={settings} loading={ticketsLoading} />
       </div>
     </PageWrapper>
   );

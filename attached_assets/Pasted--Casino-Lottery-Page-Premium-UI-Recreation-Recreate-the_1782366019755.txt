@@ -1,0 +1,334 @@
+# Casino Lottery Page - Premium UI Recreation
+
+Recreate the provided casino lottery page as a production-quality React + Tailwind CSS application.
+
+## Core Requirements
+
+The design must maintain the exact visual identity of the reference:
+
+* Dark luxury casino aesthetic
+* Black and deep brown backgrounds
+* Neon gold highlights
+* Orange accent colors
+* Thin glowing borders
+* Subtle radial lighting effects
+* Premium futuristic typography
+* High contrast readability
+* Smooth animations and micro-interactions
+* Keep the page title exactly: **LOTTERY**
+
+Do not redesign the visual style. Improve layout quality, usability, scalability, and responsiveness while preserving the original casino branding.
+
+---
+
+# Dynamic Resolution & Responsive Requirements
+
+The application must be fully responsive and dynamically adapt to any screen size.
+
+Support:
+
+* 3440px Ultrawide
+* 2560px Desktop
+* 1920px Desktop
+* 1600px Laptop
+* 1440px Laptop
+* 1366px Laptop
+* 1280px Desktop
+* 1024px Tablet Landscape
+* 768px Tablet
+* 480px Mobile
+* 390px Mobile
+* 375px Mobile
+
+Layout behavior:
+
+### Large Screens (1600px+)
+
+* Fixed left navigation
+* Wide two-column layout
+* Lottery card on left
+* Tickets card on right
+* Maximum content width of 1800px
+* Proper spacing to avoid excessive empty space
+
+### Desktop (1280px–1599px)
+
+* Two-column layout maintained
+* Proportional scaling
+* Cards remain side-by-side
+
+### Tablet (768px–1279px)
+
+* Sidebar collapses into icon-only mode
+* Main content stacks intelligently
+* Lottery card displayed first
+* Tickets card displayed second
+
+### Mobile (<768px)
+
+* Sidebar becomes slide-out drawer
+* Header condenses
+* Search bar becomes collapsible
+* Content becomes single-column
+* Tables become mobile-friendly cards
+* Buttons remain touch-friendly
+* Maintain premium visual appearance
+
+No horizontal scrolling.
+
+No fixed widths.
+
+Use fluid layouts with:
+
+* CSS Grid
+* Flexbox
+* clamp()
+* minmax()
+* responsive Tailwind utilities
+
+---
+
+# Application Architecture
+
+Use:
+
+* React
+* TypeScript
+* Tailwind CSS
+* Lucide React Icons
+
+Structure the project with reusable components:
+
+* Sidebar
+* TopNavigation
+* LotteryHeader
+* LotteryCard
+* JackpotCard
+* PrizeTable
+* TicketCounter
+* PurchaseButton
+* TicketsAccordion
+* TicketSummaryCards
+* TicketHistoryTable
+* ProgressBar
+* ResponsiveDrawer
+
+Use proper component separation and clean code organization.
+
+---
+
+
+# Sidebar
+
+Sections:
+
+### Home
+
+* Home
+
+### Casino
+
+* Table Games
+* Mini Games
+* Slots
+* Poker
+* Sportsbook
+
+### Events
+
+* Tournaments
+* Horse Racing
+* Lottery
+* Bingo
+
+### The Hub
+
+* Rewards
+* Challenges
+* Leaderboards
+
+### Account
+
+* Profile
+* Staff
+
+Lottery must have an active orange/gold highlighted state.
+
+---
+
+# Main Content
+
+Centered header:
+
+LOTTERY
+
+With glowing divider lines extending left and right.
+
+---
+
+# Left Card — Weekly Mega Draw
+
+Title:
+
+WEEKLY MEGA DRAW
+
+Badges:
+
+* LIVE
+* FEATURED
+
+Display:
+
+* Draw date
+* Jackpot amount
+* Live countdown timer
+
+Prize Tiers:
+
+* 1st Place
+* 2nd Place
+
+Statistics:
+
+* Tickets Sold
+* Total Tickets
+
+Progress Section:
+
+* Dynamic progress bar
+* Percentage display
+
+Purchase Controls:
+
+* Quantity stepper
+* Buy ticket button
+
+---
+
+# Right Card — Your Tickets
+
+Replace "How It Works" section completely.
+
+Create an accordion titled:
+
+YOUR TICKETS
+
+Accordion should contain:
+
+## Summary Cards
+
+* Your Tickets
+* Total Spent
+* Total Entries
+
+## Ticket History
+
+Display purchased tickets.
+
+Columns:
+
+* Ticket Number
+* Entries
+* Purchase Date
+* Status
+
+Status badges:
+
+* Active
+* Drawn
+* Winner
+
+## Information Panel
+
+"Each ticket gives you one entry into the current draw."
+
+Below this section add a collapsed accordion:
+
+HOW IT WORKS
+
+---
+
+# Dynamic State Requirements
+
+Everything must be data-driven.
+
+Create mock data models for:
+
+* User
+* Lottery
+* Prize Tiers
+* Ticket Purchases
+* Countdown
+* Rank Progress
+* Chip Balance
+* Draw Information
+
+Use React state management.
+
+Buying tickets must dynamically:
+
+* Reduce chip balance
+* Increase tickets sold
+* Increase entries
+* Add tickets to history
+* Update progress percentage
+* Update statistics
+* Update summary cards
+
+Disable purchase button when balance is insufficient.
+
+Countdown updates every second.
+
+Accordion states are dynamic.
+
+---
+
+# UI Quality Requirements
+
+Include:
+
+* Hover animations
+* Smooth transitions
+* Glow effects
+* Glassmorphism panels
+* Neon highlights
+* Loading skeleton states
+* Empty states
+* Success states
+* Error states
+
+Animations should use:
+
+* Framer Motion
+
+Avoid excessive motion.
+
+Maintain casino-grade polish.
+
+---
+
+# Accessibility
+
+Include:
+
+* Keyboard navigation
+* Focus states
+* ARIA labels
+* Screen reader support
+* Proper color contrast
+
+---
+
+# Performance
+
+* Lazy load large components
+* Memoize expensive renders
+* Optimize re-renders
+* Responsive image handling
+* Production-ready code structure
+
+---
+
+# Final Goal
+
+Build a premium AAA-quality casino lottery interface that looks like a real-money gaming platform, matches the supplied design language exactly, adapts perfectly to all screen sizes, and uses fully dynamic React state so it can later connect directly to a backend API without requiring major refactoring.
