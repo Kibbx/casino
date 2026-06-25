@@ -756,7 +756,7 @@ export default function HorseRacing() {
   const preloadedRef   = useRef<Set<string>>(new Set());
 
   usePasswordGuard("horseRacing");
-  useEffect(() => { if (!isGameUnlocked("horseRacing")) setLocation("/live-events"); }, []);
+  useEffect(() => { if (!isGameUnlocked("horseRacing")) setLocation("/lobby"); }, []);
 
   const loadStables = useCallback(() => {
     setStablesLoading(true);

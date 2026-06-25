@@ -196,8 +196,8 @@ export default function BingoPage() {
     <div style={{ minHeight: "100vh", background: "#0a0005", color: "#fff", fontFamily: "Georgia, serif" }}>
       {/* Header */}
       <div style={{ background: "rgba(0,0,0,0.85)", borderBottom: "1px solid rgba(180,30,60,0.3)", padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
-        <button onClick={() => setLocation("/live-events")} style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
-          <ChevronLeft size={18} /> Live Events
+        <button onClick={() => setLocation("/lobby")} style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", background: "none", border: "none", cursor: "pointer", fontSize: 14 }}>
+          <ChevronLeft size={18} /> Lobby
         </button>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "Oswald, Georgia, serif", fontWeight: 700, fontSize: 22, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>BINGO</div>
