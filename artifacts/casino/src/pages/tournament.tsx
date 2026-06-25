@@ -286,7 +286,7 @@ export default function TournamentPage() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4">
         <div className="text-muted-foreground">Tournament not found.</div>
-        <Button variant="ghost" onClick={() => setLocation("/lobby")}>Back to Lobby</Button>
+        <Button variant="ghost" onClick={() => setLocation("/tournaments")}>Back to Lobby</Button>
       </div>
     );
   }
@@ -313,7 +313,7 @@ export default function TournamentPage() {
       <div className="border-b border-border bg-card/50 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center gap-4">
           <button
-            onClick={() => setLocation("/lobby")}
+            onClick={() => setLocation("/tournaments")}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
