@@ -384,7 +384,7 @@ export default function TablePage() {
           if (isTournament && tournamentId) {
             setLocation(`/tournament/${tournamentId}`);
           } else {
-            setLocation("/lobby");
+            setLocation("/poker-tables");
           }
         }, 3500);
       }
@@ -553,13 +553,13 @@ export default function TablePage() {
     }
     // If already removed from the table (e.g. AFK kick), just navigate away
     if (!mySeat) {
-      setLocation("/lobby");
+      setLocation("/poker-tables");
       return;
     }
     hasLeftRef.current = true;
     try {
       await leaveMutation.mutateAsync({ tableId, data: { playerId } });
-      setLocation("/lobby");
+      setLocation("/poker-tables");
     } catch (err: any) {
       hasLeftRef.current = false;
       setError(err?.message || "Could not leave table");
