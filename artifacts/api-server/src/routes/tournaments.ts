@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, tournamentsTable, tournamentEntriesTable, pokerTablesTable, playersTable, transactionsTable } from "@workspace/db";
+import { db, tournamentsTable, tournamentEntriesTable, pokerTablesTable, playersTable, transactionsTable, settingsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { requireBanker, requirePlayer } from "../middleware/auth.js";
 import { type Seat } from "../lib/poker-engine.js";
@@ -47,6 +47,13 @@ router.get("/", async (_req, res) => {
   }));
 
   res.json(enriched);
+});
+
+// ── Public: is the tournament lobby enabled? ───────────────────────────────────
+router.get("/lobby-enabled", async (_req, res) => {
+  const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, "tournamentsEnabled"));
+  const enabled = rows.length > 0 ? rows[0].value === "true" : false;
+  res.json({ enabled });
 });
 
 // ── Get one tournament ─────────────────────────────────────────────────────────

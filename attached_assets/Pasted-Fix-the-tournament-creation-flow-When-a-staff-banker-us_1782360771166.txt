@@ -1,0 +1,46 @@
+Fix the tournament creation flow.
+
+When a staff/banker user creates a Tournament from the Staff Dashboard tournament creator, the created tournament should automatically appear as a playable/registerable card on the sidebar “Tournaments” route.
+
+Requirements:
+
+* Use the existing sidebar Tournaments route.
+* The Staff Dashboard remains the admin/control area for creating, editing, showing/hiding, enabling/disabling, and deleting tournaments.
+* The sidebar Tournaments page is the player-facing tournament lobby/list view.
+* When a tournament is created in Staff → Tables → Tournaments, generate a Tournament card on the Tournaments page.
+* The card should use the created tournament data:
+
+  * tournament name
+  * tournament type
+  * buy-in
+  * starting time
+  * duration
+  * prize pool
+  * max players
+  * registered player count
+  * status
+  * featured/big/open/late-reg tags if available
+* Cards should match the existing casino tournament card style shown in the screenshots.
+* Clicking “Register Now” should register the player or open the registration flow.
+* Reuse the existing tournament creator data model/API/state instead of creating separate mock card data.
+* Make sure newly created tournaments appear immediately after creation without requiring a hard refresh.
+* Persist created tournaments so they still appear after page reload.
+* Respect the existing “Show in lobby” toggle from the staff area.
+* If “Show in lobby” is off, hide created tournaments from the player-facing Tournaments page.
+* Add loading, empty, and error states for the Tournaments page.
+
+Implementation steps:
+
+1. Locate the existing Staff Dashboard tournament creator component.
+2. Identify where created tournaments are stored or posted.
+3. Connect the sidebar Tournaments page to the same tournament source.
+4. Render tournament records as lobby cards.
+5. Filter visibility based on show-in-lobby/enabled/status/user permissions.
+6. Ensure create, update, hide/show, disable, and delete actions in Staff Dashboard update the Tournaments card list in real time.
+7. Test:
+
+   * Create tournament → card appears on the sidebar Tournaments page.
+   * Turn “Show in lobby” off → regular users no longer see it.
+   * Delete tournament → card disappears.
+   * Edit tournament → card updates immediately.
+   * Refresh page → tournament still exists and appears correctly.
