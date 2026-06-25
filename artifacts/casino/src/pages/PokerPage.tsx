@@ -63,62 +63,6 @@ function tableToGame(table: PokerTable): CatalogGame {
   };
 }
 
-const staticPokerTypes: CatalogGame[] = [
-  {
-    id: "cash",
-    name: "Cash Games",
-    description: "Sit down, play at your own pace. Leave anytime with your chips.",
-    gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)",
-    neonClass: "neon-green",
-    neonColor: "#22c55e",
-    players: "Texas Hold'em",
-    betRange: "No limit",
-    actionLabel: "Find a Table",
-    statusLabel: "OPEN",
-    statusColor: "#22c55e",
-  },
-  {
-    id: "sng",
-    name: "Sit & Go",
-    description: "Single-table tournaments that start when seats fill. Fast & focused.",
-    gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)",
-    neonClass: "neon-blue",
-    neonColor: "#06b6d4",
-    players: "Texas Hold'em",
-    betRange: "Tournament chips",
-    actionLabel: "Register",
-    statusLabel: "FILLING",
-    statusColor: "#06b6d4",
-  },
-  {
-    id: "mtt",
-    name: "Multi-Table",
-    description: "Big fields, bigger prizes. Compete against hundreds for massive prize pools.",
-    gradient: "linear-gradient(135deg, #0d0520 0%, #160930 60%, #1c0d40 100%)",
-    neonClass: "neon-pink",
-    neonColor: "#a855f7",
-    players: "Texas Hold'em",
-    betRange: "Tournament chips",
-    actionLabel: "Register",
-    statusLabel: "OPEN",
-    statusColor: "#a855f7",
-  },
-  {
-    id: "highstakes",
-    name: "High Stakes",
-    description: "For elite players only. Massive blinds, massive pots, maximum prestige.",
-    gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)",
-    neonClass: "neon-yellow",
-    neonColor: "#f5c518",
-    badge: "VIP",
-    badgeColor: "#7c3aed",
-    players: "Texas Hold'em",
-    betRange: "High limit",
-    actionLabel: "Request Access",
-    statusLabel: "LIVE",
-    statusColor: "#f5c518",
-  },
-];
 
 export function PokerPage() {
   const [, setLocation] = useLocation();
@@ -206,21 +150,6 @@ export function PokerPage() {
           </CardGrid>
         )}
       </div>
-
-      {/* Divider */}
-      <div style={{ height: 1, background: "rgba(255,255,255,0.07)", marginBottom: 28 }} />
-
-      {/* Game Types */}
-      <div style={{ marginBottom: 14 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>
-          Game Formats
-        </span>
-      </div>
-      <CardGrid>
-        {staticPokerTypes.map((g, i) => (
-          <CatalogCard key={g.id} game={g} delay={`${-i}s`} />
-        ))}
-      </CardGrid>
 
     </PageWrapper>
   );
