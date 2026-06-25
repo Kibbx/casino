@@ -192,6 +192,8 @@ export function CardGrid({
         justifyContent: "center",
         gap: `${gap}px`,
         width: "100%",
+        maxWidth: `${4 * 220 + 3 * gap}px`,
+        margin: "0 auto",
       }}
     >
       {children}
