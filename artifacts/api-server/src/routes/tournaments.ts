@@ -52,7 +52,8 @@ router.get("/", async (_req, res) => {
 // ── Public: is the tournament lobby enabled? ───────────────────────────────────
 router.get("/lobby-enabled", async (_req, res) => {
   const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, "tournamentsEnabled"));
-  const enabled = rows.length > 0 ? rows[0].value === "true" : false;
+  // Default to true — tournaments are visible unless staff explicitly disables the toggle
+  const enabled = rows.length > 0 ? rows[0].value === "true" : true;
   res.json({ enabled });
 });
 

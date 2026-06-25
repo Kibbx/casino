@@ -260,7 +260,7 @@ export function TournamentsPage() {
 
   useEffect(() => {
     fetchData();
-    const id = setInterval(fetchData, 15_000);
+    const id = setInterval(fetchData, 5_000);
     return () => clearInterval(id);
   }, [fetchData]);
 
