@@ -1,0 +1,299 @@
+You are modifying an existing casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, PostgreSQL + Drizzle ORM, WebSockets already implemented).
+
+DO NOT break poker or existing horse race systems.
+
+GOAL:
+Build a COMPLETE Horse Creator system with:
+
+* Layered 2D visuals (base + pattern + flair + tack)
+* Live preview UI
+* Admin horse creation + saving
+* Owner-ready horses
+* Integration with race system
+
+---
+
+## DATABASE CHANGES
+
+Update horses table:
+
+Add:
+
+visualBase (string)
+visualPattern (string)
+visualFlair (string)
+
+Keep existing:
+
+* id
+* name
+* odds
+* weight
+* ownerId
+* ownerCut
+* totalEarnings
+
+---
+
+## BACKEND LOGIC
+
+1. HORSE CREATION
+
+POST /api/admin/horses/create
+
+Body:
+{
+name: string,
+odds: number (1–30),
+visualBase: string,
+visualPattern: string,
+visualFlair: string
+}
+
+On create:
+
+* calculate weight = 1 / (odds + 1)
+* normalize weights across all horses
+* calculate ownerCut based on odds tier:
+
+1–3 → 1%
+4–8 → 2%
+9–15 → 3%
+16–22 → 4%
+23–27 → 5%
+28–30 → 6%
+
+Save horse.
+
+---
+
+2. GET HORSES
+
+GET /api/admin/horses
+
+Return:
+
+* id
+* name
+* odds
+* visualBase
+* visualPattern
+* visualFlair
+* ownerId
+* totalEarnings
+
+---
+
+3. OPTIONAL: TEMPLATE SAVE
+
+POST /api/admin/horses/template
+
+Stores preset visual combos.
+
+---
+
+## ASSET SYSTEM
+
+Assets are stored in:
+
+/public/assets/horses/
+
+Folders:
+
+base/
+pattern/
+flair/
+tack/
+
+---
+
+BASE OPTIONS (starter set)
+
+["brown","black","white","grey","chestnut","dark_bay"]
+
+PATTERN OPTIONS
+
+["none","blaze","socks","stripe","spotted","pinto"]
+
+FLAIR OPTIONS
+
+["none","glow","smoke","fire","neon","electric","gold"]
+
+---
+
+## FRONTEND COMPONENTS
+
+CREATE:
+
+components/admin/HorseCreator.tsx
+components/horses/HorseSprite.tsx
+
+---
+
+1. HORSE SPRITE (CORE)
+
+Renders layered visuals:
+
+Props:
+{
+base,
+pattern,
+flair,
+ownerColor?,
+number?
+}
+
+Render order:
+
+<div className="relative w-24 h-24">
+
+<img src={`/assets/horses/base/${base}.png`} />
+
+<img src={`/assets/horses/pattern/${pattern}.png`} />
+
+{ownerColor && (
+<img
+src="/assets/horses/tack/cloth_base.png"
+style={{
+filter: `drop-shadow(0 0 2px ${ownerColor})`
+}}
+/>
+)}
+
+<img src={`/assets/horses/flair/${flair}.png`} />
+
+{number && ( <div className="absolute top-0 left-0 bg-black text-white px-1 text-xs">
+#{number} </div>
+)}
+
+</div>
+
+---
+
+2. HORSE CREATOR UI
+
+Layout:
+
+---
+
+## | 🐎 Live Preview               |
+
+[ Base Selector Dropdown ]
+[ Pattern Selector Dropdown ]
+[ Flair Selector Dropdown ]
+
+[ Name Input ]
+[ Odds Input (1–30) ]
+
+[ Save Horse ]
+
+---
+
+IMPLEMENT:
+
+* useState for:
+  base, pattern, flair, name, odds
+
+* Live preview updates instantly using HorseSprite
+
+---
+
+SAVE HANDLER
+
+POST to:
+/api/admin/horses/create
+
+After save:
+
+* reset form
+* refresh horse list
+
+---
+
+3. DROPDOWNS
+
+Populate from predefined arrays (no API needed initially)
+
+---
+
+## INTEGRATION INTO ADMIN PANEL
+
+Inside:
+
+Tables → Horse Racing sub-tab
+
+Add new section:
+
+"🐎 Horse Creator"
+
+Place above horse list.
+
+---
+
+## RACE SYSTEM INTEGRATION
+
+When race is generated:
+
+Each horse already includes:
+
+* visualBase
+* visualPattern
+* visualFlair
+
+Pass to frontend.
+
+---
+
+RACE TRACK UI
+
+Use HorseSprite instead of emojis.
+
+Each horse:
+
+* gets number (1–6)
+* gets ownerColor if exists
+
+---
+
+OWNER COLOR
+
+If horse.ownerId exists:
+
+Fetch player:
+
+* primaryColor
+
+Pass into HorseSprite as ownerColor.
+
+---
+
+## IMPORTANT RULES
+
+* DO NOT use emojis anywhere
+* DO NOT generate images dynamically
+* ONLY use layered PNG system
+* visuals DO NOT affect odds
+* keep UI clean and minimal
+* reuse Tailwind styles
+
+---
+
+## FINAL RESULT
+
+System includes:
+
+* Admin Horse Creator tool
+* Live visual preview
+* Layered 2D horses
+* Stored customizable horses
+* Race-ready visuals
+* Owner-ready system
+
+Staff can:
+
+* create horses visually
+* name them
+* set odds
+* use them in races
+
+Only output working code and required files.

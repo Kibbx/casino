@@ -1,0 +1,146 @@
+I want to completely replace my current wheel spin system with a CASE OPENING system (CS:GO style), while fully integrating with my existing inventory + stock system.
+
+CORE REQUIREMENTS:
+
+1. INVENTORY INTEGRATION (CRITICAL)
+- I already have a site-side inventory system with stock counts per item.
+- Each item has:
+  - id
+  - name
+  - type (cash, vehicle, item, etc.)
+  - value (cost to house)
+  - stock (how many available)
+- The case system MUST:
+  - ONLY pull items that are in stock
+  - DECREMENT stock when an item is won
+  - PREVENT selection of items with 0 stock
+  - Support limiting items to X wins based on stock
+
+2. CASE STRUCTURE
+- Each case has:
+  - case_id
+  - name
+  - price (cost to open)
+  - item pool (linked to inventory items)
+- Items are grouped into TIERS:
+  - Common
+  - Rare
+  - Epic
+  - Legendary
+  - Jackpot
+
+3. DROP SYSTEM (NOT PURE RANDOM)
+Implement a TWO-STAGE roll system:
+
+STEP 1: Roll tier based on weighted odds
+Example:
+- Common: 55%
+- Rare: 25%
+- Epic: 12%
+- Legendary: 6%
+- Jackpot: 2%
+
+STEP 2: Randomly select an item WITHIN that tier
+- Only choose from items that:
+  - belong to that tier
+  - have stock > 0
+
+If no items exist in a tier:
+- fallback to next lower tier automatically
+
+4. RTP CONTROL (VERY IMPORTANT)
+- Each case must target a configurable RTP (e.g. 85–92%)
+- Use item value (cost to house) to balance odds
+- Ensure long-term:
+  total payout ≈ RTP * total spent
+
+5. ANTI-FRUSTRATION SYSTEMS
+Implement:
+- "Pity system":
+  - Track spins per player
+  - Guarantee at least:
+    - Rare every 5 opens
+    - Epic every 15 opens
+- Prevent long losing streaks
+
+6. ANIMATION SYSTEM (FRONTEND LOGIC)
+- Horizontal scrolling item reel
+- Pre-determine result BEFORE animation
+- Fill reel with:
+  - random items
+  - include near-miss high tier items near final position
+- Smooth slowdown effect
+- Final item lands centered
+
+7. WIN HANDLING
+- When player wins:
+  - Add item to player inventory
+  - Deduct from global stock
+  - Log transaction (case_id, item_id, value)
+
+8. ADMIN CONTROLS
+- Ability to:
+  - Create/edit cases
+  - Assign items to cases
+  - Set drop rates per tier
+  - Adjust RTP target
+- Visibility into:
+  - stock levels
+  - case profitability
+
+9. DATA STRUCTURE (EXAMPLE)
+
+Inventory Item:
+{
+  id: "item_01",
+  name: "Sports Car",
+  type: "vehicle",
+  value: 5000,
+  stock: 2,
+  tier: "legendary"
+}
+
+Case:
+{
+  case_id: "premium_case",
+  name: "Premium Case",
+  price: 100,
+  tiers: {
+    common: 55,
+    rare: 25,
+    epic: 12,
+    legendary: 6,
+    jackpot: 2
+  }
+}
+
+10. BACKEND FUNCTION FLOW
+
+openCase(player, case_id):
+  - check player balance
+  - deduct case price
+  - determine tier (weighted roll)
+  - filter items by:
+      tier + stock > 0
+  - select item
+  - decrement stock
+  - add item to player inventory
+  - apply pity adjustments if needed
+  - return result for animation
+
+11. UX GOALS
+- Player should feel:
+  - frequent wins
+  - visible rarity differences
+  - excitement from near-misses
+- Avoid:
+  - dead outcomes
+  - empty rewards
+
+FINAL GOAL:
+Replace the wheel entirely with a case opening system that:
+- feels rewarding
+- respects inventory stock
+- is RTP-controlled
+- prevents frustrating streaks
+- is visually engaging

@@ -1,0 +1,147 @@
+You are updating an existing 5-reel, 3-row, 243-ways slot machine engine.
+
+GOAL:
+Fix the slot math so RTP is approximately 93–95%, eliminate runaway payouts, and maintain engaging gameplay with occasional big wins.
+
+DO NOT redesign UI.
+DO NOT change reel layout (keep 5x3, 243 ways).
+ONLY adjust math, weights, and payout logic.
+
+---
+
+CURRENT ISSUES TO FIX:
+
+* RTP is ~323% (massive overpayout)
+* Multipliers stack too aggressively
+* High symbol payouts too large for 243 ways
+* Bonus rounds trigger too often and are too strong
+* Wild frequency in bonus is too high
+
+---
+
+REQUIRED CHANGES:
+
+1. SPIN MULTIPLIER REBALANCE
+
+Replace multiplier distribution with:
+
+const multipliers = [
+{ value: 1, weight: 85 },
+{ value: 2, weight: 10 },
+{ value: 3, weight: 3 },
+{ value: 5, weight: 1.5 },
+{ value: 10, weight: 0.4 },
+{ value: 20, weight: 0.09 },
+{ value: 50, weight: 0.01 }
+];
+
+Ensure only ONE multiplier applies per spin.
+Do NOT allow multipliers to stack multiplicatively.
+
+---
+
+2. PAYTABLE ADJUSTMENTS
+
+Update high-value symbols:
+
+7:
+
+* 3x = 4.0 (unchanged)
+* 4x = 20
+* 5x = 60 (was 120)
+
+Diamond:
+
+* 3x = 1.2
+* 4x = 5
+* 5x = 25 (was 40)
+
+BAR:
+
+* 3x = 0.5
+* 4x = 2
+* 5x = 10 (was 15)
+
+Keep low symbols mostly unchanged but slightly reduce if needed.
+
+---
+
+3. SCATTER / BONUS NERF
+
+* Reduce scatter weight from 2/96 → 1/96
+* Free spins:
+  3 scatters = 8 spins
+  4 scatters = 12 spins
+  5 scatters = 18 spins
+
+---
+
+4. BONUS ROUND BALANCE
+
+* Bonus multiplier range: 2x–4x (NOT 5x)
+* Wild weight in bonus: 6 (NOT 10)
+* No additional stacking multipliers inside bonus
+
+---
+
+5. WIN CAP (CRITICAL)
+
+Add hard cap per spin:
+
+const MAX_WIN_MULTIPLIER = 500;
+
+if (totalWin > bet * MAX_WIN_MULTIPLIER) {
+totalWin = bet * MAX_WIN_MULTIPLIER;
+}
+
+---
+
+6. PAYOUT LOGIC FIX
+
+Ensure correct flow:
+
+balance -= bet;
+
+if (winAmount > 0) {
+balance += winAmount;
+}
+
+Do NOT add payout without subtracting bet first.
+
+---
+
+7. TARGET METRICS
+
+* RTP: 93–95%
+* Hit frequency: 20–30%
+* Bonus frequency: ~1 in 120 spins
+* Max exposure per spin: capped at 500x
+
+---
+
+8. DEBUG / VALIDATION
+
+Add a simulation function:
+
+simulateSpins(1000000)
+
+Track:
+
+* Total wagered
+* Total paid out
+* RTP %
+* Bonus trigger rate
+* Max win hit
+
+Log results clearly in console.
+
+---
+
+IMPORTANT:
+
+* Keep gameplay feel exciting (do not make it too dry)
+* Maintain small frequent wins
+* Preserve chance of big wins, but rare and controlled
+* Avoid exponential payout stacking
+
+Return updated code sections only (math, weights, payout logic, simulation).

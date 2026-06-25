@@ -1,0 +1,106 @@
+I want to upgrade my Promo Region system from a manual form-based setup into a VISUAL REGION EDITOR.
+
+Current problem:
+- Right now regions are created by entering values like page, width, and height
+- That is not good enough
+- I do NOT want to manually guess x/y positions or sizes
+- I want to visually see the page I selected and draw the promo area directly on it
+
+Main goal:
+Create a visual region editor inside the Banker dashboard so the owner/admin can select a page, see a preview of that page, and draw promo regions by click-and-drag.
+
+What I want:
+1. In Promos → Regions, when creating or editing a region:
+   - select the page (lobby, roulette, slots, blackjack, crash, etc.)
+   - load a visual preview/canvas of that page
+   - click and drag to create a rectangular region
+   - move and resize that region visually
+   - save it as the promo region
+
+2. Region box behavior
+- The region should appear as a visible outlined box inside the editor only
+- It can have:
+  - dashed border
+  - translucent fill
+  - label with region name
+- On the live site, the box itself should not show unless a promo is placed there
+- Think of it as an invisible promo zone that is only visible/manageable in the editor
+
+3. Editing behavior
+- Existing regions should load on top of the page preview
+- I should be able to:
+  - click a region
+  - drag it to reposition
+  - resize it from corners/edges
+  - rename it
+  - delete it
+- Multiple regions on the same page should be visible in the editor
+
+4. No manual x/y guessing
+- The system should automatically calculate and save:
+  - x position
+  - y position
+  - width
+  - height
+based on the box I draw
+- If x/y values are stored in the database, that is fine, but I should NOT need to manually enter them
+
+5. Page preview system
+- When I select a page, show a preview canvas of that page layout
+- Ideally this should be a real scaled preview or screenshot-based layout of that page
+- The editor should overlay region boxes on top of that preview
+- Keep the preview clean and easy to understand
+
+6. Responsive behavior
+- Save region position/sizing in a consistent way
+- Prefer percentage-based positioning and sizing instead of fragile fixed pixels if possible
+- That way regions scale better with page size
+
+7. Region data model
+Please support/safe-store:
+- region name
+- page key
+- x
+- y
+- width
+- height
+- active/inactive
+- optional z-index
+- created/updated timestamps
+
+8. UI/UX requirements
+- Make the region editor simple and visual
+- I want to be able to understand it without knowing dev stuff
+- Add buttons like:
+  - Add Region
+  - Save Region
+  - Delete Region
+  - Cancel
+- Show region dimensions/position if needed, but as secondary info
+- The main interaction should be visual, not form-heavy
+
+9. Promo placement compatibility
+- Keep compatibility with the existing Assets and Placements tabs
+- The new visual region boxes should still act as promo slots/containers
+- Admins should still be able to upload assets and assign them to saved regions
+
+10. Live site behavior
+- Regions should be invisible on the actual site unless a promo is active there
+- When a promo is assigned and live, it should render inside the saved region box area
+
+11. Important design direction
+- This should feel like drawing ad/promo zones on a page
+- Not like filling out developer coordinates
+- I need to see where I am placing things
+
+What I want from you:
+1. upgrade the region system into a visual click-and-drag editor
+2. let me select a page and see a preview/canvas
+3. let me draw, move, and resize invisible promo boxes
+4. auto-save x/y/width/height from the visual editor
+5. keep it compatible with the current promo asset and placement system
+6. explain what changed and how to use it
+
+Important:
+I do NOT want to manually type x/y positions.
+I want to visually define the region by drawing it on the selected page.

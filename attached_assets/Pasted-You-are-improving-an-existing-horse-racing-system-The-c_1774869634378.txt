@@ -1,0 +1,206 @@
+You are improving an existing horse racing system.
+
+The current system already includes:
+
+* Stat normalization and clamping
+* Per-tick variance
+* Event system
+* Pack compression
+* Anti-streak penalties
+
+However, one horse is still winning too consistently.
+
+DO NOT remove existing systems.
+ADD the following systems on top to break consistency over time.
+
+---
+
+## GOAL
+
+* Stats still matter
+* But no horse dominates every race
+* Best horse should win ~20–30% max
+
+---
+
+1. ADD FORM STATE SYSTEM (CRITICAL)
+
+---
+
+Each horse must have a temporary "form state" that changes during the race.
+
+On race start:
+
+formState = randomBetween(0.85, 1.15)
+formDuration = randomBetween(40, 120) ticks
+
+Every tick:
+
+* decrement formDuration
+
+When formDuration reaches 0:
+
+* reroll formState = randomBetween(0.85, 1.15)
+* reset formDuration = randomBetween(40, 120)
+
+Apply each tick:
+
+tickPerformance *= formState
+
+This ensures horses are not consistently strong or weak.
+
+---
+
+2. ADD UNDERDOG VARIANCE BIAS
+
+---
+
+If horse is below average (normalizedStat < 1.0):
+
+variance = randomBetween(-0.10, +0.25)
+
+Else:
+
+variance = randomBetween(-0.15, +0.15)
+
+Apply this instead of equal variance for all horses.
+
+---
+
+3. ADD MOMENTUM SYSTEM
+
+---
+
+Each horse tracks momentum:
+
+Initialize:
+momentum = 0
+
+Each tick:
+
+If horse gains position relative to previous tick:
+momentum += 0.02
+
+If horse loses position:
+momentum -= 0.02
+
+Clamp:
+momentum between -0.15 and +0.15
+
+Apply:
+
+tickPerformance *= (1 + momentum)
+
+---
+
+4. ADD LEADER FATIGUE
+
+---
+
+If a horse stays in 1st place continuously:
+
+track:
+timeInLead += ticks
+
+If timeInLead exceeds threshold:
+
+apply fatigue:
+
+leaderFatigue = randomBetween(0.05, 0.10)
+
+tickPerformance *= (1 - leaderFatigue)
+
+Reset timeInLead when horse loses 1st place.
+
+---
+
+5. ENABLE EVENT STACKING
+
+---
+
+Modify event system so:
+
+* Multiple events can be active at once
+* New events do NOT cancel existing ones
+
+All event effects should stack multiplicatively.
+
+---
+
+6. ADD PERFORMANCE DRIFT
+
+---
+
+Every 50–100 ticks:
+
+drift = randomBetween(0.9, 1.1)
+
+Apply temporarily:
+
+tickPerformance *= drift
+
+This creates long-term fluctuations.
+
+---
+
+7. REDUCE OVER-SMOOTHING (ANTI-AVERAGING)
+
+---
+
+Instead of applying very small changes every tick:
+
+Group updates into small chunks:
+
+Example:
+
+* Combine 5–10 ticks into one "performance step"
+
+This prevents the best horse from averaging out to a guaranteed win.
+
+---
+
+8. FINAL TICK PERFORMANCE
+
+---
+
+Each update step should combine:
+
+tickPerformance =
+baseSpeed
+
+* statInfluence (already implemented)
+* formState
+* (1 + momentum)
+* (1 + variance)
+* eventMultipliers
+* packCompression
+* (1 - leaderFatigue if active)
+* drift (if active)
+
+---
+
+9. VALIDATION
+
+---
+
+After implementing:
+
+Run at least 30 races with the SAME horses.
+
+Expected results:
+
+* Different winners across races
+* No horse wins more than ~30–35%
+* Best horse still wins more often, but not always
+
+---
+
+## IMPORTANT RULE
+
+The system must NOT allow any horse to have a consistent advantage across the entire race.
+
+Stats should create OPPORTUNITIES, not guarantees.
+
+---
+
+END OF TASK

@@ -1,0 +1,224 @@
+Upgrade the Tournament System to fully support SLOT TOURNAMENTS with variable betting, tournament chips, and score-based ranking.
+
+GOAL:
+Create a competitive slot tournament mode where players use tournament chips to spin, winnings convert to score only, and players can choose their bet size per spin.
+
+---
+
+1. TOURNAMENT TYPE SYSTEM
+
+---
+
+Extend tournament model:
+
+type: "poker" | "slots"
+
+* Default = "poker"
+* Slot tournaments use separate logic path
+
+---
+
+2. CREATE TOURNAMENT UI (SLOTS MODE)
+
+---
+
+When "Slots" is selected:
+
+SHOW:
+
+* Buy-in (real chips)
+* Starting Tournament Chips (required)
+* Min Bet (required)
+* Max Bet (optional but recommended)
+
+REMOVE:
+
+* Blinds
+* Poker chip settings
+* Rebuy options
+
+---
+
+3. ENTRY FLOW
+
+---
+
+When player joins:
+
+* Deduct buy-in from real balance
+* Initialize:
+  tournamentChips = starting amount
+  score = 0
+  biggestSpin = 0
+
+---
+
+4. CORE SLOT TOURNAMENT LOGIC
+
+---
+
+Each spin:
+
+VALIDATE:
+
+* betAmount >= minBet
+* betAmount <= tournamentChips
+* (optional) betAmount <= maxBet
+
+EXECUTE:
+
+* tournamentChips -= betAmount
+* Run slot roll using betAmount
+
+IF payout > 0:
+score += payout
+
+IMPORTANT:
+
+* DO NOT add payout back to tournamentChips
+* Chips only decrease
+* Score only increases
+
+---
+
+5. VARIABLE BET SYSTEM (UI + LOGIC)
+
+---
+
+Allow player to select bet per spin:
+
+UI:
+[ MIN ] [ 1/4 ] [ 1/2 ] [ MAX ]
+[ - ] betAmount [ + ]
+[ SPIN ]
+
+---
+
+6. WIN CONDITION
+
+---
+
+Winner = highest score
+
+NOT based on:
+
+* remaining chips
+* survival
+
+---
+
+7. END CONDITIONS
+
+---
+
+Tournament ends when:
+
+* Player tournamentChips = 0 (player finished)
+  AND
+* All players finished OR timer ends
+
+---
+
+8. ANTI-EXPLOIT RULES (REQUIRED)
+
+---
+
+Implement:
+
+* Max Bet Cap (recommended: 20–30% of starting chips)
+* Prevent betting 100% unless chips are below minBet threshold
+* Block switching to normal slots during tournament
+* Tournament chips cannot be withdrawn or reused
+
+---
+
+9. UI (TOURNAMENT MODE)
+
+---
+
+Display:
+
+🎰 TOURNAMENT MODE
+
+Chips Remaining: X
+Score: X
+
+* Remove real balance display
+* Remove deposit/withdraw options
+
+---
+
+10. LEADERBOARD SYSTEM
+
+---
+
+Sort players by:
+
+score DESC
+
+Show:
+
+* Player name
+* Score
+* Chips remaining
+
+---
+
+11. BIGGEST SPIN TRACKING
+
+---
+
+Track per player + tournament:
+
+IF payout > biggestSpin:
+biggestSpin = payout
+
+Use this for:
+
+* Highlight feed
+* "Biggest Spin" display
+
+---
+
+12. SLOT ENGINE UPDATE
+
+---
+
+Refactor spin function:
+
+spin(playerId, {
+mode: "normal" | "tournament",
+tournamentId,
+betAmount
+})
+
+Return:
+
+{
+result,
+payout,
+newBalance (normal only),
+tournamentChips (tournament only),
+score (tournament only)
+}
+
+---
+
+13. DO NOT BREAK
+
+---
+
+* Normal slot gameplay
+* RTP / odds
+* Existing poker tournaments
+* API structure
+
+---
+
+## RESULT:
+
+* Competitive slot tournaments
+* Big number hype (score-based)
+* Strategic betting (risk vs reward)
+* No economy exploits
+* Fully scalable system for future games

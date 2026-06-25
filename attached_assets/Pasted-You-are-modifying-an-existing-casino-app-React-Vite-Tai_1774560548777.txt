@@ -1,0 +1,232 @@
+You are modifying an existing casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, WebSockets already implemented).
+
+DO NOT break existing systems.
+
+GOAL:
+Fix and polish Horse Racing system to behave like a real event:
+
+* 2 minute 15 second countdown timer
+* Camera follows horse pack (not static scroll)
+* Smooth race finish (no abrupt stop)
+* Dynamic race text (not stuck on screen)
+* Podium system (1st, 2nd, 3rd)
+
+---
+
+## RACE TIMER SYSTEM
+
+Set default race duration:
+
+const RACE_DURATION = 135 seconds (2 minutes 15 seconds)
+
+Flow:
+
+1. scheduled
+2. betting (until 15 seconds before race)
+3. running
+4. finish
+5. podium display
+
+---
+
+## CAMERA FOLLOW SYSTEM (IMPORTANT)
+
+DO NOT scroll based on fixed animation.
+
+Instead:
+
+* Track all horse positions
+* Find average of top 2 leading horses
+
+Example:
+
+const leaders = horses sorted by position
+const focus = (leaders[0] + leaders[1]) / 2
+
+cameraOffset = -focus * 0.6
+
+Apply to track container:
+
+<motion.div animate={{ x: cameraOffset }} />
+
+This keeps camera centered on the pack.
+
+---
+
+## HORSE MOVEMENT (SMOOTH)
+
+DO NOT jump to final positions.
+
+Use progressive updates:
+
+Every 200ms:
+
+* increment horse positions slightly
+* use easing (not linear)
+
+Example:
+
+position += random(0.5 to 1.5)
+
+Winner horse gets slightly higher increments near end.
+
+---
+
+## FINISH SYSTEM (CRITICAL FIX)
+
+DO NOT instantly snap winner to 100%.
+
+Instead:
+
+When winner is determined:
+
+1. Let race continue until winner reaches finish
+2. Slow other horses slightly
+3. Allow natural spacing
+
+Final stretch:
+
+* winner accelerates slightly
+* others plateau at 90–98%
+
+---
+
+## RACE TEXT SYSTEM (FIX STUCK TEXT)
+
+Create dynamic message system:
+
+State:
+
+raceMessage
+
+Sequence:
+
+1. betting:
+   "BETTING OPEN"
+
+2. 10 seconds before race:
+   "FINAL BETS"
+
+3. race start:
+   "AND THEY'RE OFF!"
+
+4. mid race:
+   randomly rotate:
+
+* "CLOSE RACE!"
+* "NECK AND NECK!"
+* "FINAL STRETCH!"
+
+5. finish:
+   "WINNER: [HORSE NAME]"
+
+---
+
+IMPORTANT:
+
+Each message has timeout:
+
+setTimeout(() => updateMessage(), X ms)
+
+DO NOT keep one message the whole race.
+
+---
+
+## PODIUM SYSTEM (NEW FEATURE)
+
+After race finishes:
+
+Sort horses by final position.
+
+Top 3:
+
+1st → winner
+2nd → runner up
+3rd → runner up
+
+---
+
+DISPLAY PODIUM UI:
+
+---
+
+|        🥇 1st Place            |
+|        (center, big)           |
+----------------------------------
+
+## | 🥈 2nd      🥉 3rd             |
+
+---
+
+Use HorseSprite for each.
+
+Winner:
+
+* larger scale
+* glow effect
+
+Others:
+
+* slightly smaller
+* no glow
+
+---
+
+## TRANSITION TO PODIUM
+
+After race ends:
+
+1. wait 2–3 seconds
+2. fade out track
+3. fade in podium
+
+Use framer-motion:
+
+opacity transition
+
+---
+
+## BETTING UI FIX
+
+Hide betting UI when race starts.
+
+Show only during:
+
+status === "betting"
+
+---
+
+## RACE SPEED TUNING
+
+Total race runtime (visual):
+
+~6–8 seconds
+
+NOT tied to 2:15 timer.
+
+Timer = event countdown
+Race = short visual event
+
+---
+
+## IMPORTANT RULES
+
+* backend still decides winner
+* animation is visual only
+* no instant position jumps
+* camera must follow horses
+* text must rotate dynamically
+
+---
+
+## FINAL RESULT
+
+Horse racing now:
+
+* feels like a real event (2:15 buildup)
+* camera follows action
+* horses finish naturally
+* text updates dynamically
+* ends with podium display
+
+Only output working code and required files.

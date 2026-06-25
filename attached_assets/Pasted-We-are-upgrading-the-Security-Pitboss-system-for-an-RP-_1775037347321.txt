@@ -1,0 +1,229 @@
+We are upgrading the Security / Pitboss system for an RP casino.
+
+GOAL:
+
+1. Flags must be editable in place (no delete/re-add)
+2. Security must be able to attach photos to players for visual identification (blacklist system)
+
+This should feel like a real casino watchlist system — fast, visual, and clean.
+
+---
+
+1. FLAG SYSTEM FIX (EDITABLE FLAGS)
+
+---
+
+Replace the current flag system with a SINGLE editable flag per user.
+
+User model fields:
+
+* isFlagged (boolean)
+* flagSeverity (enum: low, medium, high)
+* flagReason (string)
+* flaggedAt (timestamp)
+* flaggedBy (userId)
+
+IMPORTANT:
+
+* DO NOT create/delete flag records anymore
+* A user always has ONE active flag (or none)
+
+---
+
+2. UPDATE FLAG IN PLACE (CORE FIX)
+
+---
+
+Create/update endpoint:
+
+PATCH /admin/users/:id/flag
+
+Body:
+{
+isFlagged: true,
+flagSeverity: "high",
+flagReason: "Chip scammer / suspicious deposits"
+}
+
+Behavior:
+
+* If isFlagged = true → update fields directly
+* If isFlagged = false → clear all flag fields
+* NO deleting + recreating flags
+
+---
+
+3. UI FIX (SECURITY PANEL)
+
+---
+
+When viewing a player:
+
+IF NOT FLAGGED:
+→ Show button: [ Add Flag ]
+
+IF FLAGGED:
+→ Show editable inputs:
+
+* Severity dropdown (low / medium / high)
+* Reason text input
+
+Buttons:
+[ Save Changes ]
+[ Remove Flag ]
+
+Changes update instantly (no page reload)
+
+---
+
+4. OPTIONAL FLAG HISTORY (RECOMMENDED)
+
+---
+
+Create flagHistory:
+
+* userId
+* changedBy
+* oldSeverity
+* newSeverity
+* oldReason
+* newReason
+* timestamp
+
+---
+
+5. SECURITY PHOTO SYSTEM (CORE FEATURE)
+
+---
+
+Extend User model:
+
+* securityPhotos (array of image URLs)
+* primaryPhotoUrl (string)
+* securityNotes (text, internal only)
+
+---
+
+6. PHOTO MANAGEMENT
+
+---
+
+Security roles (security, pitboss, admin) can:
+
+* Upload photos
+* Add via URL (fallback)
+* Delete photos
+* Set a PRIMARY photo
+
+Use cases:
+
+* Back room photos
+* Screenshots from RP
+* Different outfits / disguises
+
+---
+
+7. SECURITY PROFILE UI
+
+---
+
+When clicking a player in Security Panel:
+
+Show:
+
+[ PRIMARY PHOTO ]
+
+Name: John Doe
+Severity: HIGH (red)
+Reason: Chip scammer
+
+--- Photos ---
+
+* Grid of uploaded images
+* Button: + Add Photo
+* Option: Set as Primary
+
+--- Notes ---
+
+* Editable internal notes
+
+---
+
+8. LIVE SECURITY INTEGRATION
+
+---
+
+Anywhere security sees players:
+
+Display:
+[ small circular photo ] + Name
+
+Locations:
+
+* Active Watchlist
+* Live activity feed
+* Player lists
+
+If no photo:
+→ fallback to initials avatar
+
+---
+
+9. ALERT INTEGRATION
+
+---
+
+When a flagged player triggers an alert:
+
+Include:
+
+[PHOTO] John Doe (HIGH)
+→ "Now active in casino"
+→ "Sat at Blackjack"
+→ "Deposited 50,000"
+
+---
+
+10. PERMISSIONS
+
+---
+
+Only roles:
+
+* security
+* pitboss
+* admin
+
+Can:
+
+* Add/edit/remove flags
+* Upload/delete photos
+* Edit notes
+
+Players cannot see any of this data
+
+---
+
+11. STORAGE
+
+---
+
+* Store image URLs (use existing upload system if available)
+* Do NOT store images as raw blobs in DB
+
+---
+
+FINAL RESULT:
+
+Security can:
+
+* Edit flags instantly (no delete/re-add)
+* Attach faces to players
+* Recognize problem players immediately
+* Run a real casino-style watchlist system
+
+System should feel like:
+→ “We know this guy — keep an eye on him”
+
+NOT:
+→ generic admin tools

@@ -1,0 +1,148 @@
+We need to completely upgrade the Stats page to support time-based profit tracking instead of only lifetime totals.
+
+GOAL:
+Allow staff/bankers to view casino performance by:
+- Single day
+- Custom date range
+- Weekly view
+- Monthly view
+
+This should replace the current “lifetime-only” stats as the primary view.
+
+----------------------------------------
+CORE FEATURES
+----------------------------------------
+
+1. DATE RANGE SELECTOR (TOP OF STATS PAGE)
+Add a date picker UI at the top with:
+
+- Presets:
+  - Today
+  - Yesterday
+  - Last 7 Days
+  - Last 30 Days
+  - This Week
+  - This Month
+
+- Custom Range:
+  - Start Date
+  - End Date
+
+This selection should control ALL stats on the page.
+
+----------------------------------------
+2. DAILY PROFIT CALCULATION (IMPORTANT)
+----------------------------------------
+
+We need REAL profit, not fake “chips moved” numbers.
+
+For selected time range calculate:
+
+TOTAL INCOME SOURCES:
++ Deposits (cash → chips)
++ House game profit (blackjack, roulette, slots, plinko, crash)
++ Rake collected (poker)
+
+TOTAL OUTFLOWS:
+- Withdrawals (chips → cash)
+- Player winnings from house games
+
+FINAL NET:
+Net Profit = Total Inflows - Total Outflows
+
+----------------------------------------
+3. NEW STAT CARDS (TOP SECTION)
+----------------------------------------
+
+Replace current stat cards with:
+
+- Net Profit (selected period)
+- Total Deposits
+- Total Withdrawals
+- House Game Profit
+- Poker Rake
+- Cash in Crate (current vault amount, still needed)
+
+Color coding:
+- Green = profit
+- Red = loss
+
+----------------------------------------
+4. GAME BREAKDOWN (FOR SELECTED RANGE)
+----------------------------------------
+
+For each game show:
+
+Blackjack / Roulette / Slots / Plinko / Crash:
+
+- Total Bets
+- Total Paid Out
+- Net Profit
+- RTP %
+
+ONLY include data inside selected date range.
+
+----------------------------------------
+5. DAILY BREAKDOWN TABLE
+----------------------------------------
+
+Add a table:
+
+Date | Deposits | Withdrawals | Game Profit | Rake | Net
+
+This lets us quickly scan performance day-by-day.
+
+----------------------------------------
+6. OPTIONAL GRAPH (HIGH VALUE)
+----------------------------------------
+
+Add a simple line graph:
+
+X-axis: Date
+Y-axis: Net profit per day
+
+This should update based on selected range.
+
+----------------------------------------
+7. BACKEND REQUIREMENTS
+----------------------------------------
+
+- All transactions (bets, payouts, deposits, withdrawals, rake)
+  MUST have timestamps
+
+- Create query:
+  getStats(startDate, endDate)
+
+- Aggregate:
+  SUM deposits
+  SUM withdrawals
+  SUM bets
+  SUM payouts
+  SUM rake
+
+- Group by date for daily breakdown
+
+----------------------------------------
+8. REMOVE / DEPRIORITIZE
+----------------------------------------
+
+- Remove “lifetime only” as main display
+- Keep lifetime as a toggle if needed, but NOT default
+
+----------------------------------------
+IMPORTANT NOTES
+----------------------------------------
+
+- This is for an RP casino economy (NoPixel)
+- “Cash in crate” must remain visible (real vault money)
+- Focus on REAL profit tracking, not vanity stats
+
+----------------------------------------
+END RESULT
+----------------------------------------
+
+When I open stats:
+- I can instantly see TODAY’S profit or loss
+- I can switch to a week and see trends
+- I can identify losing games fast
+- I can track if the casino is actually making money

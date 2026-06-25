@@ -1,0 +1,181 @@
+uploads = []
+
+[[generated]]
+id = "4jGRI1oEltAh9p0swMg0a"
+uri = "file://artifacts/casino/public/images/card-blackjack.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "FJr-z-sm1rO4tI8GwkwEH"
+uri = "file://artifacts/casino/public/images/card-slots.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "jJmya4VFfq0nG884ACQsd"
+uri = "file://artifacts/casino/public/images/card-roulette.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "88EDy5kHn9tkcVA2evcVB"
+uri = "file://artifacts/casino/public/images/card-baccarat.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "9bR04uDTOUxqh_c6QaMBg"
+uri = "file://artifacts/casino/public/images/card-horseracing.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "8kZ-nexatuaM3EciyaTUr"
+uri = "file://artifacts/casino/public/images/card-plinko.png"
+type = "image"
+title = "plinko card art"
+
+[[generated]]
+id = "MsUPKC655aNFfJlEh4JwB"
+uri = "file://artifacts/casino/public/images/card-poker.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "_NXMpCmb33pvOQR4sPrbz"
+uri = "file://artifacts/casino/public/images/card-tournaments.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "AK9fs0e1iXLOxZrlOv0JD"
+uri = "file://artifacts/casino/public/images/card-cases.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "MjO9ZILaXn7uOlftzN9QZ"
+uri = "file://artifacts/casino/public/images/casino-bg.png"
+type = "image"
+title = "rich atmospheric casino bg"
+
+[[generated]]
+id = "sZW7nBY1KxbDigzDTvT86"
+uri = "file://artifacts/casino/public/images/home-new-player.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "AGtuYuhDIqd6duFSG9NQp"
+uri = "file://artifacts/casino/public/images/home-login.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "XsO0-k3oxqglGddWYXO23"
+uri = "file://artifacts/casino/public/images/home-staff.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "5gVsKxHPkHPz-25CnB2jV"
+uri = "file://artifacts/casino/public/images/card-sports.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "c-uMOXmUdOSZEwPtPl293"
+uri = "file://artifacts/casino/public/images/card-mines.png"
+type = "image"
+title = "epic mines casino card"
+
+[[generated]]
+id = "8hDSjlUHVfzWVes6WFHmm"
+uri = "file://artifacts/casino/public/images/card-highlow.png"
+type = "image"
+title = "highlow card lobby image"
+
+[[generated]]
+id = "7GuKoMGhf3FhTE4LO8jE4"
+uri = "file://artifacts/casino/public/keno-card.png"
+type = "image"
+title = "keno card dark speakeasy"
+
+[[generated]]
+id = "wz1AVaHDD7PSiPli4jqF2"
+uri = "file://artifacts/casino/public/images/card-colosseum-gold.png"
+type = "image"
+title = "colosseum gold slots card"
+
+[[generated]]
+id = "5jT7hXyq9bQOpUHnVQdqR"
+uri = "file://artifacts/casino/public/babalari-coin.png"
+type = "image"
+title = "babalari gold coin icon"
+
+[[generated]]
+id = "gB6srd4-A3zYruBfljkjc"
+uri = "file://artifacts/casino/public/images/card-mob-tower.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "XKHGN7B7ECgAlo-00bIUt"
+uri = "file://artifacts/casino/public/images/card-table-games.png"
+type = "image"
+title = "table games casino card"
+
+[[generated]]
+id = "D9VVWxrQSwhRvS3W_4r17"
+uri = "file://artifacts/casino/public/images/card-mini-games.png"
+type = "image"
+title = "mini games arcade casino card"
+
+[[generated]]
+id = "E0SiR3YCYBjHgoNkilif1"
+uri = "file://artifacts/casino/public/images/card-live-events.png"
+type = "image"
+title = "Live Events lobby card image"
+
+[[generated]]
+id = "qd7Ntb6knbYTuLO9Yip7t"
+uri = "file://artifacts/casino/public/images/card-lottery.png"
+type = "image"
+title = "Lottery card image"
+
+[[generated]]
+id = "pOogQSqFuDtjNLyiwiTAq"
+uri = "file://artifacts/casino/public/images/card-bingo.png"
+type = "image"
+title = "Bingo card image"
+
+[[generated]]
+id = "WQGK6JFHVlSvxg5JZZxI3"
+uri = "file://artifacts/casino/public/images/lottery-machine.png"
+type = "image"
+title = "lottery ball machine speakeasy"
+
+[[generated]]
+id = "1CILYPpOgoy8POC9JrNYz"
+uri = "file://artifacts/casino/public/images/lottery-bg.png"
+type = "image"
+title = "dark casino background texture"
+
+[[outputs]]
+id = "DbgwaG89PRXbNnswoOcc2"
+uri = "file://artifacts/casino/public/images/card-mines.png"
+type = "image"
+title = "Mines Lobby Card"
+
+[[outputs]]
+id = "wi14Yz0jegOriQs3CvSDg"
+uri = "file://artifacts/casino/public/keno-card.png"
+type = "image"
+title = "Keno Lobby Card"
+
+[[outputs]]
+id = "DM5zYaxpFzuijgKHmtzBg"
+uri = "file://artifacts/casino/public/babalari-coin.png"
+type = "image"
+title = "Babalari Gold Coin"

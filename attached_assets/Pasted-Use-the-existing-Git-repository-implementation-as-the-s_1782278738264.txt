@@ -1,0 +1,39 @@
+Use the existing Git repository implementation as the source of truth for the sidebar navigation.
+
+Tasks:
+
+Locate the sidebar component in the Git repository and compare it against the current implementation.
+Revert or synchronize the current sidebar structure with the version stored in Git.
+Use the Git version's navigation hierarchy, styling, spacing, icons, routes, active states, and layout as the baseline.
+Remove any custom sidebar modifications that are not present in the Git version unless they are required elsewhere in the application.
+Preserve all role-based permissions, authentication checks, and staff-only access controls.
+Verify that all sidebar links resolve correctly after the changes.
+Run the application and confirm there are no TypeScript, React, routing, or build errors.
+
+Responsive & Dynamic Resolution Requirements:
+
+Make the sidebar fully responsive across all supported screen sizes and resolutions.
+Test and optimize the layout for:
+1920x1080+
+1440x900
+1366x768
+1280x720
+Tablets
+Mobile devices
+Ensure navigation elements scale and reposition correctly without overlapping, clipping, or creating horizontal scrollbars.
+Maintain proper spacing, padding, typography scaling, and icon alignment at all breakpoints.
+Ensure the bottom section and Account section remain properly aligned regardless of viewport height.
+Use responsive CSS/Flexbox/Grid patterns rather than fixed pixel positioning wherever possible.
+Prevent the sidebar from overflowing vertically on smaller screens.
+Verify that collapsed/mobile sidebar states function correctly and preserve all navigation functionality.
+Confirm that hover states, active states, notifications, badges, and role-based menu items render correctly at every resolution.
+Test browser zoom levels of 80%, 100%, 125%, and 150% to ensure the layout remains stable.
+Ensure the sidebar dynamically adapts to future menu additions without requiring manual positioning adjustments.
+
+Before making changes:
+
+Identify the sidebar component file(s).
+Show the Git version being used as the source of truth.
+List any differences between the current sidebar and the Git version.
+Then apply the updates and provide a summary of all modified files.
+Include screenshots or a verification report showing the sidebar at multiple viewport sizes after implementation.

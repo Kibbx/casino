@@ -1,0 +1,339 @@
+Update the Back Alley Bets admin system.
+
+Do not rebuild the site.
+Do not redesign unrelated pages.
+Do not remove existing promo code or referral systems.
+Do not break games, wallet, deposits, withdrawals, login, signup, or staff permissions.
+
+TASK 1 — SECURITY PANEL: RECENTLY CREATED ACCOUNTS
+
+Add a section or sub-tab inside the existing Security panel called:
+
+Recently Created Accounts
+
+Purpose:
+Security needs to quickly see new accounts from newest to oldest so they can catch alt accounts, promo abuse, free chip abuse, or suspicious account creation.
+
+Display accounts sorted by created date:
+
+Newest → Oldest
+
+Default view:
+Show newest accounts first.
+
+The table should include:
+
+- Player name
+- State ID
+- Phone number, if available
+- Account ID / user ID
+- Created date/time
+- Created how long ago, example:
+  - 5 minutes ago
+  - 2 hours ago
+  - 3 days ago
+- Promo code used, if any
+- Referral code used, if any
+- Starting bonus / free chips received, if any
+- Current chip balance
+- First deposit amount, if any
+- Total deposits
+- Total withdrawals
+- Total wagered
+- Account status / flag status, if available
+
+If a field does not exist, show:
+
+—
+
+or
+
+Not tracked
+
+Do not crash if older accounts are missing createdAt or promo/referral data.
+
+If createdAt is missing:
+- Show “Unknown”
+- Put those accounts below accounts with a real created date
+
+For new accounts going forward:
+Make sure createdAt is always saved during account creation.
+
+Filters/search:
+
+- Search by player name
+- Search by State ID
+- Search by phone number
+- Search by promo code
+- Search by referral code
+- Last 1 hour
+- Last 24 hours
+- Last 7 days
+- Last 30 days
+- All
+- Used promo code only
+- Used referral code only
+- Zero deposits only
+- Claimed free chips only
+
+If the existing player profile / flagging system exists, add quick actions:
+
+- View Player
+- Open Profile
+- Flag Account
+- Add Security Note
+
+Use the existing player/profile/flagging system.
+Do not create a new profile system.
+
+Permissions:
+Only staff who can already access the Security panel should see this section.
+Normal players must never access this data.
+
+Backend/API routes must enforce this.
+Do not rely only on hiding the frontend.
+
+TASK 2 — BANKER SIDE: GLOBAL ENABLE / DISABLE FOR PLAYER SELF-SERVICE CODES / TRANSFERS
+
+On the Banker side, in the same area where staff already manage:
+
+- Promo codes
+- Referrals
+
+Add a global enable/disable control for player self-service code usage and player self-service transfers.
+
+Purpose:
+If players start abusing promo codes, referral codes, or player-controlled transfers, bankers need a temporary kill switch so they can disable the system, handle the issue, and turn it back on later.
+
+Add these settings:
+
+promoCodesEnabled = true / false
+referralCodesEnabled = true / false
+playerTransfersEnabled = true / false
+
+The Banker side should show clear controls:
+
+Promo Codes: ENABLED / DISABLED
+Referral Codes: ENABLED / DISABLED
+Player Transfers: ENABLED / DISABLED
+
+These controls should live where the existing promo/referral management already exists.
+
+Do not create a random new page if the Banker promo/referral page already exists.
+
+PROMO CODES DISABLED BEHAVIOR:
+
+When promoCodesEnabled is false:
+
+- Players cannot redeem promo codes themselves
+- Promo code fields should be disabled or hidden from player-facing screens
+- Backend must reject promo code redemption
+- Existing promo codes are not deleted
+- Promo history is not deleted
+- Staff can still view/manage existing promo codes
+- Player should see:
+  “Promo codes are temporarily disabled.”
+
+When promoCodesEnabled is true:
+
+- Promo codes work normally again
+
+REFERRAL CODES DISABLED BEHAVIOR:
+
+When referralCodesEnabled is false:
+
+- Players cannot submit/use referral codes themselves
+- Referral fields should be disabled or hidden from player-facing screens
+- Backend must reject referral code claims
+- Existing referral codes are not deleted
+- Referral history is not deleted
+- Staff can still view/manage referral data
+- Player should see:
+  “Referral codes are temporarily disabled.”
+
+When referralCodesEnabled is true:
+
+- Referral codes work normally again
+
+PLAYER TRANSFERS DISABLED BEHAVIOR:
+
+When playerTransfersEnabled is false:
+
+- Players cannot use self-service transfers
+- Transfer UI should be disabled or hidden from player-facing screens
+- Backend must reject player-initiated transfers
+- Existing transfer history is not deleted
+- Staff/banker/admin manual transfers should still work if they already exist
+- Player should see:
+  “Player transfers are temporarily disabled.”
+
+When playerTransfersEnabled is true:
+
+- Player self-service transfers work normally again
+
+IMPORTANT BACKEND RULE:
+
+These toggles must be enforced backend-side.
+
+Do not only hide buttons on the frontend.
+
+Players must not be able to bypass disabled systems by calling API endpoints directly.
+
+Before applying promo reward:
+
+if promoCodesEnabled === false:
+  reject request
+  return "Promo codes are temporarily disabled."
+
+Before applying referral reward:
+
+if referralCodesEnabled === false:
+  reject request
+  return "Referral codes are temporarily disabled."
+
+Before allowing player self-transfer:
+
+if playerTransfersEnabled === false:
+  reject request
+  return "Player transfers are temporarily disabled."
+
+These checks must happen before:
+- crediting chips
+- marking code as used
+- creating reward history
+- moving balance
+- completing transfer
+- updating player stats
+
+PERMISSIONS:
+
+Use the existing Banker-side permissions for the staff who already manage promo codes and referrals.
+
+Whoever can already manage promo codes/referrals should be able to use these toggles.
+
+Normal players must never be able to change these settings.
+
+Backend/API routes that update these settings must enforce staff permissions.
+
+DATABASE / STORAGE:
+
+Use the existing project settings/config pattern.
+
+If Firebase/Firestore is used, use or create a settings document like:
+
+settings/playerControls
+{
+  promoCodesEnabled: true,
+  referralCodesEnabled: true,
+  playerTransfersEnabled: true,
+  updatedAt: timestamp,
+  updatedBy: staffUserId
+}
+
+If a settings/config collection already exists, use that instead.
+
+Do not create duplicate settings systems.
+
+AUDIT LOGGING:
+
+If audit logs already exist, log every toggle change.
+
+Log:
+
+- Staff user
+- Setting changed
+- Old value
+- New value
+- Timestamp
+
+Example:
+
+Promo Codes changed from ENABLED to DISABLED by staffUserId
+
+If audit logs do not exist, do not build a massive new audit system.
+A simple database log is fine only if it fits the existing architecture.
+
+UI STYLE:
+
+Match the existing Back Alley Bets admin style.
+
+Dark theme.
+Clean banker/admin controls.
+No generic white dashboard.
+Keep the current casino/noir/premium look.
+
+TEST CASES:
+
+1. Security staff opens Security panel:
+They see Recently Created Accounts.
+
+2. Recently Created Accounts:
+Newest accounts appear first.
+
+3. New account is created:
+createdAt is saved.
+
+4. Search State ID:
+Matching account appears.
+
+5. Filter promo code used:
+Only accounts with promo code usage appear.
+
+6. Banker opens promo/referral management:
+They see enable/disable controls for:
+- Promo Codes
+- Referral Codes
+- Player Transfers
+
+7. Promo codes disabled:
+Player cannot redeem promo code.
+Backend rejects it.
+No chips are credited.
+
+8. Referral codes disabled:
+Player cannot claim referral.
+Backend rejects it.
+No reward is credited.
+
+9. Player transfers disabled:
+Player cannot self-transfer chips.
+Backend rejects it.
+Manual staff/banker transfers still work if they already exist.
+
+10. Re-enable toggles:
+Systems work normally again.
+
+11. Existing promo/referral/transfer history:
+Not deleted.
+
+12. Unauthorized player:
+Cannot view or change controls.
+Cannot bypass disabled systems through API calls.
+
+DO NOT:
+
+- Do not rebuild the whole site.
+- Do not remove existing promo codes.
+- Do not remove referral codes.
+- Do not delete histories.
+- Do not break banker tools.
+- Do not break manual staff transfers.
+- Do not only hide frontend buttons.
+- Do not let backend endpoints bypass disabled settings.
+- Do not expose security account data to players.
+- Do not create duplicate settings systems.
+- Do not change unrelated games or wallet logic outside these checks.
+
+FINAL RESPONSE AFTER IMPLEMENTING:
+
+Tell me:
+
+1. Which files were changed.
+2. Where Recently Created Accounts was added.
+3. Where accounts are sorted newest to oldest.
+4. Where the player control settings are stored.
+5. Where promo code disable enforcement happens.
+6. Where referral code disable enforcement happens.
+7. Where player transfer disable enforcement happens.
+8. Which existing Banker-side permission controls these toggles.
+9. How to test turning each system off and back on.

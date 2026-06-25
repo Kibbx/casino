@@ -1,0 +1,33 @@
+Fix the table creation flow.
+
+When a staff/banker user creates a Blackjack table from the Staff Dashboard table creator, the created table should automatically appear as a playable card on the `/tablegames` route under the sidebar “Table Games” item.
+
+Requirements:
+
+* Route is exactly `/tablegames`.
+* The Staff Dashboard remains the admin/control area for creating, editing, enabling/disabling, passwording, and deleting tables.
+* The `/tablegames` page is the player-facing lobby/list view.
+* When a blackjack table is created in Staff → Tables → Blackjack, generate a Blackjack table card on `/tablegames`.
+* If a table has a password, show it as “Private” and require a password before joining
+* Cards should match the existing casino lobby style shown in the screenshots.
+* Clicking a card should take the player into that specific blackjack table or open the join flow.
+* Reuse the existing blackjack table creation data model/API/state instead of creating separate mock card data.
+* Make sure newly created tables appear immediately after creation without requiring a hard refresh.
+* Persist created tables so they still appear after page reload.
+* Add loading, empty, and error states for `/tablegames`.
+
+Implementation steps:
+
+1. Locate the existing Staff Dashboard blackjack table creator component.
+2. Identify where created blackjack tables are stored or posted.
+3. Connect `/tablegames` to the same blackjack table source.
+4. Render blackjack table records as lobby cards.
+5. Filter visibility based on enabled/open/private/user permissions.
+6. Ensure create, update, disable, and delete actions in Staff Dashboard update the `/tablegames` card list in real time.
+7. Test:
+
+   * Create blackjack table → card appears on `/tablegames`.
+   * Disable table → regular users no longer see it.
+   * Delete table → card disappears.
+   * Password-protected table → card shows Private and joining requires a password.
+   * Refresh page → table still exists and appears correctly.

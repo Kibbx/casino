@@ -1,0 +1,99 @@
+I want to upgrade the Promos → Regions editor so the canvas shows a real preview image of the selected page behind the editable promo boxes.
+
+Current problem:
+- The current region editor works, but it only shows a themed canvas/grid
+- That makes placement harder because I cannot see the actual UI layout of the page
+- I want to accurately place promo regions without accidentally covering important UI
+- I also want to clearly see the dimensions and position of the ad space while creating or editing it
+
+Main goal:
+When I select a page in the Regions editor, I want to see a visual preview of that actual page as the background of the region editor, with my promo regions overlaid on top, and I want live dimension readouts for the selected region.
+
+What I want:
+
+1. Real page preview background
+- In the Regions tab, when I choose a page (Lobby, Roulette, Slots, Blackjack, etc.), load a preview of that actual page layout in the editor
+- The preview should appear as the background layer
+- Promo region boxes should appear on top of it
+
+2. Overlay editing
+- Keep the current click-and-drag region system
+- Keep move/resize behavior
+- Keep region labels and selection handles
+- But place all of that on top of the page preview instead of a blank/themed canvas
+
+3. Preview accuracy
+- The preview should match the actual page structure as closely as possible
+- This can be done using either:
+  - a rendered scaled preview of the real page component/layout
+  - or a screenshot/image snapshot of the page
+- Prefer a real rendered preview if practical, but screenshot-based preview is acceptable if simpler and stable
+
+4. Safe placement
+- This is important because I want to avoid placing promo regions on top of important UI
+- Seeing the actual page will let me place banners in safe open areas
+
+5. Scaling behavior
+- Keep region coordinates stored as percentages
+- Make sure the preview and overlay use the same coordinate space
+- Region boxes should line up correctly regardless of editor size
+
+6. Editor behavior
+- Existing regions should load on top of the page preview
+- I should still be able to:
+  - draw new regions
+  - select regions
+  - move them
+  - resize them
+  - rename them
+  - delete them
+
+7. Dimension and position display
+- When I create, select, move, or resize a region, show:
+  - width
+  - height
+  - x position
+  - y position
+- Show this in a clean info panel, side panel, or bottom bar
+- Show both percentage values and approximate pixel values if possible
+- Example:
+  - Width: 28.5% (342px)
+  - Height: 12.0% (96px)
+  - X: 61.2% (734px)
+  - Y: 18.4% (147px)
+
+8. Live dimension updates
+- While drawing a new region, show live width/height as I drag
+- While resizing, update dimensions live
+- While moving, update x/y live
+- If practical, show a subtle small size label directly on the selected region box too
+
+9. Optional helpful features
+If possible, add:
+- a toggle to switch between:
+  - preview mode
+  - grid-only mode
+- adjustable preview opacity
+- a “safe zone” overlay if needed
+- a preview of how a promo image would look in the selected region
+- a “Refresh Preview” button if the page layout changes
+
+10. Technical direction
+- Do not break the existing Regions / Assets / Placements workflow
+- This should be an upgrade to the region editor UI only
+- Keep coordinates percentage-based
+- Make sure the page preview does not interfere with dragging/resizing
+- Keep the editor easy to understand for non-technical staff
+
+11. Important UX goal
+I want the Regions editor to feel like I am placing invisible promo boxes directly on the real page layout, not guessing on a blank canvas.
+I also want to clearly understand how big each ad space is without guessing.
+
+What I want from you:
+1. upgrade the region editor to show real page previews
+2. overlay existing and new promo regions on top of those previews
+3. preserve all current draw/move/resize functionality
+4. add live dimension and position readouts for selected regions
+5. show both % and px values if possible
+6. keep coordinate scaling accurate
+7. explain how the preview system works and how it stays aligned with live page layouts

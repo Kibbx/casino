@@ -1,0 +1,69 @@
+Update the new Sportsbook artifact/page so it uses the same shared application shell as the main casino dashboard and supports fully responsive, dynamic layouts across all screen sizes.
+
+Requirements:
+
+Add the existing top header to the Sportsbook page:
+Big House Casino logo
+Casino / Market tabs
+Search bar
+Silver II progress section
+Chips section
+User profile section
+Logout/navigation icon
+Add the existing left sidebar to the Sportsbook page:
+Home
+Table Games
+Mini Games
+Poker
+Sportsbook
+Tournaments
+Lottery
+Bingo
+Rewards
+Challenges
+Leaderboards
+Profile
+Staff
+The Sportsbook page should render inside the same layout wrapper used by the Home page, not as a standalone fullscreen artifact.
+Keep the Sportsbook content exactly as it is, but place it inside the main content area to the right of the sidebar and below the header.
+Make the Sportsbook sidebar item active when the user is on the sportsbook route.
+Fix spacing so the Sportsbook content does not overlap the header or sidebar.
+Reuse the existing shared layout components rather than creating new copies.
+Make the entire page dynamically responsive:
+Support all desktop resolutions (1920px, 2560px, ultrawide, etc.)
+Support laptops and smaller desktop screens
+Support tablets in both portrait and landscape
+Support mobile devices
+Eliminate fixed widths and fixed-height layouts where possible
+Use responsive grid/flex layouts
+Use fluid sizing and percentage-based widths
+Prevent horizontal scrolling
+Ensure sportsbook cards, betting markets, search controls, and bet slip resize appropriately
+Maintain proper spacing and alignment at every breakpoint
+Sidebar should collapse or adapt appropriately on smaller screens
+Header elements should stack or resize gracefully when space becomes limited
+Ensure the sportsbook content area expands to fill available screen space while respecting the shared layout.
+Verify:
+Header appears on Sportsbook.
+Sidebar appears on Sportsbook.
+Sportsbook content loads in the correct content area.
+Sportsbook content scales correctly across screen sizes.
+No clipping, overflow, or hidden content.
+No 404 errors.
+No layout breaking on resize.
+No broken imports.
+No TypeScript, ESLint, or build errors.
+Lighthouse responsive/mobile checks pass.
+Provide a summary showing:
+Files modified.
+Shared layout components integrated.
+Responsive improvements made.
+Breakpoints implemented.
+Any remaining layout issues requiring manual review.
+
+Important:
+
+Do not duplicate the header or sidebar components.
+Reuse the existing dashboard layout system.
+Preserve the current casino visual design, neon styling, and user experience.
+The Sportsbook page should feel like a native part of the platform, not a separate artifact or embedded application.

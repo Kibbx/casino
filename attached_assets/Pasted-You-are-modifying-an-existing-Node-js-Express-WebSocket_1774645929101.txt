@@ -1,0 +1,169 @@
+You are modifying an existing Node.js + Express + WebSocket casino project.
+
+🚨 CRITICAL OBJECTIVE:
+Completely REMOVE the current GTA-style horse racing system:
+
+* NO fixed odds
+* NO multipliers
+* NO house-paid winnings
+* NO preset payouts
+
+Replace it with a TRUE parimutuel (pool-based) system.
+
+---
+
+🔥 STEP 1 — HARD DELETE OLD SYSTEM
+
+Find and REMOVE all logic related to:
+
+* payout = bet * multiplier
+* any "odds" stored as fixed values
+* predefined odds tables
+* static odds per horse
+* any function that calculates winnings BEFORE the race
+* any logic where the HOUSE pays winnings directly
+
+Search for and remove:
+
+* multiplier
+* fixedOdds
+* payoutMultiplier
+* oddsTable
+* setOdds()
+
+---
+
+🔥 STEP 2 — NO STORED ODDS
+
+* DO NOT store odds in database
+* DO NOT save odds on horse or race objects
+
+Odds must be:
+✅ calculated live
+❌ never persisted
+
+---
+
+🔥 STEP 3 — POOL SYSTEM
+
+race.totalPool = sum of all bets
+race.bets = []
+horsePools = {}
+
+When bet is placed:
+
+* Add to race.bets
+* Increase race.totalPool
+* Increase horsePools[horseId]
+
+---
+
+🔥 STEP 4 — LIVE ODDS (DISPLAY ONLY)
+
+odds[horseId] = totalPool / (horsePool || 1)
+
+* Send via WebSocket
+* DO NOT use odds directly for payouts
+
+---
+
+🔥 STEP 5 — RACE OUTCOME
+
+Each horse has stats:
+
+* speed
+* stamina
+* acceleration
+* luck
+
+Compute:
+
+baseScore =
+speed * 0.35 +
+stamina * 0.30 +
+acceleration * 0.20 +
+luck * 0.15
+
+variance = random between -0.15 and +0.20
+
+finalScore = baseScore * (1 + variance)
+
+Winner = horse with highest finalScore
+
+---
+
+🔥 STEP 6 — PAYOUT SYSTEM (WITH EDGE CASE)
+
+totalPool = race.totalPool
+winningBets = bets where horseId === winner
+totalWinningPool = sum(winningBets.amount)
+
+---
+
+CASE A — NORMAL PAYOUT (bets exist on winner):
+
+houseCut = totalPool * 0.05
+ownerCut = totalPool * 0.10
+payoutPool = totalPool - houseCut - ownerCut
+
+For each winning bet:
+share = bet.amount / totalWinningPool
+payout = payoutPool * share
+creditPlayer(playerId, payout)
+
+creditOwner(winnerHorseId, ownerCut)
+
+---
+
+CASE B — EDGE CASE (NO BETS ON WINNING HORSE):
+
+IF totalWinningPool === 0:
+
+* NO bettor payouts
+* Split FULL pool between house and owner
+
+houseCut = totalPool * 0.50
+ownerCut = totalPool * 0.50
+
+creditOwner(winnerHorseId, ownerCut)
+
+---
+
+🔥 STEP 7 — VALIDATION
+
+Ensure:
+
+* ZERO multiplier logic remains
+* NO payouts are calculated before race ends
+* ALL payouts come ONLY from totalPool
+* This edge case is handled safely (no divide by zero)
+
+---
+
+🔥 STEP 8 — UI UPDATE
+
+REMOVE:
+
+* fixed odds
+* multiplier displays
+
+ADD:
+
+* live odds
+* total pool
+* estimated return
+
+---
+
+🔥 FINAL RESULT
+
+✔ No fixed odds anywhere
+✔ No multipliers anywhere
+✔ No house-funded payouts
+✔ Fully pool-based betting
+✔ Live odds only
+✔ House always profits
+✔ Owner earns 10% normally
+✔ SPECIAL RULE: If no bets on winner → 50/50 split between house and owner
+
+Implement cleanly without breaking auth, wallets, or websocket systems.

@@ -1,0 +1,353 @@
+Fix WESTERN SLOTS Wild behavior.
+
+Do not recreate Western Slots.
+Do not replace symbols.
+Do not redesign the game.
+Do not touch Roman Slots.
+Do not touch unrelated games.
+Do not change wallet logic except where Western Slots is crediting wrong wins.
+
+IMPORTANT CLARIFICATION:
+Wild DOES count as a fill-in symbol, but ONLY when it is connected on a valid left-to-right payline.
+
+Wild is NOT Scatter.
+Wild does NOT pay anywhere.
+Wild does NOT count globally.
+Wild does NOT help symbols that are separated by gaps.
+Wild does NOT connect symbols from random places on the board.
+
+Wild only substitutes inside a single payline, starting from reel 1, moving left to right, with no gaps.
+
+CORRECT WILD RULE:
+Wild can fill in for a normal symbol only if it is part of the consecutive left-to-right streak from reel 1.
+
+Normal symbols:
+- Bag
+- Crosses
+- Diamonds
+- Flask
+- Gun
+- Hat
+- Hearts
+- Spades
+
+Wild:
+- substitutes for normal symbols only inside connected paylines
+
+Scatter:
+- pays anywhere separately
+- Wild does not substitute for Scatter
+
+CONNECTED PAYLINE EXAMPLES:
+
+VALID:
+Spades, Wild, Spades, Bag, Hat
+
+This is:
+Spades + Wild-as-Spades + Spades
+Result:
+3x Spades
+
+VALID:
+Wild, Spades, Spades, Bag, Hat
+
+This is:
+Wild-as-Spades + Spades + Spades
+Result:
+3x Spades
+
+VALID:
+Spades, Spades, Wild, Diamonds, Bag
+
+This is:
+Spades + Spades + Wild-as-Spades
+Result:
+3x Spades
+
+VALID:
+Wild, Wild, Gun, Gun, Bag
+
+This is:
+Wild-as-Gun + Wild-as-Gun + Gun + Gun
+Result:
+4x Gun
+
+VALID:
+Gun, Wild, Gun, Wild, Bag
+
+This is:
+Gun + Wild-as-Gun + Gun + Wild-as-Gun
+Result:
+4x Gun
+
+INVALID:
+Spades, Hearts, Wild, Spades, Spades
+
+Result:
+No win.
+The chain breaks at reel 2.
+Wild on reel 3 cannot reconnect it.
+
+INVALID:
+Spades, Bag, Spades, Wild, Spades
+
+Result:
+No win.
+The chain breaks at reel 2.
+Later Wilds do not matter.
+
+INVALID:
+Wild, Scatter, Wild, Wild, Wild
+
+Result:
+No normal line win.
+Scatter breaks the line.
+Wild does not substitute for Scatter.
+
+INVALID:
+Spades on reel 1, Wild on reel 3, Spades on reel 5
+
+Result:
+No win.
+They are not connected.
+
+PAYLINE EVALUATION LOGIC:
+
+For each payline:
+1. Read exactly 5 symbols using the payline coordinates.
+2. Start from reel 1 only.
+3. Move left to right.
+4. Determine the target paying symbol:
+   - If reel 1 is a normal symbol, that is the target symbol.
+   - If reel 1 is Wild, look right until the first connected non-Wild normal symbol.
+   - If the first connected non-Wild symbol is Scatter, no normal line win.
+   - If the first 3+ connected symbols are all Wild, pay Wild.
+5. Count the connected streak:
+   - normal target symbol counts
+   - Wild counts as the target symbol
+   - any other normal symbol breaks the streak
+   - Scatter breaks the streak
+6. Stop counting immediately when the streak breaks.
+7. Pay only if matchCount is 3, 4, or 5.
+8. Only include connected positions in the winning positions array.
+9. Do not include symbols after the break.
+10. Do not scan later reels for another win after the chain breaks.
+
+IMPORTANT:
+Wild can bridge connected symbols, but it cannot jump over a different symbol.
+
+Example:
+Spades, Wild, Spades = valid because connected.
+
+Example:
+Spades, Hearts, Wild, Spades = invalid because Hearts breaks the chain before Wild.
+
+Example:
+Spades, Wild, Hearts, Spades = only two connected Spades/Wild, so no win.
+
+WILD SHOULD NOT BE COUNTED LIKE THIS:
+
+Wrong:
+Count all Spades and Wilds anywhere on a payline.
+
+Wrong:
+Count all Wilds anywhere on the grid.
+
+Wrong:
+Wild + Wild + Wild anywhere = payout.
+
+Wrong:
+Wild connects reel 1 to reel 4 through mismatched symbols.
+
+Wrong:
+Wild is grouped with Scatter as a special anywhere-pay symbol.
+
+CORRECT FUNCTION SHAPE:
+
+The win evaluator should create structured line wins like this:
+
+{
+  lineNumber: 5,
+  payline: [2,1,0,1,2],
+  symbol: "Spades",
+  matchCount: 3,
+  usedWild: true,
+  paytableValue: 10,
+  betPerLine: 2500,
+  payout: 25000,
+  positions: [
+    { reel: 0, row: 2, symbol: "Spades" },
+    { reel: 1, row: 1, symbol: "Wild" },
+    { reel: 2, row: 0, symbol: "Spades" }
+  ]
+}
+
+The positions array must only contain the connected symbols that paid.
+
+If the win is 3 symbols, positions length must be 3.
+If the win is 4 symbols, positions length must be 4.
+If the win is 5 symbols, positions length must be 5.
+
+FINAL WESTERN PAYTABLE:
+
+Bag:
+3 = 5
+4 = 20
+5 = 60
+
+Crosses:
+3 = 5
+4 = 25
+5 = 80
+
+Diamonds:
+3 = 10
+4 = 30
+5 = 100
+
+Hearts:
+3 = 10
+4 = 35
+5 = 120
+
+Spades:
+3 = 10
+4 = 40
+5 = 150
+
+Flask:
+3 = 15
+4 = 60
+5 = 200
+
+Hat:
+3 = 20
+4 = 80
+5 = 300
+
+Gun:
+3 = 30
+4 = 125
+5 = 750
+
+Wild:
+3 = 100
+4 = 500
+5 = 2000
+
+Scatter:
+3 = 2x TOTAL BET + 8 free spins
+4 = 10x TOTAL BET + 12 free spins
+5 = 50x TOTAL BET + 18 free spins
+
+PAYOUT MATH:
+
+totalBet = full spin cost
+lines = 20
+betPerLine = totalBet / 20
+
+Normal line payout:
+lineWin = betPerLine × paytableValue
+
+Scatter payout:
+scatterWin = totalBet × scatterMultiplier
+
+Do not multiply by 20 again.
+Do not treat totalBet as betPerLine.
+
+SCATTER SEPARATION:
+
+Scatter is handled separately from Wild.
+
+Scatter pays anywhere only if 3+ Scatter symbols exist on the full grid.
+
+Wild does not increase Scatter count.
+Scatter does not act as Wild.
+Wild does not trigger free spins.
+Wild does not trigger Scatter payout.
+
+ANIMATION / POPUP:
+
+The popup and animation must use the same structured lineWin data.
+
+If Wild helped on a connected line, show:
+
+Line 5: 3x Spades — Wild helped — 25,000
+
+If Wild is not part of a connected win, do not animate it.
+
+Do not animate Wild just because it landed.
+
+Do not show random Wilds as wins.
+
+Do not show symbols after the streak breaks.
+
+TEST CASES:
+
+Test 1:
+Payline:
+Spades, Wild, Spades, Bag, Hat
+
+Expected:
+3x Spades
+usedWild = true
+positions = first 3 only
+
+Test 2:
+Payline:
+Spades, Wild, Hearts, Spades, Spades
+
+Expected:
+No win.
+Only first 2 are connected before Hearts breaks.
+
+Test 3:
+Payline:
+Wild, Spades, Spades, Bag, Hat
+
+Expected:
+3x Spades
+usedWild = true
+
+Test 4:
+Payline:
+Wild, Wild, Gun, Gun, Bag
+
+Expected:
+4x Gun
+usedWild = true
+
+Test 5:
+Payline:
+Spades, Hearts, Wild, Spades, Spades
+
+Expected:
+No win.
+The chain broke at reel 2.
+
+Test 6:
+Payline:
+Wild, Scatter, Wild, Wild, Wild
+
+Expected:
+No normal line win.
+Scatter breaks the line.
+
+Test 7:
+Grid has 3 Wilds anywhere, but not connected on the same payline.
+
+Expected:
+No Wild payout.
+No free spins.
+No Scatter payout.
+No Wild animation.
+
+FINAL RESPONSE AFTER FIXING:
+
+Tell me:
+1. Which Western Slots files were changed.
+2. Where the connected Wild logic was fixed.
+3. Confirm Wild fills only inside connected left-to-right paylines.
+4. Confirm Wild does not count globally.
+5. Confirm Wild does not act like Scatter.
+6. Confirm popup and animations only use connected lineWin positions.

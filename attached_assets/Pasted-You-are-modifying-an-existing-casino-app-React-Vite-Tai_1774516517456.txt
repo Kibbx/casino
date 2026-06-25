@@ -1,0 +1,253 @@
+You are modifying an existing casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, PostgreSQL + Drizzle ORM, WebSockets already implemented).
+
+DO NOT break poker or existing systems.
+
+GOAL:
+Implement a complete visual Horse System with:
+
+* Horse Creator UI (admin)
+* Layered 2D rendering (HorseSprite)
+* Animated race track (HorseRaceTrack)
+* Owner tack colors
+* Race numbering (1–6)
+* Full integration into Tables → Horse Racing tab
+
+---
+
+## DATABASE CHANGES
+
+Update horses table:
+
+Add:
+
+* visualBase (string)
+* visualPattern (string)
+* visualFlair (string)
+
+Keep:
+
+* id
+* name
+* odds
+* weight
+* ownerId
+* ownerCut
+* totalEarnings
+
+---
+
+## BACKEND ROUTES
+
+POST /api/admin/horses/create
+
+Body:
+{
+name: string,
+odds: number (1–30),
+visualBase: string,
+visualPattern: string,
+visualFlair: string
+}
+
+Logic:
+
+* weight = 1 / (odds + 1)
+* normalize weights across horses
+* ownerCut:
+  1–3 → 1%
+  4–8 → 2%
+  9–15 → 3%
+  16–22 → 4%
+  23–27 → 5%
+  28–30 → 6%
+
+---
+
+GET /api/admin/horses
+
+Return all horses with visuals + ownerId
+
+---
+
+## ASSETS STRUCTURE
+
+/public/assets/horses/
+
+base/
+pattern/
+flair/
+tack/
+
+Starter sets:
+
+BASE:
+["brown","black","white","grey","chestnut","dark_bay"]
+
+PATTERN:
+["none","blaze","socks","stripe","spotted","pinto"]
+
+FLAIR:
+["none","glow","smoke","fire","neon","electric","gold"]
+
+---
+
+## FRONTEND COMPONENTS
+
+CREATE:
+
+components/horses/HorseSprite.tsx
+components/horses/HorseRaceTrack.tsx
+components/admin/HorseCreator.tsx
+
+---
+
+## HORSESPRITE COMPONENT
+
+Layer images:
+
+* base
+* pattern
+* tack (if owner)
+* flair
+* number badge
+
+Use absolute positioning and stacked <img> elements.
+
+Props:
+{
+base,
+pattern,
+flair,
+ownerColor?,
+number?
+}
+
+---
+
+## HORSECREATOR UI
+
+Add inside:
+Tables → Horse Racing tab
+
+UI:
+
+* Live preview (HorseSprite)
+* Dropdowns:
+  base / pattern / flair
+* Inputs:
+  name / odds (1–30)
+* Save button
+
+State:
+useState for all fields
+
+On save:
+POST /api/admin/horses/create
+
+---
+
+## HORSE RACETRACK (GTA STYLE)
+
+Create 6-lane track:
+
+Each lane:
+
+* horizontal row
+* horse moves left → right
+
+Use framer-motion:
+
+animate x: 0 → 100%
+
+---
+
+HORSE DATA:
+
+type Horse = {
+id,
+name,
+odds,
+visualBase,
+visualPattern,
+visualFlair,
+ownerColor?
+}
+
+---
+
+ANIMATION RULES:
+
+* running:
+  random position (70–95%)
+
+* finished:
+  winner → 100%
+  others → 80–98%
+
+Winner ALWAYS controlled by backend.
+
+---
+
+LANE UI:
+
+* left: number (#1–6)
+* center: animated horse
+* right: finish line
+
+---
+
+## OWNER TACK SYSTEM
+
+If horse.ownerId exists:
+
+Fetch player.primaryColor
+
+Apply to tack layer using CSS filter:
+
+filter: drop-shadow(color)
+
+---
+
+## INTEGRATION
+
+Use HorseSprite everywhere:
+
+* Horse Creator preview
+* RaceTrack lanes
+* Horse listings (future auction)
+
+REMOVE all emoji horses.
+
+---
+
+## STYLE RULES
+
+* Tailwind only
+* Dark theme
+* Clean cards
+* No clutter
+* Smooth animation (4–6s)
+
+---
+
+## IMPORTANT RULES
+
+* visuals DO NOT affect odds
+* backend controls winner
+* no emoji usage anywhere
+* keep performance lightweight
+
+---
+
+## FINAL RESULT
+
+You now have:
+
+* Admin Horse Creator tool
+* Layered 2D horse rendering system
+* Animated race track (visual, not bars)
+* Owner-colored tack system
+* Race numbering (1–6 lanes)
+* Fully integrated UI + backend
+
+Only output working code and required files.

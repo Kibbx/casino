@@ -1,0 +1,251 @@
+I need you to refactor my Blackjack game from SINGLEPLAYER into a true MULTIPLAYER blackjack table with 6 player seats.
+
+Main goal:
+Turn my current blackjack game into a shared live table where up to 6 players can sit around the table, see each other, and play in the same round. The game must also be able to start with only 1 player seated.
+
+Core requirements:
+- 6 player seats total
+- Game can start with just 1 seated player
+- Players sit around a visible blackjack table layout
+- Each seat should show the player’s profile image/avatar where they are sitting
+- The table should feel like a real multiplayer blackjack table, not a list of players
+- The dealer must be at the table visually as well
+
+What I want:
+1. Convert blackjack from singleplayer to multiplayer
+2. Add a real 6-seat table layout
+3. Let players join open seats
+4. Show each player’s profile image/avatar in their seat
+5. Show each player’s cards, bet, and turn state at their seat
+6. Support shared round flow with all seated players
+7. Keep the backend authoritative for all game logic
+
+Important rules:
+- 6 seats max
+- Game can begin with 1 or more players
+- Empty seats should remain visible and joinable
+- Players should stay associated with their seat until they leave, disconnect, or are removed
+- Each player only controls their own hand
+- Dealer is shared by the whole table
+- The table round should include all currently active seated players
+
+Game flow I want:
+1. Players join the blackjack table
+2. Players choose or are assigned an open seat
+3. Their profile image/avatar appears at that seat
+4. Players place bets for the next round
+5. Once at least 1 player has bet, the round can begin
+6. Dealer deals cards to all active seated players and to the dealer
+7. Players take turns in seat order
+8. Each player can only act on their own turn
+9. Dealer plays after all player turns are finished
+10. Server resolves outcomes for all active players
+11. Payouts are applied individually
+12. New betting phase begins
+
+Multiplayer behavior:
+- All seated players see the same shared table state
+- All seated players see:
+  - who is sitting in each seat
+  - profile images at seats
+  - current bets
+  - cards dealt to each player
+  - whose turn it is
+  - dealer hand
+  - round phase
+- Each player can only:
+  - place their own bet
+  - act on their own hand
+  - sit in or leave their own seat
+- Spectators can optionally watch if easy to support
+
+Table layout / UI requirements:
+I want a visual blackjack table where players sit around the table in 6 fixed seat positions.
+
+UI must include:
+- visible blackjack table background/layout
+- 6 seat positions arranged around the table
+- dealer position
+- each seated player’s avatar/profile image shown in their seat
+- player name near seat
+- current bet near seat
+- cards displayed in front of each seat
+- clear visual highlight for active turn
+- empty seats clearly marked as “Open Seat” or similar
+- seat button or join action for open seats
+- balance display for the local player
+- action buttons for the current player only:
+  - hit
+  - stand
+  - double
+  - split if supported
+- round state display:
+  - waiting for bets
+  - dealing
+  - player turn
+  - dealer turn
+  - results
+
+Backend requirements:
+The backend must be authoritative for:
+- seat assignment
+- bet validation
+- dealing cards
+- shuffling / deck state
+- turn order
+- hand actions
+- dealer logic
+- outcome resolution
+- payouts
+- balance updates
+
+Do NOT trust the client for:
+- card generation
+- turn progression
+- bet amounts
+- payout calculations
+- seat ownership
+
+State / architecture:
+Please refactor the game into a multiplayer table architecture with:
+- one blackjack table state
+- up to 6 player seats
+- shared dealer
+- round phase manager
+- player seat manager
+- turn manager
+- bet manager
+- payout manager
+
+Suggested round states:
+- WAITING_FOR_PLAYERS
+- WAITING_FOR_BETS
+- DEALING
+- PLAYER_TURN
+- DEALER_TURN
+- ROUND_RESOLUTION
+- RESETTING
+
+Suggested seat states:
+- empty
+- seated
+- bet_placed
+- active_in_round
+- standing
+- busted
+- blackjack
+- finished
+
+Player features needed:
+- join table
+- choose seat
+- leave seat
+- place bet
+- act on turn
+- see avatar and cards at seat
+- remain seated between rounds unless leaving
+- reconnect safely if possible
+
+Turn behavior:
+- Only players who placed a bet are active in the round
+- Turn order should follow seat order
+- Skip empty seats and players not in the round
+- Skip players who are already busted/stood/finished
+- Dealer acts only after all active player turns are complete
+- Results are resolved for each active player individually
+
+Profile image / avatar requirements:
+- Each player’s profile image must display clearly at their seat
+- Keep avatars easy to read and not too small
+- Add circular frame/border around avatar if helpful
+- Show player name below or beside avatar
+- Visually indicate active player with glow, ring, or highlight
+- Empty seats should show placeholder seat marker
+
+WebSocket / realtime events:
+Please create or refactor clean realtime events such as:
+- tableState
+- seatJoined
+- seatLeft
+- playerBetPlaced
+- roundStarted
+- cardsDealt
+- turnChanged
+- playerAction
+- dealerAction
+- roundResolved
+- balanceUpdated
+- seatUpdated
+- playerReconnected
+
+Data model suggestions:
+Please structure clean models for:
+- blackjack table
+- seat
+- player session
+- dealer hand
+- player hand(s)
+- round state
+- bets
+- actions
+- payouts
+
+If split support exists:
+- Keep split logic multiplayer-safe
+- Show split hands clearly at that player’s seat
+- Maintain correct turn order for split hands
+
+Configurable settings:
+Add a config section for:
+- min bet
+- max bet
+- number of seats
+- auto-start behavior
+- delay before round start
+- delay between turns if needed
+- delay before next round
+- whether spectators are allowed
+- whether split/double are enabled
+
+Testing / debugging:
+Please add support or helpers for testing:
+- 1 player seated round
+- multiple players seated round
+- full 6-player table
+- seat joining/leaving
+- turn order correctness
+- payout correctness
+- reconnect behavior if possible
+
+Frontend goals:
+- Make it feel like a real blackjack table
+- Seats should be visually placed around the table, not just a list
+- The local player should easily understand:
+  - where they are sitting
+  - who else is seated
+  - whose turn it is
+  - what actions are available
+- Make the UI clean, readable, and scalable
+
+If I already have singleplayer blackjack code:
+- Review the current implementation
+- Identify what is singleplayer-specific
+- Refactor it into shared multiplayer table architecture
+- Remove assumptions that only one player exists
+- Keep code modular and expandable later
+
+What I want from you:
+1. Review my current blackjack implementation
+2. Refactor it from singleplayer to multiplayer
+3. Add a 6-seat table system
+4. Add visible seat positions with avatars/profile images
+5. Build a server-authoritative round and turn manager
+6. Update frontend UI to a real table layout
+7. Keep code clean, modular, and commented
+8. Explain what changed and why
+
+Important design direction:
+- This should feel like a real online blackjack table
+- The table should work with only 1 player, but support up to 6
+- The seat layout and avatars are very important
+- Build it so I can later add features like spectators, table chat, multiple tables, and dealer animations

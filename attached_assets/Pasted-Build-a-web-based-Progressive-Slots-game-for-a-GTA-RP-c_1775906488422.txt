@@ -1,0 +1,117 @@
+Build a web-based Progressive Slots game for a GTA RP casino called "Back Alley Bets".
+
+CORE GAME:
+- 5 reels × 3 rows
+- 20 paylines
+- Bet sizes: 1k, 5k, 10k, 25k chips (configurable)
+- Spin + Auto-spin
+- Smooth reel animations (GTA-style, dark, gold/black theme)
+
+PROGRESSIVE JACKPOTS:
+Create 3 global shared jackpots:
+- Mini (frequent)
+- Major (medium)
+- Grand (rare)
+
+JACKPOT CONTRIBUTION (per spin):
+- 2% of bet → Mini
+- 1% → Major
+- 0.5% → Grand
+- Remaining goes to payouts + house edge
+
+Jackpots must:
+- Be shared across all players
+- Persist in backend
+- Update in real-time
+
+JACKPOT LOGIC (IMPORTANT):
+Use a “must-hit range” system, NOT pure random.
+
+Each jackpot has:
+- Min value (starting point)
+- Max value (must-hit cap)
+
+Example:
+- Grand: min 2,000,000 / max 5,000,000
+
+On each spin:
+- Calculate probability based on current jackpot value
+- The closer to max → higher chance to hit
+- If RNG passes threshold → jackpot hits
+- Reset jackpot to min after win
+
+Optional:
+- Require 3 scatter symbols OR allow random trigger
+
+SYMBOLS:
+- Low: cards, chips, dice
+- Mid: cash stacks, gold bars
+- High: Back Alley Bets logo
+- Special:
+  - Wild
+  - Scatter (bonus trigger)
+
+PAYOUT SYSTEM:
+- Weighted symbol probabilities
+- Frequent small wins
+- Occasional medium wins
+- Rare large wins
+- RTP target: 92%–96% (configurable)
+
+BONUS FEATURES:
+
+Free Spins:
+- Trigger: 3+ scatters
+- 10–15 spins
+- Multiplier: x2–x5
+
+Jackpot Wheel (optional):
+- Trigger randomly or via bonus
+- Rewards: Mini, Major, Grand, or cash
+
+RNG:
+- Server-side RNG only
+- Each spin independent
+- Track total wagers, payouts, and jackpot contributions
+
+ADMIN PANEL:
+
+Jackpots:
+- Set starting values
+- Adjust contribution %
+- Set min/max caps
+- Reset jackpots
+
+RTP / BALANCE:
+- Adjust symbol weights
+- Adjust payout multipliers
+- Toggle volatility modes (low / medium / high)
+
+ANALYTICS:
+- Total spins
+- Total wagered
+- Total paid out
+- Profit/loss
+- Jackpot win history
+
+UI STYLE:
+- GTA 5 / NoPixel inspired
+- Dark UI (black, dark wood, gold accents)
+- Clean but underground feel
+
+ANIMATIONS:
+- Reel spin blur
+- Win line highlights
+- Jackpot counter ticking upward live
+
+BALANCE RULES:
+- Avoid excessive dead spins (target <70% no-win spins)
+- Ensure frequent small wins for player retention
+- Ensure jackpots are funded by player bets
+- Maintain long-term house profitability
+
+FINAL REQUIREMENTS:
+- Fully configurable from backend
+- Designed for multiplayer/shared environment
+- Feels rewarding, not rigged
+- Builds jackpot hype over time

@@ -1,0 +1,199 @@
+I need you to completely redesign my slot machine from a basic/classic slot into a modern, high-volatility, bonus-driven slot experience.
+
+Current problems:
+- The slot feels like a classic/basic slot
+- Too predictable and boring
+- Too many small or break-even wins
+- No real excitement or big hit moments
+- Bonus spins exist but don’t feel impactful enough
+
+Goal:
+Transform this into a modern casino-style slot that is exciting, volatile, and designed for big moments and player engagement.
+
+---
+
+## 🎯 Core Design Direction
+
+I want a slot that feels like:
+- high energy
+- volatile
+- rewarding when it hits
+- capable of BIG wins
+- focused on bonus features
+- addictive but not obviously unfair
+
+NOT:
+- slow classic slot
+- constant tiny payouts
+- flat gameplay
+
+---
+
+## 🔥 Required Features
+
+### 1. Increase Volatility
+- Reduce frequency of small/break-even wins
+- Increase frequency of:
+  - dead spins
+  - occasional medium wins
+  - rare BIG wins
+- Target RTP: 88%–92% but with higher variance
+
+---
+
+### 2. Modern Reel System
+- Use 5 reels minimum
+- 20+ paylines OR ways system (like 243 ways)
+- Avoid simple 3-reel classic layout
+
+---
+
+### 3. Symbol System Upgrade
+Create a proper symbol hierarchy:
+
+- LOW symbols:
+  - common
+  - small payouts
+
+- MID symbols:
+  - moderate wins
+
+- HIGH symbols:
+  - bigger payouts
+
+- SPECIAL symbols:
+  - WILD
+  - SCATTER (bonus trigger)
+
+---
+
+### 4. BONUS SPINS (VERY IMPORTANT)
+Bonus spins should be the main excitement driver.
+
+Improve them:
+- Make them less frequent but more valuable
+- Add multipliers during bonus
+- Add increased wild frequency during bonus
+- Add potential for big payouts
+
+Example improvements:
+- 3 scatters = 10 free spins
+- during bonus:
+  - 2x–5x multipliers
+  - extra wilds
+  - higher hit potential
+
+---
+
+### 5. Add MULTIPLIERS
+- Random multipliers on wins (2x, 3x, 5x, etc.)
+- Bonus round multipliers stack or increase
+- Rare high multipliers for big hits
+
+---
+
+### 6. Add “WOW” Moments
+- Rare big win events (50x–500x+)
+- Bonus round explosions
+- Big multiplier hits
+
+Players should feel:
+“I almost had it”
+“one more spin”
+“this thing can hit big”
+
+---
+
+### 7. Reduce Junk Outcomes
+- Remove or reduce constant:
+  - 1.1x
+  - 1.2x
+  - tiny spam wins
+- Replace with:
+  - more losses
+  - better medium hits
+  - occasional strong wins
+
+---
+
+### 8. Add Spin Feedback / UX
+- Animate wins properly
+- Add:
+  - win flashes
+  - multiplier animations
+  - bonus trigger animation
+- Make spins feel impactful, not static
+
+---
+
+### 9. Configurable Balancing System
+Create a clean config section for:
+- RTP target
+- symbol weights
+- payout multipliers
+- bonus trigger rate
+- wild frequency
+- multiplier frequency
+- max win cap
+- volatility tuning
+
+NO hardcoded random values scattered in code.
+
+---
+
+### 10. Simulation Tool (IMPORTANT)
+Add a function to simulate many spins and output:
+- total wagered
+- total paid out
+- RTP
+- hit frequency
+- bonus trigger rate
+- average win
+- biggest win
+- distribution of wins
+
+This is required so I can tune balance.
+
+---
+
+## ⚙️ Implementation Requirements
+
+- Refactor existing slot logic into a weighted probability system
+- Use clear symbol definitions
+- Make reels configurable
+- Make bonus logic modular
+- Keep code clean and commented
+- Do NOT break existing functionality unless replacing it with better logic
+
+---
+
+## 🎨 UI / Feel Improvements
+
+- Make reels larger and more visible
+- Add modern styling (not old-school slot look)
+- Show win amounts clearly
+- Show multipliers clearly
+- Highlight bonus triggers
+
+---
+
+## 🧠 Final Goal
+
+I want:
+- more losses overall (so players chase)
+- fewer boring small wins
+- occasional solid hits
+- rare BIG wins
+- bonus spins that actually feel exciting
+
+---
+
+## ✅ What I want from you:
+
+1. Review my current slot implementation
+2. Replace classic slot logic with a modern system
+3. Improve bonus spin system significantly
+4. Add multipliers and volatility
+5. Add a clean config system
+6. Add a simulation tool
+7. Explain what you changed and why this is more exciting and profitable

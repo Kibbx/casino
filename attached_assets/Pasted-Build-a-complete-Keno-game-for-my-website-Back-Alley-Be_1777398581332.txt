@@ -1,0 +1,146 @@
+Build a complete Keno game for my website “Back Alley Bets” that also works inside FiveM NUI (tablet browser).
+
+========================
+COMPATIBILITY (VERY IMPORTANT)
+==============================
+
+* Must run as a normal website (hosted online)
+* Must ALSO work inside FiveM NUI (CEF browser)
+* Do NOT use heavy frameworks (no React/Vue)
+* Use vanilla HTML, CSS, JavaScript
+* Avoid anything that breaks in CEF:
+
+  * No external popups
+  * No unsupported APIs
+* Keep performance lightweight
+
+========================
+CORE GAME
+=========
+
+* Grid: 80 numbers (1–80)
+* Player selects 1–10 numbers (Picks)
+* Draw: 20 random numbers per round
+* Matches determine payout
+
+========================
+UI STYLE (GTA PREMIUM)
+======================
+
+* Background: #0b0f14
+* Panels: #121821
+* Tiles: #1a2430
+* Hover: #223041
+* Selected: #ff2a2a
+* Hit: #ffd700
+* Text: #e6edf3
+
+Layout:
+LEFT PANEL:
+
+* Bet input
+* ½ and 2x buttons
+* Picks selector (1–10)
+* "Selected: X / Picks"
+* Quick Pick
+* Clear
+* Play button
+
+MAIN:
+
+* 80-number grid
+
+BOTTOM/RIGHT:
+
+* Multiplier table (updates based on Picks)
+
+========================
+FUNCTIONALITY
+=============
+
+* Limit selections to Picks value
+* Disable Play unless valid
+* Quick Pick auto-selects numbers
+* Clear resets
+* Rebet repeats last bet
+
+========================
+ANIMATIONS (LIGHTWEIGHT)
+========================
+
+* Tile select = small scale pop
+* Draw = fast sequential reveal
+* Hits = simple gold flash
+
+========================
+PAYOUT TABLE
+============
+
+Use balanced multipliers (same structure as Stake but slightly nerfed for RP economy)
+
+========================
+BACKEND (WEB + FIVEM SAFE)
+==========================
+
+* All RNG and payouts handled server-side (Node.js or similar)
+* Endpoint: POST /api/keno/play
+
+Request:
+{
+bet: number,
+picks: number[]
+}
+
+Response:
+{
+drawnNumbers: number[],
+hits: number,
+payout: number
+}
+
+========================
+FIVEM SUPPORT
+=============
+
+* Detect if running inside FiveM:
+  if (window.invokeNative) OR GetParentResourceName exists
+
+* If in FiveM:
+  Use NUI callback:
+  fetch(`https://${GetParentResourceName()}/playKeno`, {...})
+
+* If on website:
+  Use normal API:
+  fetch('/api/keno/play', {...})
+
+* Same frontend must support BOTH automatically
+
+========================
+ANTI-EXPLOIT
+============
+
+* Never trust client
+* Validate picks count server-side
+* Rate limit requests
+* Prevent multi-tab abuse
+
+========================
+OUTPUT
+======
+
+* index.html
+* style.css
+* script.js
+* example backend route (Node.js)
+* example FiveM Lua callback
+
+========================
+GOAL
+====
+
+One Keno game that:
+
+* Works perfectly on website
+* Works inside FiveM tablet
+* Feels like GTA casino UI
+* Is smooth, fast, and NOT exploitable

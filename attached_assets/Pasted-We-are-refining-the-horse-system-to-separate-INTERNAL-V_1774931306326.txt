@@ -1,0 +1,113 @@
+We are refining the horse system to separate INTERNAL VALUE (AVG) from PLAYER-FACING UI.
+
+-------------------------------------
+BACKEND — AVG SYSTEM (ADMIN ONLY)
+-------------------------------------
+
+Each horse has 4 stats:
+- speed
+- stamina
+- acceleration
+- luck
+
+Compute avgStat as:
+
+avgStat = Math.round((speed + stamina + acceleration + luck) / 4)
+
+Rules:
+- Must calculate on horse creation
+- Must recalculate on any stat change
+- Must be stored in DB
+- Must NOT be editable manually
+
+IMPORTANT:
+- avgStat is INTERNAL ONLY
+- Do NOT expose avgStat in player-facing APIs (stables, race UI, etc.)
+
+-------------------------------------
+BACKEND — PRICE SYSTEM
+-------------------------------------
+
+Fields:
+- price (number | null)
+- isForSale (boolean)
+
+Rules:
+- If price is set → isForSale = true
+- If price is null → isForSale = false
+
+avgStat is used ONLY by admins to help determine pricing
+
+-------------------------------------
+API RULES
+-------------------------------------
+
+ADMIN / CREATOR ENDPOINTS:
+- Include avgStat
+- Include price
+- Include isForSale
+
+PLAYER / STABLES ENDPOINTS:
+- Include price
+- Include isForSale
+- EXCLUDE avgStat completely
+
+-------------------------------------
+FRONTEND — ADMIN HORSE LIST
+-------------------------------------
+
+Show:
+- Horse name
+- Rarity
+- Stats
+- AVG (avgStat) ← ADMIN ONLY
+- Price (editable)
+- For Sale toggle
+
+Admins can:
+- Set price
+- Remove price
+- View avgStat to guide pricing
+
+-------------------------------------
+FRONTEND — STABLES (PLAYER SIDE)
+-------------------------------------
+
+DO NOT change existing layout or stats display.
+
+ONLY ADD:
+
+If horse.isForSale === true:
+- Show a price tag badge (ex: "$350,000")
+- Place it cleanly on the card (top-right or under name)
+- Style: gold or green to stand out
+
+If not for sale:
+- Show nothing (no placeholder, no "$0")
+
+-------------------------------------
+SORTING (STABLES)
+-------------------------------------
+
+Sort order:
+
+1. Owned horses first
+2. Rarity (Legendary > Epic > Rare > Uncommon > Common)
+3. Keep existing sort behavior otherwise
+
+-------------------------------------
+IMPORTANT RULES
+-------------------------------------
+
+- avgStat must NEVER appear in stables or player UI
+- Pricing must feel consistent with stats (admin responsibility)
+- Do NOT alter race logic
+- Do NOT clutter the UI — only add price tag
+
+-------------------------------------
+END GOAL
+-------------------------------------
+
+- Admins see AVG → price horses correctly
+- Players ONLY see price → clean and immersive
+- System feels fair without exposing formulas

@@ -1,0 +1,72 @@
+Build a casino prize wheel system with the following logic:
+
+CORE SYSTEM:
+- The wheel consists of multiple prize segments (money, items, bonuses, etc.)
+- Each prize has:
+  - value (cost to the house)
+  - weight (chance to hit)
+  - optional stock limit (for inventory-based prizes)
+
+HOUSE EDGE + RTP:
+- The system must support a configurable RTP % (e.g. 85%–95%)
+- Total expected payout must always stay BELOW total player spend over time
+- Use this formula:
+    RTP = (Expected Total Payout / Total Wagered)
+
+- Dynamically adjust weights OR validate weights to ensure RTP target is met
+
+NO JACKPOT POOL:
+- Remove any "void", "pool", or "progressive pot"
+- All payouts come directly from the house balance
+- The house balance is virtual and assumed infinite unless configured
+
+SPIN LOGIC:
+- Player pays spin cost (e.g. $5)
+- RNG determines result based on weighted probabilities
+- Use a secure RNG (crypto if possible)
+- Immediately award prize
+
+PRIZE CONTROL:
+- Allow admin to:
+  - Add/remove prizes
+  - Set prize value
+  - Set weight OR auto-calculate weight based on RTP target
+  - Set max stock (optional)
+
+STOCK SYSTEM (OPTIONAL BUT IMPORTANT):
+- If a prize has limited stock:
+  - Reduce available spins for that prize when won
+  - If stock = 0 → remove from wheel automatically
+
+ANTI-ABUSE / FAIRNESS:
+- Each spin must be independent (no streak manipulation)
+- No fake near-misses
+- No outcome bias AFTER spin starts
+
+ADMIN PANEL:
+- RTP slider (e.g. 80%–98%)
+- “Auto Balance Weights” button:
+    → recalculates all prize weights based on:
+        - spin cost
+        - prize values
+        - target RTP
+
+- Live stats:
+  - total wagered
+  - total paid out
+  - actual RTP (real-time)
+  - profit
+
+UI / UX:
+- Smooth spinning animation (ease-out, realistic physics feel)
+- Highlight winning segment clearly
+- Show prize value before and after spin
+- Optional:
+  - sound effects
+  - confetti for big wins
+
+ADVANCED (OPTIONAL):
+- "Rare Drop Multiplier" system:
+    - extremely low chance prizes (e.g. 0.1%)
+- Tiered wheels (low, mid, high stakes)
+- Daily spin limits or cooldowns

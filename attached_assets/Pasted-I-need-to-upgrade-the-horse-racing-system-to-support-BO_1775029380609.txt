@@ -1,0 +1,109 @@
+I need to upgrade the horse racing system to support BOTH scheduled races and manual staff-controlled races, while still using the queue-based system and maintaining fairness.
+
+GOAL:
+
+* Keep full automated scheduling (EST-based)
+* Allow staff to manually create and control races
+* Ensure all races (manual or scheduled) go through the same queue and lifecycle
+* Only ONE race runs at a time
+* Maintain proper betting windows
+
+---
+
+1. MANUAL RACE SUPPORT
+
+---
+
+Add support for staff-created races.
+
+Staff must be able to:
+
+1. Create Instant Race
+
+* When triggered:
+
+  * scheduledTime = now + 2 minutes
+  * bettingOpensAt = now
+  * bettingClosesAt = scheduledTime - 10 seconds
+
+2. Create Scheduled Manual Race
+
+* Staff can choose custom date/time (EST)
+
+3. Priority Race (optional)
+
+* If priority = true:
+  → Add race to FRONT of queue (unshift instead of push)
+
+4. Cancel Race
+
+* If race.status == QUEUED:
+
+  * Remove from queue
+  * Release horses:
+
+    * isReserved = false
+    * reservedRaceId = null
+
+---
+
+2. CRITICAL RULES FOR MANUAL RACES
+
+---
+
+* Manual races MUST NOT bypass the queue
+* Manual races MUST NOT instantly start
+* Manual races MUST follow full lifecycle:
+  UPCOMING → LOCKED → RUNNING → FINISHED
+
+---
+
+3. SYSTEM INTEGRATION
+
+---
+
+Manual and scheduled races must use SAME logic:
+
+* Same horse selection rules
+* Same reservation system
+* Same betting system
+* Same lifecycle timing
+
+---
+
+4. ADMIN UI REQUIREMENTS
+
+---
+
+Add staff panel controls:
+
+* "Create Race Now"
+* "Schedule Race"
+* "Priority Race" toggle
+* "Cancel Race"
+* View:
+
+  * RaceQueue
+  * ActiveRace
+  * Upcoming races
+
+---
+
+5. SAFETY RULES
+
+---
+
+* Prevent staff from starting race instantly (must always allow betting window)
+* Prevent duplicate races at same time
+* Ensure horses are not reused across races
+* Ensure fatigue rules still apply
+
+---
+
+## EXPECTED RESULT
+
+* Staff can trigger races at any time
+* Scheduled races still run automatically
+* All races behave consistently
+* Betting remains fair
+* Only one race runs at a time

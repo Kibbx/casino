@@ -1,0 +1,222 @@
+You are adding a new feature to an existing Node.js + Express + WebSocket casino project.
+
+GOAL:
+Add a "Horse Stables" view INSIDE the existing horse racing game UI.
+
+This is NOT a separate page — it is a toggle view within the current horse racing interface.
+
+---
+
+🔥 FEATURE OVERVIEW:
+
+* Add a "STABLES" button in the horse racing header (top UI bar)
+* Clicking it switches the view from the race UI → stables view
+* Inside stables, users can:
+
+  * View all owned horses
+* Add a "BACK TO RACE" button to return to the race screen
+
+The stables UI MUST match the current race page styling (same colors, fonts, layout feel)
+
+---
+
+🔥 BACKEND CHANGES
+
+1. UPDATE HORSE MODEL
+
+Ensure each horse includes:
+
+horse = {
+id: string,
+name: string,
+ownerId: string,
+
+stats: {
+speed: number,
+stamina: number,
+acceleration: number,
+luck: number
+},
+
+rarity: string, // cosmetic only
+
+history: {
+races: number,
+wins: number,
+losses: number,
+earnings: number
+},
+
+createdAt: timestamp
+}
+
+---
+
+2. UPDATE RACE SETTLEMENT
+
+After each race completes:
+
+* For ALL horses in the race:
+  history.races += 1
+
+* For winning horse:
+  history.wins += 1
+  history.earnings += ownerCut
+
+* For all other horses:
+  history.losses += 1
+
+---
+
+3. CREATE API ROUTE
+
+GET /api/horses
+
+Returns ALL owned horses:
+
+[
+{
+id,
+name,
+ownerName,
+stats,
+rarity,
+history: {
+races,
+wins,
+losses,
+earnings
+}
+}
+]
+
+---
+
+4. OWNER NAME RESOLUTION
+
+* Map ownerId → player name
+* Only return safe public info (no sensitive data)
+
+---
+
+🔥 FRONTEND IMPLEMENTATION
+
+---
+
+5. HEADER BUTTON
+
+In the existing horse race UI header:
+
+Add button:
+
+[ RACE ] [ STABLES ]
+
+* Default = RACE view
+* Clicking STABLES switches UI state
+
+---
+
+6. VIEW SWITCHING (IMPORTANT)
+
+Use a state toggle:
+
+viewMode = "race" | "stables"
+
+IF viewMode === "race":
+show existing race UI
+
+IF viewMode === "stables":
+hide race UI
+show stables UI
+
+---
+
+7. STABLES UI
+
+Create a container that matches the race page styling:
+
+* Same background
+* Same card styles
+* Same spacing and fonts
+
+Display horses in a responsive grid
+
+---
+
+8. HORSE CARD DESIGN
+
+Each horse card shows:
+
+* Horse Name
+* Owner Name
+
+STATS:
+
+* Speed
+* Stamina
+* Acceleration
+* Luck
+
+(Use bars or styled numbers matching race UI style)
+
+RECORD:
+
+* Wins / Losses / Total Races
+
+EARNINGS:
+
+* Total earnings from owner payouts
+
+RARITY:
+
+* Cosmetic label or visual indicator
+
+---
+
+9. BACK BUTTON
+
+At top of stables view:
+
+[ ← BACK TO RACE ]
+
+Clicking:
+
+* Sets viewMode = "race"
+* Restores race UI
+
+---
+
+10. DATA FETCH
+
+When entering stables view:
+
+* Call GET /api/horses
+* Cache results briefly (optional)
+* Do NOT spam requests
+
+---
+
+11. OPTIONAL ENHANCEMENTS (IF EASY)
+
+* Sort by:
+
+  * Wins
+  * Earnings
+  * Races
+
+* Highlight top horses:
+
+  * "Top Earner"
+  * "Most Wins"
+
+---
+
+🔥 FINAL RESULT
+
+✔ Seamless toggle between Race and Stables
+✔ No navigation reloads
+✔ Uses existing UI theme
+✔ Shows real horse stats + history
+✔ Builds value and reputation system for horses
+
+Do NOT create a separate page or route for UI navigation — this must exist inside the current horse racing screen.

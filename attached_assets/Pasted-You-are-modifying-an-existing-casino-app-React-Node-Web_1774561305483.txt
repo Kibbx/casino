@@ -1,0 +1,243 @@
+You are modifying an existing casino app (React + Node + WebSockets).
+
+DO NOT break existing systems.
+
+GOAL:
+Implement a REAL-TIME horse race simulation lasting ~2 minutes 15 seconds using stat-driven movement and rarity modifiers.
+
+---
+
+## RACE CORE SETTINGS
+
+RACE_DURATION = 135 seconds
+
+TICK_RATE = 200ms (update every 0.2 seconds)
+
+TOTAL_TICKS = 675
+
+Track length = 100 units
+
+Each tick:
+
+* update horse positions
+* broadcast to frontend
+
+---
+
+## HORSE DATA MODEL
+
+Each horse has:
+
+{
+speed: 1–100,
+stamina: 1–100,
+acceleration: 1–100,
+luck: 1–100,
+rarity: "common" | "uncommon" | "rare" | "epic" | "legendary"
+}
+
+---
+
+## RARITY MODIFIERS
+
+common: 1.30
+uncommon: 1.15
+rare: 1.00
+epic: 0.80
+legendary: 0.60
+
+---
+
+## MOVEMENT SYSTEM (CORE LOGIC)
+
+Each tick:
+
+progressRatio = currentTick / TOTAL_TICKS
+
+---
+
+1. BASE SPEED
+
+baseSpeed = speed / 100
+
+---
+
+2. ACCELERATION (START BOOST)
+
+If progressRatio < 0.2:
+
+accelBoost = (acceleration / 100) * (1 - progressRatio * 5)
+
+Else:
+accelBoost = 0
+
+---
+
+3. STAMINA (ENDURANCE)
+
+If progressRatio > 0.7:
+
+fatigue = (1 - stamina / 100) * (progressRatio - 0.7) * 2
+
+Else:
+fatigue = 0
+
+---
+
+4. SECOND WIND (STAMINA BONUS)
+
+Chance to trigger once mid-race:
+
+If not triggered AND random < stamina / 200:
+
+secondWindBoost = +0.3 for next 2–3 seconds
+
+---
+
+5. LUCK (VARIANCE)
+
+luckVariance = random(-0.3 to 0.3) * (luck / 100)
+
+---
+
+6. RARITY MODIFIER
+
+rarityBoost = rarityModifier[horse.rarity]
+
+---
+
+7. FINAL MOVEMENT
+
+delta =
+(baseSpeed
+
+* accelBoost
+* secondWindBoost
+* luckVariance
+
+- fatigue)
+
+* rarityBoost
+
+Clamp delta to >= 0
+
+---
+
+8. UPDATE POSITION
+
+position += delta
+
+Clamp max = 100
+
+---
+
+## FINISH LOGIC (IMPORTANT)
+
+Race ends when:
+
+* first horse reaches 100
+* OR final tick reached
+
+---
+
+DO NOT snap positions.
+
+Let all horses finish naturally.
+
+Sort by position.
+
+---
+
+## WEBSOCKET UPDATES
+
+Emit every tick:
+
+race_update:
+{
+horses: [
+{ id, position }
+]
+}
+
+---
+
+## FRONTEND ANIMATION
+
+Use real-time positions:
+
+x = position %
+
+NO preset animation.
+
+Horses move based on live updates.
+
+---
+
+## CAMERA SYSTEM
+
+Track top 2 horses:
+
+leaders = sorted by position
+
+focus = (leader1 + leader2) / 2
+
+cameraOffset = -focus * 0.6
+
+Apply to track container.
+
+---
+
+## RACE TEXT SYSTEM
+
+Rotate messages based on progress:
+
+0–10%: "AND THEY'RE OFF!"
+30%: "EARLY LEAD!"
+60%: "MID PACK BATTLE!"
+80%: "FINAL STRETCH!"
+finish: "WINNER: [NAME]"
+
+Update automatically.
+
+---
+
+## PODIUM SYSTEM
+
+After race ends:
+
+Sort horses:
+
+1st = highest position
+2nd = next
+3rd = next
+
+Display podium UI:
+
+* 1st center, larger, glow
+* 2nd left
+* 3rd right
+
+---
+
+## IMPORTANT RULES
+
+* NO instant jumps
+* NO fixed animation timelines
+* movement must be continuous
+* stats MUST influence race outcome
+* rarity affects win probability, not visuals
+
+---
+
+## FINAL RESULT
+
+Horse racing now:
+
+* lasts ~2 minutes 15 seconds
+* feels realistic and dynamic
+* stats actually matter
+* rarity influences outcomes
+* camera follows the action
+* ends with natural finish + podium
+
+Only output working code and required files.

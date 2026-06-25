@@ -1,0 +1,106 @@
+Fix the player location tracking system so the Security/Admin panel shows the correct page each player is on in real-time instead of everything being stuck as "lobby".
+
+This is a WebSocket state sync issue. The frontend is not emitting page changes OR the backend is not updating player state correctly.
+
+Implement the following EXACTLY:
+
+1. FRONTEND
+
+Add a global function:
+
+function updateCurrentPage(page) {
+  if (window.socket) {
+    window.socket.emit("player:updatePage", { page });
+  }
+}
+
+Call this on EVERY page load AND on route change (important if using Wouter SPA routing):
+
+updateCurrentPage("lobby");
+updateCurrentPage("blackjack");
+updateCurrentPage("slots");
+updateCurrentPage("roulette");
+updateCurrentPage("poker");
+updateCurrentPage("plinko");
+updateCurrentPage("crash");
+
+Make sure it runs when navigating between pages, not just on refresh.
+
+--------------------------------------------------
+
+2. BACKEND (Socket.IO)
+
+Add this handler:
+
+io.on("connection", (socket) => {
+  socket.on("player:updatePage", ({ page }) => {
+    const player = players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    player.currentPage = page;
+
+    io.emit("admin:playerUpdate", {
+      id: player.id,
+      name: player.name,
+      currentPage: page,
+    });
+  });
+});
+
+--------------------------------------------------
+
+3. ON PLAYER CONNECT
+
+Make sure each player is linked to their socket:
+
+player.socketId = socket.id;
+
+--------------------------------------------------
+
+4. PLAYER STATE
+
+Each player object MUST include:
+
+{
+  id,
+  name,
+  socketId,
+  currentPage
+}
+
+--------------------------------------------------
+
+5. ADMIN / SECURITY PANEL
+
+Listen for updates:
+
+socket.on("admin:playerUpdate", (player) => {
+  updatePlayerInUI(player);
+});
+
+This must be real-time (WebSocket), not polling.
+
+--------------------------------------------------
+
+6. DEBUG REQUIREMENT
+
+If it still shows "lobby", log this on frontend:
+
+console.log("EMITTING PAGE:", page);
+
+And confirm "player:updatePage" is actually firing on navigation.
+
+--------------------------------------------------
+
+EXPECTED RESULT:
+
+- Player in lobby → "lobby"
+- Player in blackjack → "blackjack"
+- Player in slots → "slots"
+- Switching pages updates instantly with no refresh
+
+Do NOT hardcode "lobby".
+Do NOT fake values in UI.
+Do NOT use REST polling.
+
+Fix the root issue so page tracking works across the entire app.

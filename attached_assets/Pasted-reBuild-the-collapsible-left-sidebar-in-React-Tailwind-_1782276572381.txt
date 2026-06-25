@@ -1,0 +1,77 @@
+reBuild the collapsible left sidebar in React + Tailwind CSS. Match every detail exactly.
+
+Container
+
+Width: 192px expanded, 52px collapsed. Transition: width 0.2s ease
+Height: 100%, overflow-y: auto, flex-shrink: 0
+Background: rgba(8, 5, 5, 0.97)
+Right border: 1px solid rgba(255, 255, 255, 0.05)
+collapsed is a boolean passed in as a prop (the topnav hamburger button controls it)
+Section label (hidden when collapsed)
+
+Font size: 8px, weight 900, letter-spacing: 0.18em, text-transform: uppercase
+Color: rgba(255, 255, 255, 0.22)
+Padding: 12px 14px 4px
+Nav item button
+
+Full width, flex row, align-items: center, gap: 10px
+Padding: 10px 14px when expanded — 14px 0 with justify-content: center when collapsed
+Left border: 3px solid #e8400a when active, 3px solid transparent when inactive
+Background: rgba(232, 64, 10, 0.08) when active, none when inactive
+Hover background: rgba(255, 255, 255, 0.04)
+Icon: Lucide, size={15}
+Icon color: #fff when active, rgba(255, 255, 255, 0.45) when inactive
+Label text: font-size: 12px, font-weight: 700 active / 500 inactive, same color as icon
+Label is hidden when collapsed
+border: none, cursor: pointer, width: 100%
+Nav groups — Casino mode
+
+Group 1 — no section label, margin-top: 8px at top:
+
+Home — icon: Home
+Group 2 — section label "CASINO":
+
+Table Games — icon: CircleDot
+Mini Games — icon: Gamepad2
+Poker — icon: Spade
+Sportsbook — icon: Activity
+Group 3 — section label "EVENTS":
+
+Tournaments — icon: Trophy
+Lottery — icon: Zap
+Bingo — icon: Gift
+Group 4 — section label "THE HUB":
+
+Rewards — icon: Star
+Challenges — icon: Target
+Leaderboards — icon: BarChart2
+Group 5 — section label "ACCOUNT":
+
+Profile — icon: User
+Staff — icon: Crown
+Nav groups — Marketplace mode (swap in when appMode === "marketplace")
+
+Group 1 — no section label:
+
+Home — icon: Home
+Group 2 — section label "SELLER DASHBOARD":
+
+Item Listings — icon: Tag
+Trades — icon: ArrowLeftRight
+Sales History — icon: ListOrdered
+Stall Settings — icon: Settings
+Group 3 — section label "MARKETPLACE":
+
+Trending — icon: TrendingUp
+Shops — icon: Store
+Inventory — icon: Package
+Group 4 — section label "ACCOUNT":
+
+Profile — icon: User
+Staff — icon: Crown
+Behaviour
+
+activeNav string (e.g. "home", "poker") is stored in parent state. Clicking a nav item calls setActiveNav(item.id).
+Each item's id is its label lowercased with hyphens (e.g. "table-games", "the-hub" items use "rewards", "challenges", "leaderboards").
+When collapsed, section labels disappear entirely — only icons remain, centered in the 52px strip.
+All icons are from lucide-react.

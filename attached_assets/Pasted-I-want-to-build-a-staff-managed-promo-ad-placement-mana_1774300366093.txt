@@ -1,0 +1,204 @@
+I want to build a staff-managed promo/ad placement manager inside my casino site backend.
+
+Important:
+- This is NOT for public ad submissions
+- Regular users should NOT be able to submit anything
+- Only staff/admins should manage everything
+- The owner should be able to create and position promo regions on pages
+- Admins should be able to upload images into those available promo spots and set the duration for how long they stay live
+
+Goal:
+Create a clean backend-managed promo placement system where staff control all promotional image placements across the site.
+
+Main workflow I want:
+1. Owner creates promo regions/slots on specific pages
+2. Those regions become available placement spots
+3. Admins can go into the manager and upload promo images/banners
+4. Admins assign the uploaded promo to one of the available regions
+5. Admins set:
+   - start date/time
+   - end date/time
+   - active/inactive
+6. The site automatically shows the active promo in that region during the scheduled time
+
+Important:
+- No public submission system
+- No player upload system
+- Staff only
+- Keep it simple, controlled, and clean
+
+Main features needed:
+
+1. Promo Region Manager (Owner controlled)
+The owner should be able to:
+- create promo regions
+- edit promo regions
+- delete promo regions
+- assign regions to specific pages
+- visually position regions on the page
+- set region size and dimensions
+- set region name/key
+- enable/disable region
+- set desktop/mobile visibility if possible
+
+Example pages:
+- homepage
+- lobby
+- roulette
+- crash
+- blackjack
+- slots
+- tournaments
+
+Example region data:
+- region name
+- page key
+- x/y position
+- width
+- height
+- active toggle
+- z-index if needed
+- visibility settings
+
+2. Visual Region Editor
+Inside admin/backend:
+- owner can choose a page
+- see a preview/canvas of the page layout
+- create a promo region visually
+- drag and resize the region
+- save its placement
+- regions should act like defined promo spaces
+
+This should NOT be free-for-all chaos.
+Keep it structured and safe for layout.
+
+3. Promo Asset Manager (Admin controlled)
+Admins should be able to:
+- upload promo images/banners
+- give the promo a title/name
+- optionally add a link/URL
+- assign the image to a region
+- set start date/time
+- set end date/time
+- toggle active/inactive
+- preview the promo before publishing
+
+Promo entry fields should include:
+- title
+- image/banner file
+- optional target link
+- assigned region
+- start date/time
+- end date/time
+- status
+- active toggle
+- created by admin
+- notes if needed
+
+4. Scheduling / Duration
+The system must support:
+- scheduled start and end times
+- automatic showing/hiding based on schedule
+- only one active promo per region at a time unless rotation is enabled later
+- easy management of current and upcoming placements
+
+5. Frontend Rendering
+On the site frontend:
+- pages should load their configured active promo regions
+- each region should render the currently assigned active promo
+- if no promo is assigned, the region can stay empty or hidden
+- keep rendering modular and clean
+- do not hardcode promo images directly into pages
+
+6. Admin Dashboard Sections
+Create backend sections for:
+- Promo Regions
+- Promo Placements
+- Active Promos
+- Scheduled Promos
+- Expired Promos
+
+7. Data Structure
+Please create clean models/tables for:
+- promo_pages
+- promo_regions
+- promo_assets or promo_entries
+- promo_placements
+- optional promo_stats if tracking is added later
+
+Suggested structure:
+promo_regions:
+- id
+- name
+- page_key
+- x
+- y
+- width
+- height
+- is_active
+- desktop_visible
+- mobile_visible
+- created_at
+
+promo_entries / promo_assets:
+- id
+- title
+- image_url
+- target_url
+- uploaded_by
+- created_at
+- notes
+
+promo_placements:
+- id
+- region_id
+- promo_id
+- starts_at
+- ends_at
+- is_active
+- created_by
+- created_at
+
+8. Permissions
+Please separate permissions:
+- Owner:
+  - can create/edit/delete promo regions
+  - can configure placement zones
+- Admins:
+  - can upload promo images
+  - can assign promos to existing regions
+  - can schedule promo duration
+- Regular users:
+  - no access
+
+9. UI / UX Direction
+I want this system to feel like:
+- a clean internal promo manager
+- easy for staff to use
+- structured and organized
+- not like a public ad platform
+
+10. Important technical direction
+- keep the system modular
+- use reusable promo region rendering components
+- support future expansion later if I want rotation or analytics
+- but for now keep it focused on:
+  - owner-defined regions
+  - staff-uploaded images
+  - scheduled placements
+
+What I want from you:
+1. review my current backend/admin structure
+2. build a staff-managed promo/ad manager
+3. add owner-controlled page region creation
+4. add visual region placement editor
+5. add admin image upload + region assignment
+6. add start/end scheduling for placements
+7. render active promos on the frontend
+8. keep code clean and expandable
+9. explain what was built and how staff should use it
+
+Important:
+This should be a controlled internal system for staff-managed promo placements.
+Do NOT add public submissions.
+Do NOT build user-upload features.

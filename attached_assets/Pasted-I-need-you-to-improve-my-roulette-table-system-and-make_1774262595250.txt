@@ -1,0 +1,174 @@
+I need you to improve my roulette table system and make it properly support MULTIPLAYER.
+
+Current goal:
+- I want a live multiplayer roulette table where multiple players can sit at the same table and place bets during the same betting phase
+- All players should see the same wheel spin and the same winning result
+- The game should feel like a real shared live table, not a single-player roulette game
+
+What I want:
+- One shared roulette table state for all connected players
+- A betting phase with a visible countdown timer
+- Multiple players can place bets before the timer ends
+- When betting closes, no more bets can be placed
+- The wheel spins once for everyone
+- The winning number/color is resolved once and broadcast to all players
+- All player bets are evaluated against that one result
+- Payouts are calculated and applied individually
+- Then the table resets into the next betting phase
+
+Main features needed:
+1. Multiplayer shared table logic
+2. Real-time updates using WebSockets
+3. Betting timer / round state system
+4. Multiple bets per player
+5. Server-authoritative bet validation and spin result
+6. Clean UI updates for all players
+7. Stable round lifecycle
+
+Round flow I want:
+1. Table enters BETTING_OPEN state
+2. Countdown timer starts
+3. All connected players can place bets
+4. Bets are stored server-side
+5. Timer ends and table enters BETTING_CLOSED state
+6. Wheel spin starts
+7. Server generates winning number/result
+8. Result is broadcast to all players
+9. Server calculates payouts for every player
+10. Balances are updated
+11. Short result display period
+12. New round begins automatically
+
+Important technical requirements:
+- The server must be authoritative
+- Do NOT trust the client for balance changes, bet validation, or spin results
+- All chips, bets, and payouts must be handled on the backend
+- Clients should only send actions like placeBet, removeBet, clearBets, and joinTable
+- The backend should validate:
+  - player has enough balance
+  - bets are only placed during betting phase
+  - bet amount is valid
+  - bet type is valid
+  - table state allows the action
+
+Betting support:
+I want support for standard roulette bet types:
+- straight up
+- split
+- street
+- corner
+- six line
+- red/black
+- odd/even
+- low/high
+- dozen
+- column
+
+Multiplayer behavior:
+- All players at the table see:
+  - current round state
+  - countdown timer
+  - total table activity
+  - wheel spin animation trigger
+  - winning number/result
+- Each player should also see their own:
+  - placed bets
+  - total wager this round
+  - payout result
+  - updated balance
+- Other players should not be able to edit or remove someone else’s bets
+
+State management:
+Please create a clear table state machine, something like:
+- WAITING
+- BETTING_OPEN
+- BETTING_CLOSED
+- SPINNING
+- RESULT
+- PAYOUT
+- RESETTING
+
+Data model suggestions:
+I want a clean structure for:
+- table
+- round
+- player
+- player bets
+- bet type definitions
+- payout logic
+- WebSocket events
+
+Please refactor or build:
+- shared roulette table manager
+- round timer system
+- server-side bet collection
+- result resolution logic
+- payout calculation system
+- real-time event broadcasting
+
+WebSocket events I likely need:
+- tableState
+- timerUpdate
+- playerJoined
+- playerLeft
+- betPlaced
+- betRemoved
+- betsCleared
+- bettingClosed
+- spinStarted
+- spinResult
+- payoutResult
+- balanceUpdated
+- roundReset
+
+UI / frontend goals:
+- Show a real roulette table layout
+- Show chips placed on betting spots
+- Show countdown timer clearly
+- Show current round state
+- Show the winning number and color after spin
+- Show player balance and current total wager
+- Make the interface update live for all connected players
+- Make it easy to place multiple bets quickly
+
+Game logic requirements:
+- Prevent late bets after betting closes
+- Handle multiple players betting at the same time
+- Avoid race conditions when many bets come in near timer end
+- Make sure one round result is used for all players
+- Evaluate all bets correctly based on roulette rules
+- Keep the code modular and easy to expand later
+
+Balancing / limits:
+Add clean config values for:
+- minimum bet
+- maximum bet per spot
+- maximum total bet per round
+- maximum number of bet placements per player
+- betting phase duration
+- result display duration
+- table capacity if needed
+
+Testing / debugging:
+Please add a way to simulate or test:
+- multiple connected players
+- a full round cycle
+- simultaneous bet placement
+- payout correctness for all bet types
+- timer behavior and round transitions
+
+What I want from you:
+1. Review my current roulette implementation if I already have one
+2. Refactor it into a proper multiplayer shared table architecture
+3. Build or improve the backend round state manager
+4. Build clean WebSocket event handling
+5. Improve the frontend live table updates
+6. Keep code clean, commented, and configurable
+7. Explain what you changed and why
+
+Important:
+- Prioritize multiplayer shared-state architecture
+- Prioritize backend authority
+- Prioritize stability and clean round flow
+- Do not make this a fake client-side-only multiplayer system
+- Keep it expandable for future features like multiple tables, spectators, dealers, and table chat

@@ -1,0 +1,170 @@
+Fix the website UI so it is visible and usable inside the FiveM/NoPixel in-game tablet browser.
+
+Important context:
+The FiveM tablet is only a button that opens the normal website in-game.
+We only control the website.
+We do NOT control FiveM files, FiveM database, fxmanifest.lua, or the tablet resource.
+
+Problem:
+Inside FiveM, the backend/staff UI is hard to see or partially invisible. Text, rows, panels, buttons, inputs, and cards look washed out, transparent, blended into the background, or awful. The website looks better in a normal browser, but the in-game browser makes the UI unreadable.
+
+This is a WEBSITE CSS / RESPONSIVE VISIBILITY FIX ONLY.
+
+Do NOT change:
+- backend logic
+- database
+- auth
+- balances
+- deposits
+- withdrawals
+- chips
+- payouts
+- RNG
+- game math
+- API routes
+- staff permissions
+- player data logic
+
+Main goal:
+Make the existing backend/staff/admin UI fully visible inside the FiveM tablet browser by removing fragile transparent/glass styling at tablet sizes and replacing it with solid readable panels.
+
+Target viewport sizes:
+- 1024x768
+- 1280x720
+- 1366x768
+- 1440x900
+
+Do NOT require ?fivem=1.
+The tablet only opens the normal website, so this must work automatically with responsive CSS/media queries.
+
+Add CSS media queries for tablet/in-game browser sizes:
+
+@media (max-width: 1400px) { ... }
+@media (max-width: 1280px) { ... }
+@media (max-width: 1024px) { ... }
+
+Fix these visibility problems:
+
+1. Remove invisible glass styling at tablet widths
+At tablet widths, reduce or disable:
+- backdrop-filter
+- blur
+- heavy transparency
+- low opacity backgrounds
+- faint borders
+- text over background images
+- glow effects that make text muddy
+
+2. Make all backend panels solid
+At tablet widths, staff/admin/backend cards and panels should use solid dark backgrounds.
+
+Use strong readable colors like:
+- background: #070707 or #0b0b0f
+- panel: #111119 or #15151f
+- row: #191923
+- border: rgba(255,255,255,0.16)
+- text: #f5f5f5
+- muted text: #c9c9c9
+
+Do not leave panels at opacity like 0.05, 0.08, 0.1, or transparent glass if it makes them hard to see.
+
+3. Fix text invisibility
+At tablet widths:
+- all main text should be near-white
+- muted text should still be readable
+- labels should not be faint gray on transparent backgrounds
+- increase font weight slightly
+- avoid text smaller than 13px
+- make balances, player names, IDs, tags, statuses, and buttons readable
+
+4. Fix player rows
+At tablet widths:
+- make player rows solid dark
+- make rows taller
+- increase padding
+- strengthen row borders
+- remove low-opacity row backgrounds
+- prevent player info from blending into the background
+- make action buttons visible
+
+5. Fix buttons
+At tablet widths:
+- buttons must have solid backgrounds
+- button text must be high contrast
+- button borders must be visible
+- buttons should not be transparent unless still readable
+- increase button height and padding slightly
+- prevent button labels from disappearing
+
+6. Fix inputs/dropdowns/search
+At tablet widths:
+- inputs must have solid dark backgrounds
+- input text must be white/readable
+- placeholders must be readable
+- borders must be visible
+- dropdown menus must not be transparent
+
+7. Fix modals
+At tablet widths:
+- modals must use solid dark backgrounds
+- modal overlay should be dark enough
+- modal text/buttons/forms must be readable
+- modals must fit inside the viewport
+
+8. Fix background image interference
+At tablet widths:
+- darken the page overlay behind staff/admin pages
+- make content sit on solid panels
+- do not let the background image show through player rows/cards so much that text disappears
+
+9. Fix icons/badges/tags
+At tablet widths:
+- icons must be visible
+- badges must have solid background colors
+- tags must have readable text and visible borders
+- role/status labels must not blend into rows
+
+10. Add emergency FiveM-safe fallback class/styles
+Create a clear section in the CSS named:
+
+/* FiveM tablet visibility fallback */
+
+This section should force staff/admin UI elements to be visible at tablet widths.
+
+It should target existing dashboard classes/components and make them solid/readable without changing logic.
+
+11. Add debug mode
+When URL contains:
+?debug=viewport
+
+show a small debug box with:
+- viewport width
+- viewport height
+- devicePixelRatio
+- current route
+
+This is only for testing and should not show normally.
+
+Important rules:
+- Do not redesign the website.
+- Do not make a new app.
+- Do not require FiveM file changes.
+- Do not require database changes.
+- Do not require special tablet code.
+- Do not change backend/game/auth/balance/payout logic.
+- Only fix CSS/responsive visibility/readability.
+
+Acceptance criteria:
+- In FiveM tablet, nothing important is invisible.
+- Staff dashboard panels are visible.
+- Player rows are visible.
+- Text is readable.
+- Buttons are visible and usable.
+- Inputs/dropdowns are visible.
+- Modals are visible.
+- Background no longer washes out the UI.
+- Normal desktop website still looks good.
+- No backend or game logic changed.
+
+Main goal:
+Stop the backend/staff UI from being invisible or washed out inside the FiveM in-game browser by replacing fragile transparent/glass styling with solid high-contrast readable tablet-width CSS.

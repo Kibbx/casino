@@ -1,0 +1,286 @@
+Fix the UI styling across the ENTIRE backend/staff/admin area for FiveM tablet viewing.
+
+Important context:
+The FiveM tablet is only a button that opens the normal website in-game.
+We only control the website.
+We do NOT control FiveM files.
+We do NOT control FiveM database.
+We do NOT control fxmanifest.lua.
+We do NOT control the tablet resource.
+
+Problem:
+The issue is not only the Players page.
+This issue exists across the entire backend/staff area.
+
+The staff/admin/backend UI inside FiveM is too cramped, too transparent, hard to read, and not styled strongly enough.
+Important values like chips, deposits, credit scores, tags, statuses, action buttons, cards, tables, forms, and modals are not visually clear.
+Buttons are being abbreviated or compressed instead of showing proper full labels.
+The backend needs to look like a polished Back Alley Bets admin console, not a crushed desktop webpage.
+
+This is FRONTEND UI ONLY.
+
+Do NOT change:
+- backend logic
+- API routes
+- database schema
+- auth
+- balances
+- deposits
+- withdrawals
+- chips
+- payouts
+- RNG
+- game math
+- staff permissions
+- player data logic
+- button click handlers
+- calculations
+
+Goal:
+Create a consistent backend/staff/admin UI system that works across ALL backend pages inside FiveM tablet/browser view.
+
+Apply this to all backend/staff pages:
+- Players
+- Security
+- Tables
+- Games
+- Stats
+- Staff
+- Promos
+- Referrals
+- Loans
+- Deposits
+- Withdrawals
+- Any backend/admin modals
+- Any backend/admin forms
+- Any backend/admin tables/cards/lists
+
+Core design direction:
+- solid dark admin console
+- Back Alley Bets noir casino theme
+- black/charcoal panels
+- red/gold accents
+- readable white text
+- clear colored value badges
+- full readable action buttons
+- no fragile transparent glass UI
+- no invisible muted text
+- no cramped desktop rows
+- no abbreviated main buttons
+
+Required global backend UI fixes:
+
+1. Create shared backend UI classes/components if needed
+Create or update shared styles used across the staff/admin area.
+
+Use consistent classes for:
+- backend page wrapper
+- backend header
+- backend nav
+- backend card
+- backend panel
+- backend row
+- backend table
+- backend stat value
+- backend badge
+- backend action button
+- backend modal
+- backend form/input
+
+Do this without changing logic.
+
+2. Make backend pages solid and readable
+Across all backend pages:
+- reduce transparency
+- reduce glass blur
+- reduce backdrop-filter
+- use solid dark panels
+- strengthen borders
+- darken background overlay
+- make foreground content the focus
+
+Use safe colors:
+page background: #050507
+panel background: #101014
+card background: #15151d
+row background: #181820
+row hover: #20202a
+border: rgba(255,255,255,0.16)
+text: #f5f5f5
+muted text: #c9c9c9
+red accent: #ef4444
+gold accent: #f59e0b
+green accent: #22c55e
+blue accent: #38bdf8
+purple accent: #a855f7
+
+3. Full button labels everywhere
+Do NOT abbreviate primary backend action buttons.
+
+Use full labels wherever they exist:
+- Deposit, not Dep
+- Withdraw, not Wdw
+- Babalari, not Bab
+- Transfer, not Xfer
+- Referral, not Ref
+- Security, not Sec
+- Promote, not Promo if space allows
+- Disable, not Dis
+- Enable, not En
+
+If space is tight:
+- allow buttons to wrap cleanly
+- stack action groups
+- make row height taller
+- use a second action row
+- but do NOT abbreviate main button labels
+
+Small utility icons like edit/delete/key/notes can remain icon-only.
+
+4. Style money/value fields globally
+Across all backend pages, important values need visual styling.
+
+Create consistent styles for:
+- chips balance
+- deposits
+- withdrawals
+- profit/loss
+- loan amount
+- interest
+- rakeback
+- promo/referral amounts
+- Babalari amount
+- stats values
+
+Money/value styling rules:
+- chips = red/gold casino value style
+- deposits/income = green/gold
+- withdrawals/outgoing = red/orange
+- profit = green if positive, red if negative
+- neutral values = light text on dark pill/card
+- values should be bold, readable, and not blend into metadata
+
+5. Style credit scores/status badges globally
+Credit score/status badges should be real visible pills.
+
+Credit score examples:
+- Very Poor = dark red
+- Poor = orange/brown
+- Fair = yellow/gold
+- Good = green
+- Excellent = bright green/blue
+
+Badge requirements:
+- solid background
+- visible border
+- readable text
+- consistent padding
+- rounded pill
+- not tiny
+- not transparent
+
+6. Style tags/roles/flags globally
+Tags like:
+- FLAGGED
+- VIP
+- BANKER
+- OWNER
+- PLAYER ACCOUNT
+- BESTIES
+- CHIMPS
+- MAYHEM
+- HYDRA
+- referral tags
+- security tags
+- account status tags
+
+must be:
+- readable
+- solid or semi-solid
+- not invisible
+- not low-opacity
+- consistently padded
+- clearly separated from plain text
+
+7. Fix tables and lists globally
+For all backend tables/lists:
+- no crushed columns
+- no invisible text
+- no low contrast rows
+- no transparent rows over background image
+- rows/cards must be solid
+- values must be styled
+- action areas must be clean
+- if table is too wide, use contained table scroll or convert to cards at tablet widths
+- do not make the entire page horizontally scroll
+
+8. Fix backend modals/forms globally
+All backend modals/forms must:
+- use solid dark backgrounds
+- have readable labels
+- have visible inputs
+- have readable placeholder text
+- have visible dropdowns
+- fit inside the FiveM tablet viewport
+- use max-height: 90vh
+- scroll internally if needed
+- use full readable button labels
+
+9. Fix navigation/header globally
+Backend nav/header should:
+- remain readable at FiveM/tablet widths
+- keep tabs visible
+- avoid cramped spacing
+- keep Back Alley Bets branding readable
+- not overpower content
+- avoid text becoming tiny
+
+10. Responsive tablet behavior
+Target these sizes:
+- 1024x768
+- 1280x720
+- 1366x768
+- 1440x900
+
+Use responsive CSS/media queries:
+@media (max-width: 1440px)
+@media (max-width: 1280px)
+@media (max-width: 1024px)
+
+At those widths:
+- increase readability
+- keep full button labels
+- allow action rows to wrap
+- make cards/tables readable
+- keep panels solid
+- prevent horizontal page scrolling
+- keep vertical scrolling smooth
+
+11. Do not rely on ?fivem=1
+The FiveM tablet just opens the normal website.
+The backend UI must automatically adapt by viewport size.
+Do not require a special URL query.
+
+12. Do not only patch Players
+This must be a backend-wide UI pass.
+Audit every staff/admin/backend page and apply the same visual system.
+
+Acceptance criteria:
+- Players page uses full labels and styled chips/deposits/credit scores.
+- Security page is readable and styled.
+- Tables page is readable and styled.
+- Games page is readable and styled.
+- Stats page values are styled and readable.
+- Staff page is readable and styled.
+- Promos/referrals are readable and styled.
+- Loans/deposits/withdrawals are readable and styled.
+- All backend modals/forms are readable.
+- Main action buttons are not abbreviated.
+- No invisible text/buttons/cards.
+- No transparent washed-out rows.
+- No horizontal page scrolling.
+- Normal desktop website remains usable.
+- No backend/database/API/auth/balance/payout/RNG/game logic changed.
+
+Main goal:
+Make the entire backend/staff/admin area a consistent, readable, polished Back Alley Bets admin console that works inside the FiveM in-game tablet browser.

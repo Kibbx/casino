@@ -1,0 +1,162 @@
+I want to update the loan tier system to prevent players from exploiting progression using small loans.
+
+GOAL:
+Loan progression must be based on total value repaid (trusted volume), NOT number of loans.
+
+---
+
+1. CORE CHANGE: TRUSTED VOLUME
+
+---
+
+Replace loan count progression with:
+
+trustedVolume = total amount the player has successfully repaid across all loans
+
+* Increment trustedVolume only when payments are made
+* Store this on the player profile
+
+---
+
+2. LOAN TIERS (BASED ON TRUSTED VOLUME)
+
+---
+
+loanTiers = [
+{ name: "New", requiredRepaid: 0, cap: 75000 },
+{ name: "Unproven", requiredRepaid: 100000, cap: 150000 },
+{ name: "Trusted", requiredRepaid: 300000, cap: 300000 },
+{ name: "Reliable", requiredRepaid: 750000, cap: 600000 },
+{ name: "VIP", requiredRepaid: 2000000, cap: 1200000 }
+]
+
+Rules:
+
+* Player progresses tiers only when trustedVolume >= requiredRepaid
+* No skipping tiers
+
+---
+
+3. MINIMUM QUALIFYING LOAN
+
+---
+
+Prevent small loan spam:
+
+minQualifyingLoan = 50000
+
+Rules:
+
+* Loans below this value DO NOT count toward trustedVolume progression
+* Payments from these loans do not increase progression
+
+---
+
+4. OPTIONAL WEIGHTED PROGRESSION
+
+---
+
+Apply weighting so larger loans matter more:
+
+if (loanAmount >= 500000) multiplier = 1.5
+else if (loanAmount >= 250000) multiplier = 1.2
+else if (loanAmount < 50000) multiplier = 0.2
+else multiplier = 1.0
+
+trustedVolume += paymentAmount * multiplier
+
+---
+
+5. PROGRESSION BLOCKING (ANTI-RISK)
+
+---
+
+Block tier progression if player is risky:
+
+if (defaults > 0 OR overdueLoans > 2):
+blockTierProgression = true
+
+---
+
+6. MAX LOAN CALCULATION
+
+---
+
+Final max loan:
+
+maxLoan = Math.min(
+creditScore * multiplier,
+tierCap
+)
+
+* multiplier comes from banker settings
+* tierCap comes from current tier
+
+---
+
+7. UI UPDATES
+
+---
+
+In player Loans tab display:
+
+* Current Loan Tier
+* Tier Cap (max allowed loan)
+* Trusted Volume (total repaid)
+* Progress to next tier
+
+Example:
+
+Loan Tier: Trusted
+Trusted Volume: 300,000 / 750,000
+Max Loan: 300,000
+
+Add note:
+"Repay larger loans to increase your borrowing power"
+
+---
+
+8. BANKER SETTINGS (FULL CONTROL)
+
+---
+
+Add editable settings in staff dashboard:
+
+* loanTiers (caps + requiredRepaid)
+* minQualifyingLoan
+* progression multipliers
+* credit multiplier
+* progression block rules
+
+All values must be dynamic (stored in database, not hardcoded)
+
+---
+
+9. INTEGRATION RULES
+
+---
+
+* Do NOT break existing loan system
+
+* Integrate with:
+
+  * credit score system
+  * player profiles
+  * loan tracking
+  * stats page
+  * security system
+
+* Ensure performance is efficient
+
+* Ensure system cannot be exploited via small repeated loans
+
+---
+
+## END GOAL
+
+Create a progression system where:
+
+* Players must repay meaningful amounts to gain trust
+* Small loans cannot be used to game the system
+* Larger, riskier loans accelerate progression
+* Bankers have full control over tuning the system

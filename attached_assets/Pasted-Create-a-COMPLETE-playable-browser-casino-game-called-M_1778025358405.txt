@@ -1,0 +1,269 @@
+Create a COMPLETE playable browser casino game called “Mob Tower” with FULL custom-generated visuals, UI, animations, effects, and gameplay logic built together as one cohesive experience.
+
+IMPORTANT:
+DO NOT generate placeholder boxes, temporary assets, generic casino templates, or unfinished mockups.
+Generate a REAL polished game experience with original art integrated directly into the game.
+
+This should feel like a premium online casino game similar in quality to Stake or Rollbit originals, but fully themed around a criminal skyscraper climb for Back Alley Bets.
+
+==================================================
+CORE GAMEPLAY
+=============
+
+GAME NAME:
+Mob Tower
+
+GAME LOOP:
+
+* Player climbs a criminal skyscraper floor-by-floor.
+* Each floor has 3 doors.
+* Only 1 door is safe.
+* The other 2 doors are bust doors.
+* Player can cash out after any successful floor.
+* Wrong door instantly loses the bet.
+
+There are ONLY 8 floors.
+NO scrolling.
+The entire tower must always fit perfectly on screen.
+
+==================================================
+MULTIPLIER TABLE
+================
+
+Floor 1 = 1.46x
+Floor 2 = 2.18x
+Floor 3 = 3.27x
+Floor 4 = 4.91x
+Floor 5 = 7.37x
+Floor 6 = 11.05x
+Floor 7 = 16.57x
+Floor 8 = 24.86x
+
+==================================================
+VISUAL STYLE
+============
+
+STYLE:
+
+* premium online casino game
+* gangster luxury aesthetic
+* neon noir
+* cinematic atmosphere
+* underground mob empire
+* dark luxury casino energy
+
+NOT:
+
+* cartoon
+* anime
+* fantasy
+* cyberpunk overload
+* mobile game slop
+
+VISUAL QUALITY:
+Everything must look polished, expensive, cinematic, and production-ready.
+
+==================================================
+FULL CUSTOM ART GENERATION
+==========================
+
+Generate ALL visuals from scratch and integrate them into the game.
+
+==================================================
+BACKGROUND
+==========
+
+Generate:
+
+* animated nighttime city skyline
+* rain effects on windows
+* moving fog/smoke
+* subtle ambient lighting
+* neon reflections
+* luxury skyscraper atmosphere
+
+==================================================
+8 UNIQUE FLOOR ENVIRONMENTS
+===========================
+
+Generate and integrate unique themed floors:
+
+1. Alley Entrance
+2. Warehouse
+3. Underground Club
+4. VIP Lounge
+5. Counting Room
+6. Penthouse Hall
+7. Boss Office
+8. Rooftop Vault
+
+Each floor should:
+
+* visually escalate in luxury and tension
+* become more dangerous looking
+* feel like progression upward through a criminal empire
+
+==================================================
+DOORS
+=====
+
+Generate fully animated gangster-style doors.
+
+SAFE DOOR:
+
+* gold glow
+* green confirmation lighting
+* cinematic open animation
+* rewarding atmosphere
+
+BUST DOOR:
+
+* red emergency lighting
+* SWAT raid visuals
+* siren flashes
+* breach effects
+* dramatic fail reveal
+
+Door states:
+
+* idle
+* hover
+* selected
+* opening
+* success
+* busted
+
+==================================================
+GAMEPLAY UI
+===========
+
+LEFT PANEL:
+
+* bet amount input
+* start game button
+* current multiplier
+* potential payout
+* cashout button
+
+CENTER:
+
+* full vertical 8-floor tower
+
+RIGHT PANEL:
+
+* floor progression
+* current floor
+* win history
+* heat meter
+
+==================================================
+ANIMATIONS
+==========
+
+Generate smooth polished animations:
+
+* doors opening
+* subtle camera upward movement
+* floor transitions
+* rain movement
+* smoke drifting
+* red warning flashes
+* cash particles
+* glowing effects
+* rooftop finale cinematic
+* smooth hover transitions
+* subtle screen shake on busts
+
+==================================================
+FINAL FLOOR
+===========
+
+Floor 8 should feel legendary.
+
+Generate:
+
+* giant rooftop vault
+* helicopter spotlight
+* stormy skyline
+* flying cash
+* cinematic rain
+* dramatic gold lighting
+
+When player wins:
+
+* massive celebration animation
+* money explosion
+* vault opens
+* rooftop cinematic moment
+
+==================================================
+AUDIO PLACEHOLDERS
+==================
+
+Build support/hooks for:
+
+* ambient mob music
+* police radio chatter
+* bass hits
+* alarm sounds
+* helicopter ambience
+* vault sounds
+
+==================================================
+TECH STACK
+==========
+
+Use:
+
+* HTML
+* CSS
+* JavaScript
+
+Structure:
+
+* clean modular code
+* organized folders
+* responsive layout
+* optimized rendering
+* smooth performance
+* FiveM tablet compatible
+
+==================================================
+IMPORTANT DESIGN RULES
+======================
+
+* NO scrolling
+* all 8 floors visible at once
+* large readable buttons
+* immersive casino feel
+* polished professional UI
+* cinematic tension
+* responsive on tablet/browser
+* optimized animations
+* premium online casino presentation
+
+==================================================
+GAME FEEL
+=========
+
+The emotional feeling should be:
+
+“Climbing deeper into a luxury criminal empire while risking everything.”
+
+The game should feel:
+
+* tense
+* rewarding
+* dangerous
+* stylish
+* immersive
+* addictive
+* premium
+
+NOT like:
+
+* a cheap browser minigame
+* a placeholder UI
+* generic casino templates
+
+Generate the COMPLETE game experience with the visuals integrated directly into gameplay.

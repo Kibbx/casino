@@ -1,0 +1,120 @@
+Build a web-based casino game called “Mines” reskinned for a Back Alley Casino theme.
+
+DO NOT change the core Mines logic. Only change visuals, naming, and UI.
+
+---
+
+## CORE GAME RULES (KEEP SIMPLE)
+
+* Grid-based Mines game (default 5x5)
+* Player selects number of bombs (1–24)
+* Clicking tiles reveals:
+
+  * SAFE → increases multiplier
+  * BOMB → instant loss
+* Player can cash out anytime before hitting a bomb
+* Multiplier increases per safe tile
+
+---
+
+## THEME (IMPORTANT)
+
+Replace default Mines visuals with:
+
+SAFE TILE:
+
+* piles of cash
+* duffel bags of money
+* money spilling out of crates
+
+BOMB TILE:
+
+* “cop bust” theme
+* visual ideas:
+
+  * jack-in-the-box crate that opens → police lights
+  * flashing red/blue siren
+  * overlay text: “BUSTED”
+
+CLOSED TILE:
+
+* wooden crate (top-down view)
+* subtle glow on hover
+
+---
+
+## VISUAL STYLE
+
+* Dark casino theme (black / charcoal background)
+* Gold + red accents
+* Clean, flat UI (NO realistic photos)
+* GTA-style UI feel (sharp, minimal, high contrast)
+* All elements must be readable at small size
+
+---
+
+## ANIMATIONS (KEEP LIGHT)
+
+* Tile click → quick pop animation
+* Safe → money pops out slightly
+* Bomb → quick red flash + siren effect
+* No heavy animations (must stay fast)
+
+---
+
+## UI ELEMENTS
+
+Top area:
+
+* Bet amount input
+* Bomb count selector
+* Start button
+
+Game area:
+
+* 5x5 clickable grid
+
+Bottom area:
+
+* Current multiplier (large, centered)
+* Cashout button (highlighted)
+
+---
+
+## SOUNDS (OPTIONAL BUT LIGHT)
+
+* click sound on tile
+* subtle cash sound on safe
+* short siren sound on bust
+
+---
+
+## IMPORTANT CONSTRAINTS
+
+* Do NOT overdesign tiles (keep icons simple)
+* Do NOT add extra game mechanics
+* Do NOT add backend complexity
+* This must run smoothly in browser and on embedded tablet UI
+* Optimize for performance
+
+---
+
+## OUTPUT REQUIREMENTS
+
+* Single-page app (HTML + CSS + JS)
+* Clean modular JS (no spaghetti code)
+* All assets inline or simple placeholders
+* Easy to swap icons later
+
+---
+
+## FINAL TOUCH
+
+Display game title:
+“BACK ALLEY MINES”
+
+Use bold, clean font with strong contrast.
+
+---
+
+## END

@@ -1,0 +1,42 @@
+Use the existing Git repository implementation as the source of truth for the application header/navigation bar.
+
+Tasks:
+
+Locate the header/navbar component in the Git repository and compare it against the current implementation.
+Revert or synchronize the current header structure with the version stored in Git.
+Use the Git version's layout, styling, spacing, typography, icons, navigation controls, search functionality, profile controls, notifications, status indicators, and responsive behavior as the baseline.
+Remove any custom header modifications that are not present in the Git version unless they are required elsewhere in the application.
+Preserve all existing functionality, permissions, authentication states, user profile logic, notification systems, search behavior, and route handling.
+Ensure all header actions, buttons, dropdowns, menus, links, and controls function correctly after synchronization.
+Verify that all routes and navigation interactions resolve correctly.
+Run the application and confirm there are no TypeScript, React, routing, styling, or build errors.
+
+Responsive & Dynamic Resolution Requirements:
+
+Make the header fully responsive across all supported screen sizes and resolutions.
+Test and optimize the layout for:
+1920x1080+
+1440x900
+1366x768
+1280x720
+Tablets
+Mobile devices
+Ensure all header elements scale and reposition correctly without overlapping, clipping, wrapping incorrectly, or creating horizontal scrollbars.
+Maintain proper spacing, alignment, typography scaling, icon sizing, and visual hierarchy at all breakpoints.
+Ensure profile information, search bars, currency displays, notifications, user status indicators, and navigation controls remain visible and usable at all supported resolutions.
+Use responsive CSS/Flexbox/Grid patterns instead of fixed-width positioning whenever possible.
+Implement graceful handling for limited horizontal space, including collapsing, stacking, truncation, or responsive menu behavior where appropriate.
+Verify that mobile and tablet header states function correctly and preserve all navigation functionality.
+Confirm that dropdown menus, modals, notifications, hover states, active states, badges, and user controls render correctly at every resolution.
+Test browser zoom levels of 80%, 100%, 125%, and 150% to ensure the layout remains stable.
+Ensure the header dynamically adapts to future additions without requiring manual layout adjustments.
+Verify that the header integrates correctly with the sidebar and main content area at all viewport sizes.
+
+Before making changes:
+
+Identify the header/navbar component file(s).
+Show the Git version being used as the source of truth.
+List all differences between the current header and the Git version.
+Then apply the updates and provide a summary of all modified files.
+Include screenshots or a verification report showing the header at multiple viewport sizes after implementation.
+Document any functionality that could not be restored exactly from the Git version and explain why.

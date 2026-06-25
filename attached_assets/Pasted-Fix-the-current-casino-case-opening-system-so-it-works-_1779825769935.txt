@@ -1,0 +1,171 @@
+Fix the current casino case-opening system so it works like CS:GO cases.
+
+Do NOT rebuild the whole case system.
+Do NOT replace the current cases.
+Do NOT change the site theme.
+Do NOT rewrite the UI unless it is required for the odds fix.
+Do NOT give me example code unless I ask for it.
+
+Current problem:
+The case system is using lifetime case data, case history, or case stats since the case was created to influence prize results. This is causing the system to “catch up” and dump jackpots.
+
+That behavior must be completely removed.
+
+Required behavior:
+Every case opening must be a fresh independent weighted roll using ONLY the selected case’s own prize table.
+
+Each case must be its own separate odds pool.
+
+Example:
+If a player opens Street Case, only Street Case prizes and Street Case weights can be used.
+If a player opens High Roller Case, only High Roller Case prizes and High Roller Case weights can be used.
+
+No case should ever borrow:
+- odds from another case
+- prizes from another case
+- weights from another case
+- jackpot history from another case
+- payout history from another case
+- global case stats
+- lifetime case stats
+
+CS:GO-style rules:
+Every open is independent.
+The odds do not change because of previous opens.
+The odds do not change because the case has existed for a long time.
+The odds do not change because the case has made profit.
+The odds do not change because the case has not paid a jackpot recently.
+There is no “jackpot is due” logic.
+There is no pity system.
+There is no RTP catch-up system.
+There is no dynamic balancing system.
+
+The only allowed inputs for selecting a prize are:
+1. the selected case ID
+2. that selected case’s prize table
+3. that selected case’s configured prize weights
+4. one secure random roll for this single case opening
+
+Staff/admin stats are allowed, but they must be reporting only.
+Stats must NEVER affect RNG, weights, jackpot odds, prize selection, or payout logic.
+
+Keep odds adjustable:
+The staff/admin case editor must still allow us to adjust each prize’s odds.
+
+However, odds should not be limited to whole percentages.
+The current lowest possible chance being 1% is too high for jackpots.
+
+Switch the odds system to editable integer weights so we can support odds below 1%, such as:
+- 0.26%
+- 0.10%
+- 0.05%
+- 0.01%
+
+The admin UI can display the calculated percentage, but the backend should use weights for the actual roll.
+
+Use this as the default CS:GO-style rarity structure, but do not hardcode it permanently:
+
+Common: 79.92%
+Uncommon: 15.98%
+Rare: 3.20%
+High Tier: 0.64%
+Jackpot: 0.26% / about 1 in 385
+
+We need to be able to adjust these per case.
+
+Prize selection requirements:
+- Load the selected case.
+- Load only that selected case’s prize table.
+- Use only enabled prizes for that selected case.
+- Use only that selected case’s configured weights.
+- Roll once using secure server-side RNG.
+- Select exactly one prize.
+- Award exactly one prize.
+- Log the result after the prize is selected.
+
+The frontend animation is visual only.
+The frontend must not decide the prize.
+The backend must decide the prize.
+The animation must land on the backend-selected prize.
+
+Remove or bypass any prize-selection logic that uses:
+- lifetime opens
+- total opens since case creation
+- case created date
+- total case profit
+- total case payout
+- lifetime RTP
+- target RTP
+- current RTP
+- payout deficit
+- payout surplus
+- jackpot count
+- jackpot history
+- jackpot due logic
+- pity counter
+- correction factor
+- dynamic odds
+- adjusted odds
+- dynamic weight
+- adjusted weight
+- balancing system
+- previous player wins/losses
+- global case stats
+- stats from other cases
+
+Validation requirements:
+Block opening and show/log an error if:
+- the selected case does not exist
+- the selected case has no prizes
+- all prizes are disabled
+- total weight is invalid
+- any enabled prize has invalid odds/weight
+- the selected prize is missing
+- the selected prize is disabled
+
+Do not silently fall back to another case.
+Do not silently use global case odds.
+Do not silently use default odds if a case has broken odds.
+
+Admin UI requirements:
+For each case prize, show:
+- prize name
+- prize value
+- editable weight/odds control
+- calculated percentage
+- rough odds, like “1 in 385”
+- enabled/disabled status if supported
+
+Also show:
+- total case weight
+- expected payout if possible
+- warning if jackpot odds are above 0.26%
+- warning if any prize has invalid odds/weight
+- warning if total case weight is invalid
+
+Logging requirements:
+After each case open, log:
+- user ID
+- case ID
+- case name
+- case cost
+- selected prize ID
+- selected prize name
+- selected prize value
+- roll result
+- total weight
+- calculated prize chance
+- timestamp
+- profit/loss for that open
+
+Logs are reporting only.
+Logs must not alter future odds.
+
+Final confirmation needed:
+After fixing it, show me:
+1. what lifetime/global odds logic was removed or bypassed
+2. confirmation that each case only uses its own prize table
+3. confirmation that every opening is a fresh independent roll
+4. confirmation that lifetime stats are reporting only
+5. where the admin UI lets us adjust odds/weights
+6. one example case showing calculated percent and rough odds

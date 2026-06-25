@@ -1,0 +1,48 @@
+Build a dark casino dashboard shell in React + Vite + Tailwind CSS called "Big House Casino".
+
+Global style
+
+Root background: #050303
+Primary accent: #e8400a (orange-red), secondary accent: #f5c518 (gold)
+Font: Rajdhani (Google Fonts) for headings/brand, system sans-serif for body
+Cards use backdrop-filter: blur(8px) and background: rgba(10,7,7,0.92)
+Each card has an animated neon-glow border — a @keyframes pulse that cycles box-shadow with the card's accent color. Colors: green, red, pink, orange, blue, yellow, teal. Apply via class names like neon-green, neon-orange, etc.
+Top navbar (52px, fixed at top)
+Three-zone layout — left, center (search pinned to viewport center), right:
+
+Left: hamburger icon to collapse sidebar → brand name "Big House Casino" (white + orange glow on "Casino") → volume mute icon + horizontal range slider (custom-styled, fill left of thumb in accent color) → Casino / Market pill toggle (active tab = orange background)
+Center: search bar with magnifier icon, placeholder "Search games, events, players…", rounded, dark fill
+Right: tier badge (e.g. "Silver II" with a progress bar underneath), chips counter (coin icon + number), user avatar circle with name + rank label, logout icon
+Bottom border: 1px solid rgba(232,64,10,0.1); background rgba(5,3,3,0.97) with backdrop-filter: blur(16px)
+Left sidebar (collapsible, 192px expanded / icon-only collapsed)
+
+Dark background rgba(8,5,5,0.97), right border 1px solid rgba(255,255,255,0.05)
+Grouped nav items with uppercase section labels (e.g. CASINO, EVENTS, THE HUB, ACCOUNT)
+Nav groups: Home · Casino (Table Games, Mini Games, Poker, Sportsbook) · Events (Tournaments, Lottery, Bingo) · The Hub (Rewards, Challenges, Leaderboards) · Account (Profile, Staff)
+Active item: left border 3px solid #e8400a, background rgba(232,64,10,0.08), text white
+Hover: background rgba(255,255,255,0.04)
+Collapsed: show icons only, no labels, section dividers hidden
+Main content area
+
+Scrollable, padded (px-6 pt-8), max-width 1280px centered
+Subtle radial glow blobs (blurred ellipses, opacity ~5%) in the accent color in top-left and bottom-right corners of each page
+Section headers
+
+Full-width row: gradient line → glowing dot → uppercase title text → glowing dot → gradient line
+Lines fade from the dot color outward to transparent
+Title: all-caps, wide letter-spacing, muted white
+Recently Played cards (220px wide, horizontal scroll row)
+Each card has:
+
+Top: 128px image with a gradient overlay (dark at bottom), category badge (top-left, dark pill), WON/LOST pill (top-right, green or red)
+Body: game name in Rajdhani bold uppercase, stacked avatar dots showing player count (A B C D circles, dark bordered), time-ago label with clock icon, result amount in green (+$) or red (-$) with glow, "Play Again" ghost button
+Live Activity cards (same 220px format)
+Same structure but:
+
+Status pill instead of WON/LOST (colors: cyan for In Progress, orange for Active, red pulsing dot for Race Live)
+Active bets amount in gold (#f5c518) instead of result
+"Join" button: orange outline that fills solid orange with glow on hover
+Both card rows scroll horizontally with hidden scrollbar.
+
+Routing
+State-driven (no URL router needed). activeNav string controls which page component renders in the main area. Sidebar nav items set it on click.

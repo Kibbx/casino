@@ -1,0 +1,259 @@
+I want to add a full promo code + referral tracking system to my existing casino website.
+
+IMPORTANT RULES:
+
+* DO NOT break or rewrite existing systems
+* DO NOT replace the current Promos page — EXTEND it
+* Use my existing backend (Node.js + Express + TypeScript + PostgreSQL + Drizzle)
+* Integrate into my current player auth system, balances, and staff dashboard
+* Return FULL updated files (not partial snippets)
+
+---
+
+## CRITICAL UI CHANGE (DO THIS FIRST)
+
+Update the existing "Chips & Deposits" section.
+
+REMOVE this text:
+"See the Banker"
+"To deposit or withdraw chips, find Salvatore Ditacchio in-person. He handles all chip transactions."
+
+REPLACE WITH:
+
+🏦 Teller Window
+
+All chip transactions are handled at the casino location.
+
+📍 South Side • Jamestown St • 348
+
+Our staff at the teller window can assist with:
+
+* Deposits
+* Withdrawals
+* Chip purchases
+
+Make sure:
+
+* This replaces the existing text (not duplicated)
+* Styling remains consistent with current UI
+* No layout breaks
+
+---
+
+## FEATURES TO BUILD
+
+1. PROMO CODES SYSTEM
+
+Support TWO types of codes:
+
+* "single_use" → can only be used ONCE globally
+* "multi_use" → unlimited total uses, but only ONCE per player
+
+Each code must support:
+
+* reward_type: "chips" OR "freeplay"
+* reward_amount
+* optional max_uses limit
+* active toggle
+
+---
+
+## DATABASE TABLES (DRIZZLE)
+
+Create tables:
+
+promo_codes:
+
+* id (uuid primary key)
+* code (string, unique, uppercase)
+* type ("single_use" | "multi_use")
+* reward_type ("chips" | "freeplay")
+* reward_amount (number)
+* max_uses (number, nullable)
+* total_uses (number, default 0)
+* created_by (string)
+* active (boolean, default true)
+* track_conversion (boolean, default false)
+* created_at (timestamp)
+
+promo_redemptions:
+
+* id (uuid primary key)
+* player_id (string)
+* code_id (uuid)
+* redeemed_at (timestamp)
+
+referral_stats:
+
+* id (uuid primary key)
+* referrer_player_id (string)
+* referred_player_id (string)
+* total_deposited (number, default 0)
+* total_wagered (number, default 0)
+* total_profit_generated (number, default 0)
+
+---
+
+## PROMO REDEEM ENDPOINT
+
+Create:
+
+POST /api/promo/redeem
+
+Request body:
+{
+code: string
+}
+
+Logic:
+
+1. Convert code to uppercase
+
+2. Find promo code
+
+3. If not found OR inactive → return error
+
+4. If max_uses exists AND total_uses >= max_uses → reject
+
+5. Check promo_redemptions:
+
+   * If player already redeemed this code → reject
+
+6. Apply reward:
+   IF reward_type = "chips":
+   add to player chip balance
+   IF reward_type = "freeplay":
+   add to a separate "freeplay_balance" (non-withdrawable)
+
+7. Insert into promo_redemptions
+
+8. Increment total_uses
+
+9. If promo_code.track_conversion = true:
+
+   * store promo_code_id on player profile (if not already set)
+
+Return success + updated balances
+
+---
+
+## REFERRAL TRACKING (IMPORTANT)
+
+Hook into existing systems:
+
+WHEN a referred player:
+
+* deposits chips
+* places bets
+* wins/loses
+
+UPDATE referral_stats:
+
+* total_deposited += deposit amount
+* total_wagered += bet amount
+* total_profit_generated += (house profit from that player)
+
+NOTE:
+House profit = player losses - player winnings
+
+Make sure this runs in:
+
+* deposit endpoint
+* blackjack logic
+* roulette logic
+* slots logic
+* poker logic
+
+---
+
+## ADMIN PANEL (EXTEND PROMOS PAGE)
+
+Add new sections WITHOUT removing existing ones:
+
+1. "Promo Codes"
+
+* Create Code Form:
+
+  * code input
+  * type dropdown (single_use / multi_use)
+  * reward type dropdown (chips / freeplay)
+  * reward amount
+  * max uses (optional)
+  * track_conversion toggle
+
+* Codes Table:
+
+  * code
+  * type
+  * total uses
+  * max uses
+  * active toggle
+  * created by
+
+2. "Redemptions"
+
+* Show:
+
+  * player name
+  * code used
+  * timestamp
+
+3. "Referral Performance"
+
+* Show:
+
+  * referrer name
+  * number of players referred
+  * total deposited
+  * total wagered
+  * total profit generated
+
+---
+
+## FRONTEND (PLAYER SIDE)
+
+On the Chips & Deposits page:
+
+Add section:
+
+🎁 Promo Code
+
+* input field
+* redeem button
+
+Behavior:
+
+* call POST /api/promo/redeem
+* show success or error message
+* update balance UI instantly
+
+---
+
+## VALIDATION / SAFETY
+
+* Codes are case-insensitive but stored uppercase
+* Prevent double submissions (disable button while loading)
+* One redemption per player per code
+* Log all redemptions
+
+---
+
+## UI RULES
+
+* Match current site styling
+* Do NOT break layout
+* Clean integration only
+
+---
+
+## FINAL OUTPUT REQUIREMENTS
+
+* Return ALL updated backend files
+* Return ALL updated frontend files
+* Ensure no TypeScript errors
+* Ensure project builds and runs
+* Do NOT leave TODOs or incomplete code
+
+---
+
+Build this fully and correctly.

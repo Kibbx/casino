@@ -1,0 +1,652 @@
+Add a full live Bingo system to the casino website.
+
+This must be a dealer-run live casino event game, not an automated instant game.
+
+Bingo only uses these roles:
+
+1. Banker
+2. Dealer
+
+Do not create a role called Bingo Dealer.
+Do not reference Bingo Dealer anywhere.
+Use Dealer.
+
+Do not involve Junior Banker.
+Do not involve Cage Clerk.
+Do not use “banking roles” as a group.
+Only exact Banker can manage Bingo settings, prices, rates, max cards, payout rules, house cut, or prize pool settings.
+
+====================================
+BANKER — BINGO SETTINGS ONLY
+====================================
+
+Banker can set and edit:
+- Bingo card price
+- Max cards per player
+- House cut percent
+- Prize pool percent
+- Winning pattern / event type
+- Bingo payout/rate settings
+
+Banker can view:
+- Bingo card sales
+- Total prize pool
+- House profit
+- Bingo payouts
+- Bingo round history
+- Bingo revenue stats
+
+Only Banker can edit Bingo settings.
+
+Dealer cannot edit Bingo settings.
+Players cannot edit Bingo settings.
+
+Permission check for Bingo settings must specifically require:
+- Banker
+
+Do not allow Dealer to edit Bingo settings unless that staff member also has the Banker role.
+
+====================================
+DEALER — LIVE GAME OPERATOR
+====================================
+
+Dealer runs the live Bingo round.
+
+Dealer can:
+- Access the Dealer Bingo panel
+- Create/open a Bingo round using current Banker-set settings
+- Open card buying
+- Close card buying
+- Start the round
+- Click Draw Next Ball
+- Undo last drawn ball if permission is enabled
+- View active players
+- View how many cards each player bought
+- Inspect player Bingo cards
+- See player marked numbers
+- Compare marked numbers against drawn numbers
+- Review Bingo claims
+- Approve or reject Bingo claims
+- End the round after winners are handled
+
+Dealer cannot:
+- Change card price
+- Change max cards per player
+- Change house cut percent
+- Change prize pool percent
+- Change payout rules
+- Edit player card markings
+- Manually choose the next ball number
+- Edit chip balances outside of approved Bingo payouts
+- Access Banker Bingo settings unless they also have Banker permission
+
+====================================
+ROUND SYSTEM
+====================================
+
+Create Bingo rounds with statuses:
+- Waiting
+- Buying Open
+- Buying Closed
+- In Progress
+- Claim Review
+- Completed
+- Cancelled
+
+Each round should store:
+- roundId
+- status
+- dealerId
+- cardPrice
+- maxCardsPerPlayer
+- houseCutPercent
+- prizePoolPercent
+- winningPattern
+- drawnBalls
+- activePlayers
+- totalCardsSold
+- totalCollected
+- prizePool
+- houseProfit
+- createdAt
+- buyingOpenedAt
+- startedAt
+- completedAt
+
+When Dealer opens buying for a round, snapshot the current Banker-set settings onto that round:
+- cardPrice
+- maxCardsPerPlayer
+- houseCutPercent
+- prizePoolPercent
+- winningPattern
+
+Once buying has opened, that round must use the saved snapshot.
+
+If Banker changes Bingo settings during an active round, those changes only apply to the next round.
+
+Do not let mid-round setting changes affect:
+- Active card price
+- Max cards
+- Prize pool
+- House cut
+- Payout rules
+
+====================================
+PLAYER CARD BUYING
+====================================
+
+Players can buy the amount of Bingo cards they want before buying closes.
+
+Player flow:
+- Player opens Bingo page
+- Player sees current round status
+- Player sees card price
+- Player sees max cards allowed
+- Player chooses how many cards to buy
+- System shows total cost
+- Player confirms purchase
+- Chips are deducted
+- Bingo cards are generated
+- Player can view all purchased cards at once
+
+Rules:
+- Players cannot buy cards after buying is closed
+- Players cannot buy more than the Banker-set max cards for that round
+- Players cannot buy cards without enough chips
+- Card purchases must be atomic so refreshes or double-clicks cannot duplicate purchases
+- Store purchased cards in the database
+- Show all player cards on the Bingo player page
+
+====================================
+PLAYER CARD VISIBILITY
+====================================
+
+Players can only see Bingo cards they personally purchased.
+
+The player Bingo page must only load cards where:
+- card.playerId matches the logged-in player’s ID
+- card.roundId matches the active round
+
+Players cannot:
+- See other players’ Bingo cards
+- Inspect another player’s card data
+- View another player’s marked numbers
+- Access another player’s card through the UI
+- Access another player’s card through the API
+- Access another player’s card through client-side state
+- Submit another player’s cardId for marking or claiming Bingo
+
+Dealer can view player cards for the active round.
+
+Banker can view Bingo settings and stats.
+Banker does not need player card visibility unless they also have Dealer/Admin permission.
+
+Do not rely only on frontend hiding.
+Enforce card ownership in backend/API/database rules.
+
+====================================
+BINGO CARD GENERATION
+====================================
+
+Generate standard 5x5 Bingo cards.
+
+Use standard Bingo columns:
+- B: 1-15
+- I: 16-30
+- N: 31-45
+- G: 46-60
+- O: 61-75
+
+The center square should be FREE.
+The FREE space starts marked.
+
+Every Bingo card must be randomly generated.
+
+Do not:
+- Use the same fixed card template
+- Reuse the same card layout for every player
+- Generate identical cards within the same round
+
+Card generation rules:
+- Each purchased card should have a unique randomized layout
+- Each column must follow its correct number range
+- B column randomly selects 5 unique numbers from 1-15
+- I column randomly selects 5 unique numbers from 16-30
+- N column randomly selects 4 unique numbers from 31-45 because the center square is FREE
+- G column randomly selects 5 unique numbers from 46-60
+- O column randomly selects 5 unique numbers from 61-75
+- Shuffle the selected numbers inside each column so layouts are not predictable
+- Before saving a new card, check that the exact same card layout does not already exist for the active round
+- If a duplicate card layout is generated, reroll until unique
+- Add a safety limit to prevent infinite reroll loops
+
+Each card should store:
+- cardId
+- roundId
+- playerId
+- cardNumbers
+- markedNumbers
+- createdAt
+
+Players should see all their own purchased cards at once.
+
+If they buy many cards:
+- Use a readable grid layout
+- Allow scrolling
+- Keep drawn numbers visible
+- Make the UI compatible with the FiveM tablet/webview
+- Avoid tiny text
+- Avoid hover-only controls
+- Use large buttons and clear click/tap targets
+
+====================================
+MANUAL PLAYER MARKING
+====================================
+
+Do not auto-mark cards.
+
+Players must manually click/tap numbers on their own cards to mark them.
+
+Rules:
+- The site may show drawn numbers
+- The site must not automatically select numbers on player cards
+- Players can mark numbers manually
+- Players can unmark numbers if they misclick
+- Players cannot mark cards they do not own
+- Players cannot edit cards after the round is completed
+- Dealer can view player markings but cannot edit them
+
+The FREE space starts marked.
+
+Server-side ownership checks:
+- Player can only mark/unmark numbers on cards where card.playerId matches their logged-in account
+- Player can only Call Bingo on their own card
+- If a player attempts to access, mark, unmark, or claim another player’s card, reject the request and log it as suspicious
+
+====================================
+BINGO BALL DRAWING
+====================================
+
+Dealer manually clicks Draw Next Ball.
+
+When Draw Next Ball is clicked:
+- Backend randomly selects one valid undrawn ball
+- Ball is added to drawnBalls
+- All players see the newly drawn ball
+- Drawn number history updates
+
+Players cannot draw balls.
+Dealer cannot manually pick the next ball.
+
+Use standard Bingo balls:
+- B-1 through B-15
+- I-16 through I-30
+- N-31 through N-45
+- G-46 through G-60
+- O-61 through O-75
+
+Drawn balls should display like:
+- B-12
+- I-24
+- N-38
+- G-52
+- O-70
+
+Dealer screen should show:
+- Big latest drawn ball
+- Full drawn ball history
+- Remaining ball count
+- Active round status
+- Active players
+- Pending claims
+
+====================================
+BINGO CLAIM SYSTEM
+====================================
+
+Players need a Call Bingo button.
+
+When a player clicks Call Bingo:
+- Do not automatically pay them
+- Do not automatically declare them winner
+- Create a pending claim for Dealer review
+
+Claim should include:
+- claimId
+- roundId
+- playerId
+- playerName
+- stateId
+- phoneNumber
+- claimedCardId
+- cardNumbers
+- markedNumbers
+- drawnBallsAtClaim
+- claimTime
+- status: Pending, Approved, Rejected
+- reviewedBy
+- reviewedAt
+- rejectionReason
+
+Player claim flow:
+- Player manually marks card
+- Player clicks Call Bingo
+- Claim goes to Dealer panel
+- Dealer reviews the claim
+- Backend helps validate the claim
+- Dealer makes final approval or rejection
+- Only approved claims trigger payout
+
+A player can only create a claim for a card they own.
+
+====================================
+DEALER CARD CHECKING
+====================================
+
+Dealer needs a card checking screen.
+
+Dealer can open:
+- Any active player
+- Any card owned by that player for the active round
+- Any pending Bingo claim
+
+Dealer view should show:
+- Player name
+- State ID
+- Phone number
+- Round ID
+- Cards purchased
+- Claimed card
+- All cards if needed
+- Marked numbers
+- Drawn numbers
+- Whether the card has a valid winning pattern
+- Suspicious markings
+
+Use visual colors:
+- Green = marked and drawn
+- Yellow = drawn but not marked
+- Red = marked but not drawn
+- Gray = unmarked
+- Blue = FREE space
+
+Dealer can:
+- Approve claim
+- Reject claim
+- Enter rejection reason
+- End round after winner handling
+
+Dealer cannot:
+- Edit the player’s card
+- Change player markings
+- Change drawn balls except Undo Last Draw if allowed
+- Change card price
+- Change max cards
+- Change payout settings
+
+====================================
+WINNING PATTERNS
+====================================
+
+Start with Single Line Bingo.
+
+Single Line Bingo means:
+- Any full horizontal row
+- Any full vertical column
+- Either diagonal line
+
+Build the system so these can be added later:
+- Four Corners
+- X Pattern
+- Blackout
+
+Backend validation should check:
+- The claimed winning pattern exists
+- Every marked number used in the winning pattern was actually drawn
+- FREE space counts as valid
+- If a player marked numbers that were not drawn, flag the card as suspicious or invalid
+- Dealer still has final approve/reject control
+
+====================================
+PAYOUT SYSTEM
+====================================
+
+Prize pool is based on card sales.
+
+Default:
+- 80% prize pool
+- 20% house cut
+
+Example:
+- Card price: 5,000 chips
+- Cards sold: 40
+- Total collected: 200,000
+- Prize pool: 160,000
+- House cut: 40,000
+
+If multiple players have valid Bingo claims on the same drawn ball:
+- Split the prize pool evenly between approved winners
+
+Approved payout:
+- Adds chips to winning player account
+- Logs transaction history
+- Logs payout in bingoPayouts
+- Prevents duplicate payout on refresh or repeated clicks
+
+Do not auto-pay when player calls Bingo.
+Dealer approval is required for every payout.
+
+====================================
+SECURITY / PERMISSIONS
+====================================
+
+Players cannot:
+- Draw balls
+- Pick balls
+- Edit drawn numbers
+- Buy after buying closes
+- Buy more than max cards
+- See another player’s cards
+- Mark cards they do not own
+- Call Bingo on another player’s card
+- Self-approve wins
+- Receive auto payout from pressing Call Bingo
+
+Dealer cannot:
+- Change card price
+- Change max cards
+- Change house cut
+- Change prize pool percent
+- Change payout rules
+- Edit player markings
+- Manually choose next ball
+- Edit chip balances outside approved Bingo payouts
+
+Only Banker can change Bingo price/rate/settings.
+
+Do not use broad role checks.
+Do not use “banking roles.”
+Do not involve Junior Banker.
+Do not involve Cage Clerk.
+Do not create Bingo Dealer.
+
+====================================
+LOGGING
+====================================
+
+Log all actions:
+- Banker setting changes
+- Dealer round creation
+- Buying opened
+- Buying closed
+- Round started
+- Ball drawn
+- Undo draw
+- Claim created
+- Claim approved
+- Claim rejected
+- Payout issued
+- Round completed
+- Round cancelled
+- Suspicious card access attempt
+- Suspicious claim attempt
+
+Each log should include:
+- staffUserId or playerId
+- action type
+- roundId
+- timestamp
+- relevant details
+
+====================================
+DATABASE COLLECTIONS / TABLES
+====================================
+
+Create collections/tables for:
+- bingoSettings
+- bingoRounds
+- bingoCards
+- bingoClaims
+- bingoDealerActions
+- bingoPayouts
+
+bingoSettings:
+- cardPrice
+- maxCardsPerPlayer
+- houseCutPercent
+- prizePoolPercent
+- winningPattern
+- updatedBy
+- updatedAt
+
+bingoRounds:
+- roundId
+- status
+- dealerId
+- cardPrice
+- maxCardsPerPlayer
+- houseCutPercent
+- prizePoolPercent
+- winningPattern
+- drawnBalls
+- totalCardsSold
+- totalCollected
+- prizePool
+- houseProfit
+- createdAt
+- buyingOpenedAt
+- startedAt
+- completedAt
+
+bingoCards:
+- cardId
+- roundId
+- playerId
+- cardNumbers
+- markedNumbers
+- createdAt
+
+bingoClaims:
+- claimId
+- roundId
+- playerId
+- claimedCardId
+- cardNumbers
+- markedNumbers
+- drawnBallsAtClaim
+- status
+- claimTime
+- reviewedBy
+- reviewedAt
+- rejectionReason
+
+bingoDealerActions:
+- actionId
+- roundId
+- staffUserId
+- actionType
+- details
+- timestamp
+
+bingoPayouts:
+- payoutId
+- roundId
+- claimId
+- playerId
+- amount
+- paidBy
+- paidAt
+- transactionId
+
+====================================
+UI REQUIREMENTS
+====================================
+
+Add Bingo to the main games list.
+
+Add:
+- Bingo player page
+- Dealer Bingo panel
+- Banker Bingo settings panel
+- Bingo claims/review panel
+- Bingo round history/stats page
+
+Player page should show:
+- Current round status
+- Card price
+- Max cards
+- Buy card controls
+- Drawn numbers
+- Latest drawn ball
+- Only that player’s purchased cards
+- Manual marking controls
+- Call Bingo button
+
+Dealer page should show:
+- Round controls
+- Latest drawn ball
+- Drawn ball history
+- Active players
+- Cards bought per player
+- Pending claims
+- Card verification tools
+
+Banker settings page should show:
+- Card price setting
+- Max cards setting
+- House cut setting
+- Prize pool setting
+- Winning pattern setting
+- Bingo revenue/stats
+
+Make the UI compatible with FiveM tablet/webview:
+- Large buttons
+- Clear text
+- No hover-only controls
+- No tiny click targets
+- Readable cards
+- Responsive layout
+- Dark casino theme matching the existing site
+
+====================================
+DO NOT BREAK EXISTING SYSTEMS
+====================================
+
+Do not replace or break:
+- Existing casino games
+- Staff roles
+- Banker permissions
+- Dealer permissions
+- Security tools
+- Loans
+- Deposits
+- Withdrawals
+- Promos
+- Referrals
+- Stats
+- Chip balances
+- Transaction history
+- Existing authentication
+- Existing player accounts
+
+Only add the Bingo system and the required Banker/Dealer permission logic around it.

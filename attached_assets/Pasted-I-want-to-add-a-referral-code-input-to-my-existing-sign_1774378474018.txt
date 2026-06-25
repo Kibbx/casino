@@ -1,0 +1,89 @@
+I want to add a referral code input to my existing signup system WITHOUT breaking anything.
+
+----------------------------------
+CURRENT SIGNUP FIELDS (DO NOT CHANGE)
+----------------------------------
+- Full Name
+- State ID
+- Phone Number
+- PIN
+- Confirm PIN
+
+----------------------------------
+1. ADD REFERRAL INPUT (FRONTEND)
+----------------------------------
+- Add a NEW optional field at the bottom of the signup form:
+
+Label: "Referral Code (optional)"
+placeholder: "Enter code if you have one"
+
+- This field must NOT be required
+- It should visually match the existing inputs
+
+----------------------------------
+2. FRONTEND SUBMIT
+----------------------------------
+- When submitting the form, include:
+
+referralCode: value || null
+
+Example payload:
+{
+  fullName,
+  stateId,
+  phoneNumber,
+  pin,
+  referralCode // optional
+}
+
+----------------------------------
+3. BACKEND REGISTER LOGIC
+----------------------------------
+- When creating a new user:
+
+IF referralCode exists:
+  - Check if it matches an existing users.referralCode
+  - If valid:
+      set newUser.referredBy = referralCode
+  - If NOT valid:
+      ignore it completely (do NOT throw error)
+
+----------------------------------
+4. AUTO-GENERATE USER REFERRAL CODE
+----------------------------------
+- Every new user should automatically get their own referralCode
+
+Format options:
+- Use State ID (simple and fits RP)
+  referralCode = stateId
+
+OR
+- Generate unique code:
+  referralCode = "U" + random 5 digits
+
+- Ensure referralCode is UNIQUE
+
+----------------------------------
+5. PREVENT SELF REFERRAL
+----------------------------------
+- If a user somehow tries to use their own code:
+  ignore it
+
+- Optional:
+  - block same IP referrals
+
+----------------------------------
+6. DATABASE UPDATE
+----------------------------------
+Ensure users table includes:
+
+referralCode (unique)
+referredBy (nullable)
+
+----------------------------------
+7. IMPORTANT
+----------------------------------
+- DO NOT break existing signup validation
+- DO NOT require referral code
+- DO NOT change existing UI layout except adding this one field
+- Keep styling consistent

@@ -1,0 +1,131 @@
+Fix the website-side FiveM tablet styling issue.
+
+Important context:
+We do NOT have access to the FiveM server/database/resource files.
+We do NOT have access to fxmanifest.lua.
+We ONLY control the website code and deployment.
+
+The website looks styled and polished in a normal external browser, but when the same website is opened inside the FiveM/NoPixel tablet WebView, the UI looks plain, bland, broken, or unstyled.
+
+This is NOT a redesign task.
+Do NOT create a new tablet UI.
+Do NOT change game logic.
+Do NOT change backend logic.
+Do NOT change auth.
+Do NOT change balances.
+Do NOT change RNG.
+Do NOT change payouts.
+Do NOT touch any FiveM database/resource integration.
+
+Fix the website so the live deployed URL loads all CSS/JS/fonts/images correctly inside FiveM’s embedded browser.
+
+Required website-only fixes:
+
+1. Make sure all production CSS and JS assets are served from valid HTTPS URLs.
+- No localhost URLs.
+- No relative paths that break inside embedded browsers.
+- No dev server URLs.
+- No http assets on an https page.
+- No mixed content.
+
+2. If this is a Vite/React app, check vite.config.js or vite.config.ts.
+For the live hosted website, make sure the build base path matches the hosted domain/path.
+
+If the site is hosted at the root domain, use:
+base: '/'
+
+If the site is hosted in a subfolder, use the correct subfolder base.
+
+Do NOT use localhost/dev paths.
+
+3. Confirm the live deployed index.html is loading the correct production CSS bundle.
+The FiveM tablet should receive the same CSS bundle as the normal browser.
+
+Check the final deployed HTML for:
+- correct stylesheet link
+- correct script link
+- no missing /assets paths
+- no broken hashed file names
+- no stale build references
+
+4. Make asset URLs FiveM-safe.
+Search the project for hardcoded broken paths like:
+localhost
+127.0.0.1
+http://
+/src/
+/public/
+/assets/ if hosted path breaks it
+/fonts/ if hosted path breaks it
+/images/ if hosted path breaks it
+
+Fix them so the deployed website serves everything correctly over HTTPS.
+
+5. Make fonts self-hosted or safe for FiveM.
+If custom fonts are loaded from Google Fonts or another third-party CDN and FiveM fails to load them, self-host the font files inside the website build.
+
+Include font files in the production build and reference them from the website domain.
+
+6. Make sure Tailwind/global CSS is included in production.
+Confirm the main global CSS file imports Tailwind correctly:
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+Confirm the production build includes the compiled Tailwind CSS bundle.
+
+7. Check for FiveM WebView compatibility issues.
+Avoid website styling that may fail inside embedded Chromium/NUI:
+- excessive backdrop-filter
+- unsupported CSS features without fallbacks
+- huge blur effects
+- external font/CDN dependency failures
+- CSS loaded only after client-side hydration
+- styles dependent on browser extensions/dev mode
+
+Add safe fallbacks for important UI styles.
+
+8. Add a temporary website-side diagnostic panel only when URL contains:
+?debug=fivem
+
+The debug panel should show:
+- viewport width/height
+- user agent
+- whether main CSS loaded
+- whether main JS loaded
+- current route
+- asset base path
+- any detected missing stylesheet
+
+This must only show with ?debug=fivem and must not affect normal users.
+
+9. Add a CSS-load verification class.
+When the main CSS loads, set a visible CSS variable or body class like:
+body.css-loaded
+
+Then in JS, detect if the expected CSS variable exists.
+If not, show a small warning:
+"Styles failed to load"
+
+Only show this warning in debug mode.
+
+10. Fix caching issues.
+Make sure the deployed site is not serving an old index.html pointing to deleted hashed CSS/JS files.
+Ensure the deployment updates index.html and assets together.
+
+Acceptance criteria:
+- We only changed website code/deployment.
+- No FiveM database/resource/server access required.
+- The live website still looks good in normal browsers.
+- The same live website URL loads styled inside FiveM tablet.
+- CSS loads inside FiveM.
+- JS loads inside FiveM.
+- Fonts load or have clean fallbacks inside FiveM.
+- Images/icons load inside FiveM.
+- No localhost/dev URLs remain.
+- No mixed-content http assets remain.
+- No missing CSS/JS/font/image errors remain.
+- No backend, auth, balance, payout, RNG, or database logic changed.
+
+Main goal:
+Fix the live website deployment and asset loading so the existing styled casino UI appears correctly inside the FiveM/NoPixel tablet WebView without needing access to any FiveM server files or database.

@@ -1,0 +1,202 @@
+Build a fully functional casino prize wheel system with mathematically correct RTP balancing, jackpot recovery protection, and a real-time analytics dashboard.
+
+This system must NOT rely on random weight guessing. All outcomes must be derived from expected value (EV) and RTP formulas.
+
+--------------------------------------------------
+CORE CONFIG
+--------------------------------------------------
+
+Inputs:
+- spinCost (number)
+- targetRTP (0.80 – 0.98)
+- jackpotValue (number)
+
+Derived:
+- targetEV = spinCost * targetRTP
+
+--------------------------------------------------
+SYSTEM ARCHITECTURE
+--------------------------------------------------
+
+The wheel must be split into TWO systems:
+
+1) NORMAL PRIZE SYSTEM (frequent wins)
+2) JACKPOT SYSTEM (rare, protected payout)
+
+--------------------------------------------------
+NORMAL PRIZE SYSTEM (RTP CONTROLLED)
+--------------------------------------------------
+
+Each prize has:
+{
+  id,
+  name,
+  value,
+  stock (optional, null = infinite)
+}
+
+STEP 1: Remove prizes with stock = 0
+
+STEP 2: Assign base weights using inverse value:
+    baseWeight = 1 / (value + 1)
+
+STEP 3: Normalize:
+    probability = baseWeight / sum(baseWeight)
+
+STEP 4: Compute current EV:
+    currentEV = sum(probability * value)
+
+STEP 5: Scale probabilities to match NORMAL RTP:
+    normalRTP = targetRTP * 0.80
+    targetNormalEV = spinCost * normalRTP
+
+    scaleFactor = targetNormalEV / currentEV
+
+    adjustedProbability = probability * scaleFactor
+
+STEP 6: Normalize again:
+    finalProbability = adjustedProbability / sum(adjustedProbability)
+
+STEP 7: Convert to weights:
+    weight = finalProbability * 10000 (integer)
+
+STEP 8: Validate:
+    sum(finalProbability * value) must be within ±1% of targetNormalEV
+
+--------------------------------------------------
+JACKPOT SYSTEM (RECOVERY + PROTECTION)
+--------------------------------------------------
+
+Track:
+- totalWagered
+- totalPaidOut
+- houseProfit = totalWagered - totalPaidOut
+
+Recovery Model:
+- jackpotRTP = targetRTP * 0.10
+- recoveryPerSpin = spinCost * jackpotRTP
+
+- spinsToRecover = jackpotValue / recoveryPerSpin
+
+Base Jackpot Odds:
+    baseJackpotChance = 1 / spinsToRecover
+
+Protection Logic:
+
+IF houseProfit < jackpotValue:
+    riskFactor = houseProfit / jackpotValue
+    adjustedJackpotChance = baseJackpotChance * riskFactor
+
+IF houseProfit < jackpotValue * 0.25:
+    jackpotStatus = "LOCKED"
+    adjustedJackpotChance = 0
+
+ELSE IF houseProfit < jackpotValue * 0.75:
+    jackpotStatus = "RISK"
+ELSE:
+    jackpotStatus = "SAFE"
+
+--------------------------------------------------
+SPIN LOGIC
+--------------------------------------------------
+
+On spin:
+1. Deduct spinCost
+2. Add to totalWagered
+
+3. Roll RNG (crypto secure preferred):
+
+IF jackpot hits:
+    payout jackpotValue
+    totalPaidOut += jackpotValue
+    reset recovery tracking
+
+ELSE:
+    roll from normal prize weights
+    payout prize.value
+    totalPaidOut += prize.value
+
+4. Update houseProfit
+
+--------------------------------------------------
+REAL-TIME ANALYTICS DASHBOARD
+--------------------------------------------------
+
+Build a live admin panel that updates every spin.
+
+SECTION 1: CORE STATS
+- totalWagered
+- totalPaidOut
+- houseProfit
+- targetRTP
+- actualRTP = totalPaidOut / totalWagered
+- avgProfitPerSpin
+
+SECTION 2: JACKPOT PANEL
+- jackpotValue
+- recoveryPerSpin
+- spinsToRecover
+- recoveredAmount = min(houseProfit, jackpotValue)
+- recoveryProgress (%) = recoveredAmount / jackpotValue
+- baseJackpotChance
+- adjustedJackpotChance
+- jackpotStatus (SAFE / RISK / LOCKED)
+
+SECTION 3: PRIZE TABLE
+For each prize show:
+- name
+- value
+- probability (%)
+- weight
+- EV contribution = probability * value
+- stock remaining
+
+SECTION 4: EXPECTED VALUE SUMMARY
+- normalEV
+- jackpotEV
+- totalEV
+- targetEV
+- difference (totalEV - targetEV)
+
+Display warnings:
+- If totalEV > targetEV → "OVERPAYING"
+- If totalEV < targetEV → "UNDERPAYING"
+
+--------------------------------------------------
+ADMIN CONTROLS
+--------------------------------------------------
+
+- RTP slider (0.80 – 0.98)
+- Jackpot value input
+- Toggle jackpot protection ON/OFF
+- “Recalculate Weights” button
+- Prize editor (add/remove/update value & stock)
+
+--------------------------------------------------
+UI / UX REQUIREMENTS
+--------------------------------------------------
+
+- Smooth animated wheel spin (ease-out, realistic)
+- Highlight winning segment
+- Show win result clearly
+- Optional sound effects + big win visuals
+
+--------------------------------------------------
+CRITICAL RULES
+--------------------------------------------------
+
+- DO NOT use random balancing
+- DO NOT fake near-misses
+- DO NOT bias results after spin starts
+- ALL math must be deterministic and verifiable
+- RTP must remain within ±2% over time
+
+--------------------------------------------------
+GOAL
+--------------------------------------------------
+
+The system must:
+- Guarantee long-term house profit
+- Allow jackpot wins safely over time
+- Provide frequent small wins for player engagement
+- Expose full transparency via analytics dashboard

@@ -1,0 +1,157 @@
+I want to ADD a referral/sponsorship system into my EXISTING Promos section WITHOUT replacing or breaking anything.
+
+----------------------------------
+IMPORTANT RULES
+----------------------------------
+- DO NOT modify or remove existing promo/ad features
+- DO NOT change current promo database structure
+- This is an ADD-ON feature only
+- Existing promo region editor must remain untouched
+
+----------------------------------
+1. ADD NEW TAB IN PROMOS PAGE
+----------------------------------
+
+Inside the existing Promos page, add a new tab:
+
+Tabs:
+- Ads (existing, unchanged)
+- Referrals (NEW)
+
+----------------------------------
+2. CREATE NEW REFERRAL SYSTEM (SEPARATE FROM PROMOS)
+----------------------------------
+
+Create a NEW table (do NOT reuse promos table):
+
+referral_promoters:
+{
+  id
+  code (string, unique)            // e.g. RHATTV
+  ownerUserId (string)
+  commissionPercent (number)
+  isActive (boolean)
+  createdAt
+}
+
+----------------------------------
+3. UPDATE USERS TABLE
+----------------------------------
+
+Add:
+
+referredByCode (string, nullable)
+
+Keep all existing fields untouched
+
+----------------------------------
+4. SIGNUP INTEGRATION
+----------------------------------
+
+When a user signs up:
+
+IF referralCode is provided:
+  - Check referral_promoters table:
+      WHERE code = referralCode AND isActive = true
+  - If found:
+      set user.referredByCode = referralCode
+  - If not:
+      ignore
+
+----------------------------------
+5. REFERRALS TAB (STAFF UI)
+----------------------------------
+
+Inside Promos → Referrals tab:
+
+----------------------------------
+CREATE PROMOTER FORM
+----------------------------------
+- Select User (owner)
+- Enter Referral Code
+- Set Commission %
+- Active toggle
+
+Save → creates new promoter
+
+----------------------------------
+PROMOTER LIST
+----------------------------------
+
+Show all promoters:
+
+- Code
+- Owner username
+- Commission %
+- Active status
+- Total referred users
+- TotalDeposited
+- TotalWithdrawn
+- NetProfit
+- CommissionOwed
+
+----------------------------------
+6. PROMOTER DETAIL VIEW
+----------------------------------
+
+Click a promoter → show:
+
+All referred users:
+- username
+- totalDeposited
+- totalWithdrawn
+- profit/loss
+- totalWagered
+
+----------------------------------
+7. COMMISSION CALCULATION
+----------------------------------
+
+For each referred user:
+
+loss = totalDeposited - totalWithdrawn
+
+IF:
+- totalWagered >= 10000
+- loss > 0
+
+commission = loss * (commissionPercent / 100)
+
+----------------------------------
+8. BANKER-ONLY ACCESS
+----------------------------------
+
+- Entire Referrals tab is ONLY visible to banker/admin roles
+- Backend routes must enforce role checks
+
+----------------------------------
+9. API ENDPOINTS
+----------------------------------
+
+POST /api/admin/referrals/promoters
+- create promoter
+
+GET /api/admin/referrals/promoters
+- list promoters with stats
+
+GET /api/admin/referrals/promoters/:code
+- detailed view
+
+PUT /api/admin/referrals/promoters/:id
+- edit code, %, active
+
+----------------------------------
+10. PERFORMANCE
+----------------------------------
+
+- Use aggregation queries for totals
+- Avoid per-user recalculation loops
+- Optimize for dashboard speed
+
+----------------------------------
+11. FINAL REQUIREMENT
+----------------------------------
+
+- This must NOT interfere with existing promos system
+- Must be cleanly separated but accessible within same page UI
+- Keep consistent with Node.js + Express + PostgreSQL + Drizzle

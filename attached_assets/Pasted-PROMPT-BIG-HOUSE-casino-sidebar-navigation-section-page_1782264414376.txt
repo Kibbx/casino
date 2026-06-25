@@ -1,0 +1,35 @@
+PROMPT — BIG HOUSE casino: sidebar navigation → section pages → game launch
+
+Build/replicate the lobby's left sidebar so each nav item routes to a section page, and games are launched from cards (never directly from the sidebar) through a single gated launcher. Wire everything to real routes — no placeholders.
+
+1. Sidebar structure (grouped nav, collapsible 232px ↔ 64px rail). Render these groups in order; each item navigates with wouter's setLocation(route):
+
+(no heading) — Home → /lobby
+Casino — Table Games → /table-games, Mini Games → /mini-games, Poker → /poker, Sportsbook → /sports-betting
+Events — Tournaments → /tournaments, Lottery → /lottery, Bingo → /bingo, Live Events → /live-events
+Account — Rewards → /my-rewards, Profile → /profile
+Owner/staff only: Staff Dashboard at the bottom.
+Mark the item whose route matches the current location as active. When collapsed, show icons only (hide labels + group headings).
+
+2. Section pages group the games. Each sidebar destination is a real route in the router that lists the games belonging to that section:
+
+/table-games → Blackjack, Roulette, Baccarat, High-Low
+/mini-games → Slots, Mines, Keno, Case Opening, Mob Tower
+/poker → Poker lobby/tables
+/sports-betting → Sportsbook
+/live-events → Horse Racing (live/scheduled events)
+/tournaments, /lottery, /bingo → those events directly
+/my-rewards, /profile → account pages
+3. Game launch is centralized through one gated launcher (used by section-page cards, Live Activity, and Recently Played). Each game is defined in a GAMES registry: { label, cat, img, route, key, neon }. To open a game, call enter(item):
+
+If the item is direct (poker tables, sportsbook, tournaments — things with their own lobby), setLocation(item.route) immediately.
+Otherwise call handlePlayNow(route, hasPassword, key, label):
+No password → setAccessToken(key, "open") then navigate.
+Password + valid stored token (getAccessToken(key) is non-null and not "open") → navigate.
+Password + no token → open GamePasswordModal, which POSTs to /api/{key}/verify-password; on success store the returned token via setAccessToken(key, token) and navigate to the destination.
+hasPassword comes from each game's live status endpoint — never assume "open" when status is unknown.
+
+Two things to flag so the prompt produces correct gating (these are real bugs the review found in the current code — fold the fixes in when you build):
+
+Key vs. endpoint/guard mismatch: Horse uses key horse but the game-page guard expects horseRacing; High-Low uses key highlow but its API route is /api/high-low/verify-password. Separate the API path from the storage guard key per game.
+Don't treat unknown status as open: gate cards (highlow/mines/keno/cases/horse) on an "endpoint loaded" flag, not status?.enabled !== false.

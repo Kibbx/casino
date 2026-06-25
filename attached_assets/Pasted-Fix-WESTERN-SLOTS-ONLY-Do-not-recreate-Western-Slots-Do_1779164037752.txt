@@ -1,0 +1,305 @@
+Fix WESTERN SLOTS ONLY.
+
+Do not recreate Western Slots.
+Do not replace the Western Slots symbols.
+Do not redesign the UI.
+Do not touch other casino games.
+Do not change Roman Slots unless you are only reading it as the reference.
+
+Western Slots must keep these existing symbols exactly:
+
+- Bag
+- Crosses
+- Diamonds
+- Flasks
+- Gun
+- Hat
+- Hearts
+- Scatter
+- Spades
+- Wild
+
+The goal is simple:
+
+WESTERN SLOTS PAYOUTS MUST MATCH ROMAN SLOTS PAYOUTS.
+
+Use Roman Slots as the source of truth for:
+- payline count
+- total bet behavior
+- bet per line math
+- 3x / 4x / 5x payouts
+- scatter payouts
+- free spin trigger rules if Western already supports free spins
+- wild behavior
+
+Western Slots should keep its own symbols, art, theme, and UI, but its payout table should match the Roman payout values.
+
+ROMAN PAYTABLE VALUES TO COPY:
+
+Lowest symbol:
+3 = 5
+4 = 20
+5 = 60
+
+Second symbol:
+3 = 5
+4 = 25
+5 = 80
+
+Third symbol:
+3 = 10
+4 = 30
+5 = 100
+
+Fourth symbol:
+3 = 10
+4 = 40
+5 = 150
+
+Fifth symbol:
+3 = 15
+4 = 60
+5 = 200
+
+Sixth symbol:
+3 = 20
+4 = 80
+5 = 300
+
+Seventh symbol:
+3 = 25
+4 = 100
+5 = 500
+
+Eighth / highest normal symbol:
+3 = 50
+4 = 200
+5 = 1000
+
+Wild:
+3 = 100
+4 = 500
+5 = 2000
+
+Scatter:
+3 Scatters = 2x TOTAL BET
+4 Scatters = 10x TOTAL BET
+5 Scatters = 50x TOTAL BET
+
+If free spins are enabled:
+3 Scatters = 8 free spins
+4 Scatters = 12 free spins
+5 Scatters = 18 free spins
+
+WESTERN SYMBOL MAPPING:
+
+Map the Western symbols to the Roman payout order like this:
+
+Bag = Roman lowest symbol payout:
+3 = 5
+4 = 20
+5 = 60
+
+Crosses = Roman second symbol payout:
+3 = 5
+4 = 25
+5 = 80
+
+Diamonds = Roman third symbol payout:
+3 = 10
+4 = 30
+5 = 100
+
+Flasks = Roman fourth symbol payout:
+3 = 10
+4 = 40
+5 = 150
+
+Gun = Roman fifth symbol payout:
+3 = 15
+4 = 60
+5 = 200
+
+Hat = Roman sixth symbol payout:
+3 = 20
+4 = 80
+5 = 300
+
+Hearts = Roman seventh symbol payout:
+3 = 25
+4 = 100
+5 = 500
+
+Spades = Roman highest normal symbol payout:
+3 = 50
+4 = 200
+5 = 1000
+
+Wild:
+3 = 100
+4 = 500
+5 = 2000
+
+Scatter:
+3 = 2x TOTAL BET + 8 free spins if bonus exists
+4 = 10x TOTAL BET + 12 free spins if bonus exists
+5 = 50x TOTAL BET + 18 free spins if bonus exists
+
+IMPORTANT PAYOUT MATH:
+
+Western Slots is a 5x3 slot with 20 lines.
+
+The player enters TOTAL BET.
+
+TOTAL BET is the full spin cost.
+
+betPerLine = totalBet / 20.
+
+Line payout formula:
+
+lineWin = betPerLine × paytableValue
+
+Example:
+If totalBet is 2,000 chips:
+20 lines means betPerLine = 100 chips.
+
+If Spades hits 5 of a kind:
+Spades 5x paytable value = 1000
+lineWin = 100 × 1000 = 100,000 chips.
+
+Do not treat totalBet as betPerLine.
+Do not multiply the final payout by 20.
+Do not deduct totalBet × 20.
+Do not use the old Western payout values.
+Do not use random custom values.
+Do not replace the Western symbols with Roman symbols.
+
+PAYLINE RULES:
+
+Western Slots must use exactly 20 paylines.
+
+Rows:
+0 = top
+1 = middle
+2 = bottom
+
+Use these paylines:
+
+1.  [1,1,1,1,1]
+2.  [0,0,0,0,0]
+3.  [2,2,2,2,2]
+4.  [0,1,2,1,0]
+5.  [2,1,0,1,2]
+6.  [0,0,1,2,2]
+7.  [2,2,1,0,0]
+8.  [1,0,0,0,1]
+9.  [1,2,2,2,1]
+10. [0,1,1,1,0]
+11. [2,1,1,1,2]
+12. [1,0,1,2,1]
+13. [1,2,1,0,1]
+14. [0,1,0,1,0]
+15. [2,1,2,1,2]
+16. [0,2,0,2,0]
+17. [2,0,2,0,2]
+18. [1,1,0,1,1]
+19. [1,1,2,1,1]
+20. [0,2,2,2,0]
+
+WIN RULES:
+
+- Check paylines left to right only.
+- Pay only 3, 4, or 5 matching symbols starting from reel 1.
+- Do not pay 2 of a kind.
+- Do not pay right-to-left.
+- Do not pay random scattered symbols as line wins.
+- Scatter is the only symbol that pays anywhere.
+- Only one payout per line.
+- Use the highest valid match on each line.
+
+WILD RULES:
+
+- Wild substitutes for Bag, Crosses, Diamonds, Flasks, Gun, Hat, Hearts, and Spades.
+- Wild does not substitute for Scatter.
+- Wild should create the best valid payout on a line.
+- Do not duplicate payouts from the same line.
+- 5 Wilds pays the Wild 5x value of 2000.
+
+SCATTER RULES:
+
+- Scatter pays anywhere on the 5x3 grid.
+- Scatter does not need to be on a payline.
+- Scatter payout uses TOTAL BET, not betPerLine.
+- Scatter does not count as a normal line symbol.
+- Wild does not replace Scatter.
+- If Western Slots already has free spins, make the free spin amounts match Roman Slots:
+  - 3 Scatters = 8 free spins
+  - 4 Scatters = 12 free spins
+  - 5 Scatters = 18 free spins
+- Free spins must not charge another bet.
+- Free spins must use the original triggering totalBet and betPerLine.
+
+UI REQUIREMENTS:
+
+Update the Western Slots paytable UI so the visible payout numbers match Roman Slots:
+
+Bag: 5 / 20 / 60
+Crosses: 5 / 25 / 80
+Diamonds: 10 / 30 / 100
+Flasks: 10 / 40 / 150
+Gun: 15 / 60 / 200
+Hat: 20 / 80 / 300
+Hearts: 25 / 100 / 500
+Spades: 50 / 200 / 1000
+Wild: 100 / 500 / 2000
+Scatter: 2x bet / 10x bet / 50x bet
+
+The UI must not show old Western payout values.
+The UI must match the actual payout logic.
+The credited win amount must match the displayed win amount.
+
+DO NOT:
+
+- Do not regenerate Western Slots.
+- Do not replace the Western assets.
+- Do not rename the symbols.
+- Do not add Roman symbols to Western Slots.
+- Do not make Western Slots visually look like Roman Slots.
+- Do not change the whole casino.
+- Do not change other games.
+- Do not change the wallet system unless Western Slots is deducting or crediting incorrectly.
+- Do not invent a new paytable.
+- Do not keep old Western payouts.
+- Do not explain the old payouts are correct.
+- Do not silently alter the Roman payout values.
+
+FINAL CHECKS:
+
+Verify these examples:
+
+1. Total bet 2,000:
+   betPerLine = 100.
+
+2. Bag 5 of a kind:
+   payout = 100 × 60 = 6,000.
+
+3. Spades 5 of a kind:
+   payout = 100 × 1000 = 100,000.
+
+4. Wild 5 of a kind:
+   payout = 100 × 2000 = 200,000.
+
+5. 3 Scatters on a 2,000 total bet:
+   payout = 2,000 × 2 = 4,000.
+   Also award 8 free spins if Western free spins are enabled.
+
+6. Spin cost must be exactly totalBet.
+
+7. Final payout must not be multiplied by 20.
+
+After fixing, tell me:
+1. Which Western Slots files were changed.
+2. Where the Western paytable is defined.
+3. Where totalBet and betPerLine are calculated.
+4. Whether Western free spins were kept, fixed, or disabled.
+5. Confirm Western Slots now uses Roman Slots payout values while keeping Western symbols.

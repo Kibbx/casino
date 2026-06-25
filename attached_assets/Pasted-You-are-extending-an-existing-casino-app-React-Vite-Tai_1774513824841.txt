@@ -1,0 +1,243 @@
+You are extending an existing casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, PostgreSQL + Drizzle ORM, WebSockets already implemented).
+
+DO NOT break existing poker or horse racing logic.
+
+GOAL:
+Enhance the Horse Racing system with:
+
+1. Horse ownership (linked to player accounts)
+2. Owner payout % system with tracking
+3. 100 visual variants for horses
+4. Simple race animation on frontend
+5. Admin tools to assign/search owners
+
+---
+
+## DATABASE CHANGES
+
+Update horses table:
+
+Add:
+
+* ownerId (nullable, references players table)
+* ownerCut (float, default based on odds tier)
+* totalEarnings (int, default 0)
+* variantId (int 1–100)
+
+---
+
+## OWNER CUT LOGIC
+
+Owner cut based on odds:
+
+1–3 → 1%
+4–8 → 2%
+9–15 → 3%
+16–22 → 4%
+23–27 → 5%
+28–30 → 6%
+
+Store as decimal (0.01 → 0.06)
+
+---
+
+## ADMIN API (NEW)
+
+1. SEARCH PLAYERS
+
+GET /api/admin/players/search?q=
+
+Returns:
+
+* id
+* name
+* stateId
+
+---
+
+2. SET HORSE OWNER
+
+POST /api/admin/horses/set-owner
+
+Body:
+{
+horseId: number,
+ownerId: string
+}
+
+---
+
+3. GET HORSES (UPDATED)
+
+Include:
+
+* owner name
+* ownerId
+* variantId
+* totalEarnings
+
+---
+
+## OWNER PAYOUT LOGIC
+
+When a horse wins:
+
+1. Calculate total payout to players for that horse
+
+2. Owner receives:
+   ownerCut = totalPayout * horse.ownerCut
+
+3. CONDITIONS:
+
+* If owner bet on their own horse → NO payout
+* If totalPayout < 5000 → NO payout
+* Cap payout at 25,000
+
+4. Add earnings:
+   horse.totalEarnings += ownerCut
+
+5. Add to player balance
+
+---
+
+## FRONTEND ADMIN UPDATES
+
+HorseRacingAdmin component:
+
+ADD to horse table:
+
+Columns:
+
+* Horse Name
+* Odds
+* Owner
+* Variant
+* Earnings
+
+---
+
+OWNER ASSIGN UI
+
+Each row:
+
+[ Assign Owner ]
+
+Click → opens modal:
+
+* Search input (calls /players/search)
+* Select player
+* Confirm button
+
+---
+
+## VARIANT SYSTEM (VISUALS)
+
+Each horse has:
+variantId (1–100)
+
+Frontend mapping:
+
+/assets/horses/{variantId}.png
+
+Fallback if missing:
+default horse image
+
+---
+
+ADMIN VARIANT DISPLAY
+
+Show small image in table:
+<img src={`/assets/horses/${variantId}.png`} />
+
+---
+
+## RACE UI ANIMATION
+
+Create component:
+HorseRaceTrack.tsx
+
+Simple horizontal track:
+
+* 6 horses (divs or images)
+* Animate left → right using CSS or framer-motion
+
+Example:
+
+Each horse:
+position: absolute
+left: 0 → 100%
+
+Duration: 4–6 seconds
+
+---
+
+ANIMATION LOGIC
+
+When race starts:
+
+* Frontend receives horses via WS
+* Start animation
+* Random slight speed variance per horse (visual only)
+
+IMPORTANT:
+Winner is decided SERVER SIDE only
+
+At finish:
+
+* Highlight winning horse
+* Show result banner
+
+---
+
+WEBSOCKET EVENTS (EXTEND)
+
+Emit:
+
+race_start:
+
+* horses (6)
+* raceId
+
+race_progress (optional)
+
+race_finish:
+
+* winnerId
+* payouts
+
+---
+
+PLAYER UI (OPTIONAL HOOK)
+
+Show:
+
+* horse name
+* odds
+* variant image
+
+---
+
+## RULES / CONSTRAINTS
+
+* DO NOT change core race logic
+* DO NOT let variants affect odds
+* DO NOT let owner bet + earn at same time
+* Keep UI clean (table + modal only)
+* Reuse Tailwind styling
+* No heavy animations
+
+---
+
+## FINAL RESULT
+
+Horse system now includes:
+
+* 100 horses (admin controlled)
+* Owner assignment via player search
+* Owner passive income system
+* Earnings tracking per horse
+* Visual variants for each horse
+* Animated race UI
+* Fully integrated into Tables → Horse Racing sub-tab
+
+Only output working code and necessary files.

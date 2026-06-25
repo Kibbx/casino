@@ -1,0 +1,484 @@
+Build a full Lottery feature for the Back Alley Bets casino website.
+
+This lottery should work like a weekly Sunday casino lottery where players buy tickets, fill/mark their numbers manually, submit their tickets, and wait for the Sunday drawing.
+
+Core Lottery Concept:
+- The lottery runs weekly.
+- Drawings happen every Sunday.
+- Banker can set the exact Sunday draw time.
+- Default draw time should be Sunday at 9:00 PM EST.
+- Ticket sales close before the drawing.
+- Default ticket close time should be 5 minutes before draw.
+- Example:
+  - Ticket sales close Sunday 8:55 PM EST.
+  - Winning numbers draw Sunday 9:00 PM EST.
+- Each week has a new draw, new tickets, new winning numbers, and a new weekly consolation pool.
+- The main jackpot/prize pool rolls over every week until someone hits 4/4.
+- Tickets do NOT roll over.
+- Tickets are only valid for the weekly draw they were purchased for.
+
+Player Ticket Flow:
+- Player opens the Lottery page.
+- Player sees:
+  - Current rolling jackpot
+  - This week’s consolation pool
+  - Ticket cost
+  - Next Sunday draw date/time
+  - Ticket sales close countdown
+  - Drawing countdown
+  - Max tickets allowed
+  - How many tickets they already purchased for this draw
+  - Their draft tickets
+  - Their submitted tickets
+  - Previous winning numbers
+  - Recent winners
+  - Basic rules
+- Player chooses how many tickets they want to buy.
+- Allow preset buttons like:
+  - Buy 1 Ticket
+  - Buy 5 Tickets
+  - Buy 10 Tickets
+  - Custom Amount
+- The system checks:
+  - Lottery is enabled.
+  - The active draw is open.
+  - Ticket sales are not closed.
+  - Player has enough chips.
+  - Player will not exceed the Banker-set ticket limit.
+- When tickets are purchased:
+  - Chips are deducted immediately.
+  - Blank draft ticket records are created for the active draw.
+  - Purchased blank tickets count toward the player’s weekly ticket limit.
+  - Blank tickets are not refundable.
+- Player then fills/marks their numbers manually on each blank ticket.
+- Each ticket should show as a card/grid, similar to bingo cards.
+- Player should be able to see all purchased tickets at once.
+- Each ticket has 4 number slots by default.
+- Numbers are 1 through 20 by default.
+- No duplicate numbers are allowed on the same ticket by default.
+- Order does not matter.
+- Player can manually select/click/mark numbers or type them into boxes.
+- Add a Quick Pick / Fill Random button per ticket.
+- Add a Fill All Random button for all draft tickets.
+- Add Clear Ticket button for draft tickets only.
+- Add Submit Selected Tickets.
+- Add Submit All Tickets.
+- Once a ticket is submitted, it is locked and cannot be edited or refunded.
+- Submitted tickets should show as Submitted / Locked.
+- Draft tickets should show as Draft / Not Submitted.
+- Invalid tickets should clearly show what is wrong.
+- If a player buys tickets but does not submit them before ticket sales close, those tickets are void/unsubmitted and cannot win.
+- Draft/unsubmitted tickets are not refunded after sales close.
+
+Ticket Rules:
+- Tickets are only valid for the current weekly draw.
+- New week means new tickets.
+- After the Sunday draw completes, all tickets from that draw become historical records.
+- Players must buy new tickets for the next weekly draw.
+- The jackpot may roll over, but tickets never roll over.
+- Players can only see their own purchased tickets.
+- Players should never see other players’ ticket numbers.
+
+Number Rules:
+- Default number range: 1–20.
+- Default numbers per ticket: 4.
+- Default duplicates allowed: false.
+- Default order matters: false.
+- 4/4 any order wins the main jackpot.
+- 3/4 any order wins the weekly consolation prize.
+- 2/4, 1/4, and 0/4 win nothing.
+
+Payout Rules:
+- Only 4/4 and 3/4 matches pay.
+- 4/4 = main rolling jackpot.
+- 3/4 = weekly consolation pool.
+- 2/4 or lower = no payout.
+- 3/4 winners do NOT take from the main jackpot.
+- 3/4 winners only split that week’s consolation pool.
+- Only 4/4 winners can take from the main jackpot.
+- If nobody hits 4/4, the full main jackpot rolls over to the next weekly draw.
+- If nobody hits 3/4, roll the unused weekly consolation pool into the main jackpot for the next draw.
+- If there are 3/4 winners, split that week’s full consolation pool evenly across all 3/4 winning tickets.
+- If there are 4/4 winners, split the full main jackpot evenly across all 4/4 winning tickets.
+- Prize splitting is based on winning tickets, not unique players.
+- If one player owns multiple winning tickets, each winning ticket counts as its own share.
+- Example:
+  - Main jackpot: 10,000,000 chips
+  - 5 tickets hit 4/4
+  - Each winning ticket receives 2,000,000 chips
+  - If one player owns 2 of those winning tickets, that player receives 4,000,000 chips total.
+
+Prize Pool / Split Logic:
+- Banker controls the ticket cost.
+- Banker controls the ticket limit per player per draw.
+- Banker controls the split percentages.
+- Default split:
+  - 20% House
+  - 70% Main Jackpot
+  - 10% Weekly Consolation Pool
+- Splits must always equal 100%.
+- Prevent invalid split settings.
+- Every ticket purchase immediately contributes to the house cut, main jackpot, and weekly consolation pool based on the active split settings.
+- Ticket sales add to the prize pools until ticket sales close.
+- The displayed jackpot and consolation pool should update live or refresh after ticket purchases.
+- At ticket close time:
+  - Ticket buying is disabled.
+  - Ticket editing is disabled.
+  - Ticket submission is disabled.
+  - Final jackpot amount is locked.
+  - Final consolation pool amount is locked.
+- The draw uses the locked prize amounts.
+- No ticket purchased or submitted after ticket close can count for that draw.
+
+Example Weekly Flow:
+1. Players buy tickets during the week.
+2. Players fill/mark their numbers.
+3. Players submit and lock their tickets.
+4. Ticket sales close Sunday before the drawing.
+5. Prize amounts lock.
+6. Sunday draw happens with brand-new winning numbers.
+7. Submitted tickets are checked.
+8. 3/4 winners split only the weekly consolation pool.
+9. 4/4 winners split the rolling jackpot.
+10. If nobody hits 4/4, the jackpot rolls over.
+11. All tickets from that week expire.
+12. A new weekly draw opens.
+13. Players buy new tickets for the next Sunday draw.
+
+Default Settings:
+- Ticket cost: 5,000 chips.
+- Max tickets per player per draw: 25.
+- Draw day: Sunday.
+- Draw time: 9:00 PM EST.
+- Ticket close: 5 minutes before draw.
+- Number range: 1–20.
+- Numbers per ticket: 4.
+- Duplicate numbers: Not allowed.
+- Order matters: No.
+- House split: 20%.
+- Main jackpot split: 70%.
+- Weekly consolation split: 10%.
+- Rollover: Enabled.
+- Starting jackpot: Banker-configured, default 500,000 chips.
+
+Banker Lottery Settings:
+Only the Banker role can manage lottery settings.
+
+Banker can set:
+- Lottery enabled/disabled.
+- Ticket cost.
+- Max tickets per player per draw.
+- House split percentage.
+- Main jackpot split percentage.
+- Weekly consolation split percentage.
+- Starting jackpot amount.
+- Number range.
+- Numbers required per ticket.
+- Whether duplicate numbers are allowed.
+- Whether order matters.
+- Draw day/time.
+- Ticket close time.
+- Rollover enabled/disabled.
+- Force/start draw if needed.
+- Create next draw if needed.
+- Adjust starting jackpot if needed.
+
+Important Role Rules:
+- Only Banker can manage lottery prices, rates, jackpot settings, prize split settings, draw schedule, number rules, and ticket limits.
+- Junior Banker cannot manage lottery settings.
+- Cage Clerk cannot manage lottery settings.
+- Junior Banker and Cage Clerk should not see or access lottery configuration controls.
+- Junior Banker and Cage Clerk can only deal with loans, deposits, and withdrawals if those permissions already exist.
+- Do not give Junior Banker or Cage Clerk access to lottery configuration.
+
+Draw Logic:
+- At draw time, the system generates winning numbers server-side only.
+- Staff cannot manually choose winning numbers.
+- Banker may start or force the draw, but the winning numbers must still be generated by secure server-side random logic.
+- Only submitted locked tickets are checked for winners.
+- Draft/unsubmitted tickets are ignored.
+- Draw processing must:
+  - Lock the draw.
+  - Generate winning numbers.
+  - Check all submitted tickets.
+  - Determine 4/4 winners.
+  - Determine 3/4 winners.
+  - Split payouts by winning ticket count.
+  - Pay players.
+  - Log payouts.
+  - Roll over jackpot if needed.
+  - Roll unused consolation pool into jackpot if no 3/4 winners.
+  - Expire all tickets from that draw.
+  - Create the next weekly draw.
+- After draw completion, the draw becomes a historical record.
+
+Player Lottery Page:
+Add a Lottery page where players can see:
+- Current rolling jackpot.
+- This week’s consolation pool.
+- Ticket price.
+- Next Sunday drawing date/time.
+- Ticket close countdown.
+- Drawing countdown.
+- Max tickets allowed.
+- Tickets purchased by the player.
+- Draft tickets.
+- Submitted tickets.
+- Number selector / ticket marking UI.
+- Quick Pick per ticket.
+- Fill All Random.
+- Clear Ticket.
+- Submit Selected Tickets.
+- Submit All Tickets.
+- Previous winning numbers.
+- Recent winners.
+- Basic rules.
+
+Player Result Display:
+After the draw, players should see clear results.
+
+For a 4/4 jackpot win:
+- Show JACKPOT WINNER.
+- Show their winning ticket numbers.
+- Show the winning numbers.
+- Show that they matched 4/4.
+- Show total jackpot.
+- Show number of winning jackpot tickets.
+- Show payout per winning ticket.
+- Show their total winnings if they had multiple winning tickets.
+
+For a 3/4 win:
+- Show LOTTERY WIN.
+- Show their ticket numbers.
+- Show the winning numbers.
+- Show that they matched 3/4.
+- Show weekly consolation pool.
+- Show number of 3/4 winning tickets.
+- Show payout per winning ticket.
+- Show their total winnings.
+
+For losing tickets:
+- Show NO WIN.
+- Show ticket numbers.
+- Show winning numbers.
+- Show how many numbers matched.
+
+For draft/unsubmitted tickets:
+- Show VOID / NOT SUBMITTED.
+- Make clear that unsubmitted tickets are not eligible for payout.
+
+Use ticket badges:
+- JACKPOT
+- WIN
+- NO WIN
+- VOID
+- DRAFT
+- SUBMITTED / LOCKED
+
+Banker Lottery Panel:
+Add a Lottery management section to the staff dashboard.
+
+Banker panel must show:
+- Lottery enabled/disabled.
+- Ticket cost setting.
+- Ticket limit setting.
+- House split setting.
+- Main jackpot split setting.
+- Weekly consolation split setting.
+- Starting jackpot setting.
+- Number range setting.
+- Numbers per ticket setting.
+- Duplicate number setting.
+- Order matters setting.
+- Draw schedule setting.
+- Ticket close time setting.
+- Rollover setting.
+- Active draw status.
+- Current rolling jackpot.
+- Current weekly consolation pool.
+- Total tickets purchased.
+- Total submitted tickets.
+- Total draft/unsubmitted tickets.
+- Total chips collected.
+- House profit from ticket sales.
+- Player ticket counts.
+- All submitted tickets.
+- Draw controls.
+- Winner history.
+- Payout history.
+- Lottery logs.
+
+Security / Logging:
+- Log every ticket purchase.
+- Log every draft ticket created.
+- Log every ticket submission.
+- Log selected numbers at time of submission.
+- Log player ID.
+- Log character name.
+- Log ticket cost at time of purchase.
+- Log timestamp.
+- Log draw ID.
+- Log every Banker setting change.
+- Log old setting value and new setting value.
+- Log every draw.
+- Log winning numbers.
+- Log total ticket sales.
+- Log final locked jackpot amount.
+- Log final locked consolation pool amount.
+- Log number of submitted tickets.
+- Log number of draft/unsubmitted tickets.
+- Log all payouts.
+- Log rollover amounts.
+- Log expired tickets.
+- Log next draw creation.
+- Submitted tickets cannot be edited by players or staff.
+- Staff cannot manually edit player ticket numbers after submission.
+- Staff cannot manually choose winning numbers.
+- Winning number generation must happen server-side only.
+- Do not trust client-side number generation for the final draw.
+
+Transaction Safety:
+- Ticket purchase, chip deduction, and blank ticket creation must happen together in one safe transaction.
+- Ticket submission and number locking must happen together in one safe transaction.
+- Draw processing and payouts must be handled safely so players cannot be paid twice.
+- Prevent duplicate payout processing.
+- Prevent tickets from being submitted after ticket close.
+- Prevent tickets from being edited after submission.
+- Prevent tickets from being counted in the wrong draw.
+- Prevent players from exceeding ticket limits.
+- Prevent negative chip balances.
+- Prevent race conditions during ticket purchase and draw processing.
+
+Database:
+Create whatever tables/collections are needed for:
+- Lottery settings.
+- Lottery draws.
+- Lottery tickets.
+- Lottery payouts.
+- Lottery logs.
+- Winner history.
+- Player lottery stats if needed.
+
+Suggested Data Fields:
+
+Lottery Settings:
+- enabled
+- ticketCost
+- maxTicketsPerPlayer
+- houseSplitPercent
+- jackpotSplitPercent
+- consolationSplitPercent
+- startingJackpot
+- numberMin
+- numberMax
+- numbersPerTicket
+- allowDuplicates
+- orderMatters
+- drawDay
+- drawTime
+- ticketCloseMinutesBeforeDraw
+- rolloverEnabled
+- updatedBy
+- updatedAt
+
+Lottery Draw:
+- drawId
+- status: open / sales_closed / drawing / complete
+- drawStartTime
+- ticketCloseTime
+- drawTime
+- winningNumbers
+- startingJackpot
+- jackpotAddedThisDraw
+- finalJackpotAmount
+- consolationPoolAmount
+- totalTicketsPurchased
+- totalSubmittedTickets
+- totalDraftTickets
+- totalChipsCollected
+- houseProfit
+- jackpotRolledOver
+- consolationRolledIntoJackpot
+- createdAt
+- completedAt
+
+Lottery Ticket:
+- ticketId
+- drawId
+- playerId
+- characterName
+- numbers
+- status: draft / submitted / void / expired
+- ticketCost
+- purchasedAt
+- submittedAt
+- matchedCount
+- resultTier: jackpot / consolation / no_win / void
+- payoutAmount
+- paidAt
+
+Lottery Payout:
+- payoutId
+- drawId
+- ticketId
+- playerId
+- characterName
+- tier: jackpot / consolation
+- tierPrizePool
+- winningTicketCount
+- payoutPerTicket
+- payoutAmount
+- paidAt
+
+Lottery Log:
+- logId
+- drawId
+- actionType
+- actorRole
+- actorId
+- playerId if relevant
+- details
+- createdAt
+
+UI Requirements:
+- Make the Lottery page clean and easy to use inside the FiveM tablet.
+- All purchased tickets should be visible in a scrollable grid.
+- Avoid tiny number buttons.
+- Avoid invisible text.
+- Avoid broken dark-mode styling.
+- Do not abbreviate important button labels.
+- Use full labels like:
+  - Buy Tickets
+  - Submit Tickets
+  - Fill Random
+  - Fill All Random
+  - Clear Ticket
+  - View Results
+- Make buttons large enough for in-game use.
+- Make sure colors, text, and inputs render correctly inside the FiveM tablet browser.
+- Make sure the UI works both on the normal website and inside the FiveM tablet iframe/browser.
+- Match the Back Alley Bets casino theme.
+- Use a clean mafia/casino style.
+- Keep the lottery rules easy for players to understand.
+
+Player-Facing Rules Text:
+Add a simple rules section that says:
+
+“Buy tickets for this Sunday’s draw.
+Pick 4 numbers from 1–20.
+Match 4/4 to win the rolling jackpot.
+Match 3/4 to split this week’s consolation prize.
+2/4 or lower wins nothing.
+Tickets are only valid for the current weekly draw.
+After each Sunday draw, all tickets expire and a new draw begins.
+The jackpot rolls over every week until someone hits 4/4.”
+
+Important:
+- Do not make 2/4 pay anything.
+- Do not let 3/4 payouts reduce the main jackpot.
+- Do not let tickets roll over.
+- Do not let Junior Banker or Cage Clerk manage lottery settings.
+- Do not let staff manually choose winning numbers.
+- Do not let submitted tickets be edited.
+- Do not let draft/unsubmitted tickets win.
+- Do not let ticket purchases count after ticket close.

@@ -1,0 +1,5 @@
+- [Casino app-shell source of truth](casino-shell-source-of-truth.md) — Kibbx/Redesign repo is the header + sidebar visual baseline; sync styling only, keep the live app's wouter routes + staffOnly gate + responsive scaffold.
+- [Casino repo git/deploy workflow](casino-deploy-and-git.md) — how to commit/push the backalleybets casino repo (bash git is blocked) and deploy to the VPS.
+- [Casino lobby import pattern](casino-lobby-import.md) — how the Big House redesign pages (github.com/Kibbx/Redesign) were imported and wired into the casino project.
+- [Casino game launcher & password gating](casino-game-launcher.md) — game launching/password-gating is centralized in the casino artifact; invariants that must hold.
+- [FiveM CEF render constraints](fivem-cef-constraints.md) — CSS properties and Tailwind patterns that break inside FiveM's CEF (Chromium) browser.

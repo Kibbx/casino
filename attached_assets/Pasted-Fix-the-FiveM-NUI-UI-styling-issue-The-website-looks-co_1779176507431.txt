@@ -1,0 +1,111 @@
+Fix the FiveM/NUI UI styling issue.
+
+The website looks correct in the external browser, but inside the FiveM/NoPixel tablet the UI looks plain, bland, broken, or unstyled.
+
+This is NOT a redesign task.
+Do NOT redesign the UI.
+Do NOT create a new tablet layout.
+Do NOT change game logic.
+Do NOT change backend logic.
+Do NOT change auth.
+Do NOT change balances.
+Do NOT change RNG.
+Do NOT change payouts.
+Do NOT change database structure.
+
+The likely issue is that FiveM is not loading the compiled CSS/JS/assets correctly.
+
+Fix the build and asset loading for FiveM NUI.
+
+Required fixes:
+
+1. Check if this project uses Vite.
+If it does, open vite.config.js or vite.config.ts and set:
+
+base: './'
+
+Example:
+
+export default defineConfig({
+  plugins: [react()],
+  base: './',
+})
+
+2. Run/ensure the production build uses:
+
+npm run build
+
+3. Confirm the built dist/index.html uses relative asset paths.
+
+GOOD:
+./assets/index-xxxxx.css
+./assets/index-xxxxx.js
+
+BAD:
+/assets/index-xxxxx.css
+/assets/index-xxxxx.js
+
+If the built index.html still uses /assets/, fix the Vite config and rebuild.
+
+4. Update the FiveM fxmanifest.lua so the NUI loads the built production app.
+
+Use this structure:
+
+fx_version 'cerulean'
+game 'gta5'
+
+ui_page 'dist/index.html'
+
+files {
+  'dist/index.html',
+  'dist/assets/*.js',
+  'dist/assets/*.css',
+  'dist/assets/*.png',
+  'dist/assets/*.jpg',
+  'dist/assets/*.jpeg',
+  'dist/assets/*.webp',
+  'dist/assets/*.svg',
+  'dist/assets/*.gif',
+  'dist/assets/*.woff',
+  'dist/assets/*.woff2',
+  'dist/assets/*.ttf',
+  'dist/assets/*.otf'
+}
+
+5. Make sure FiveM is loading the dist build, not raw src files, not public/index.html, and not the Vite dev server.
+
+6. Make sure Tailwind or the main CSS file is actually included in the production build.
+
+7. Make sure fonts/images/icons used by the UI are either inside dist/assets or correctly referenced with relative paths.
+
+8. Search the project for broken absolute asset paths like:
+
+/assets/
+/images/
+/fonts/
+/icons/
+
+and convert them to working relative/imported paths for the build.
+
+9. Check browser/NUI console errors for:
+- failed to load CSS
+- failed to load JS
+- missing fonts
+- missing images
+- 404 errors
+- MIME type errors
+
+Fix every missing asset error.
+
+Acceptance criteria:
+- The FiveM tablet loads the same styled UI as the external website.
+- CSS is applied inside FiveM.
+- Tailwind styles work inside FiveM.
+- JS loads inside FiveM.
+- Fonts load inside FiveM.
+- Images/icons load inside FiveM.
+- The UI no longer appears plain, bland, or unstyled.
+- No gameplay, payout, RNG, balance, auth, or backend logic was changed.
+
+Main goal:
+Fix FiveM NUI asset loading so the existing styled website UI actually appears correctly in the in-game tablet.

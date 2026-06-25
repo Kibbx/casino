@@ -1,0 +1,256 @@
+Build a complete Horse Creator + Horse Management system inside the existing Horse Racing tab of my website project.
+
+IMPORTANT:
+- This is for a website casino horse racing game
+- The horse assets are 2D sprite sheets, not 3D
+- I already have multiple horse sprite sheet PNG files
+- Each PNG is a full baked sprite sheet for one horse variation
+- Do NOT build this as body-part swapping
+- Build it around selecting full sprite sheets as base horses, then adding effects and metadata
+- Keep the system lightweight and web-friendly
+
+MAIN GOAL:
+Inside the Horse Racing tab, add an admin/staff-only Horse Creator editor that lets me:
+- select a horse base sprite sheet
+- preview the horse animation live
+- add simple effects
+- assign rarity
+- assign stats
+- name the horse
+- save horses
+- edit saved horses
+- duplicate horses
+- randomize horses
+- create at least 100 unique horses from base sheets + effects + rarity + stats
+
+ASSET FACTS:
+My horse assets are multiple PNG sprite sheets with consistent layout.
+Examples of base sheets:
+- Horse_fullcolor_black.png
+- Horse_fullcolor_brown.png
+- Horse_fullcolor_White.png
+- Horse_paint_beige.png
+- Horse_paint_black.png
+- Horse_paint_brown.png
+- Horse_socks_beige.png
+- Horse_socks_black.png
+- Horse_socks_brown.png
+
+Treat each PNG as one selectable base horse variation.
+Do NOT try to separate body parts from the sprite sheet.
+
+REQUIRED SYSTEMS:
+
+1. HORSE CREATOR UI
+Add a Horse Creator panel/page inside the Horse Racing tab with:
+- live animated preview area
+- horse name input
+- base horse selector
+- rarity selector
+- stat inputs
+- effect selector
+- glow/outline color selector
+- randomize button
+- save button
+- duplicate button
+- delete button
+- edit existing horse button/list
+
+2. HORSE BASE SELECTION
+Build the editor so I can choose a base horse from uploaded sprite sheets.
+Group them cleanly by:
+- fullcolor
+- paint
+- socks
+
+And by color:
+- black
+- brown
+- white
+- beige
+
+The UI should show a small preview thumbnail and filename/title for each base horse.
+
+3. SPRITE SHEET RENDERER
+Build a reusable horse sprite renderer component.
+Requirements:
+- load a PNG sprite sheet
+- slice the sheet into frames
+- support animation playback in browser
+- loop animation smoothly
+- scale preview cleanly without blurring badly
+- support at least idle/walk/run style playback if rows exist
+- if animation row mapping is unknown, make it configurable in one central config file
+
+Create a sprite config system like:
+- file path
+- frame width
+- frame height
+- row definitions
+- frame counts per row
+- animation speed
+
+Do NOT hardcode all animation logic in one messy file.
+
+4. SIMPLE EFFECTS SYSTEM
+Add lightweight web effects that can be applied to each horse.
+Effects should render behind or around the horse preview and later be reusable in the race view.
+
+Required effects:
+- none
+- glow
+- outline
+- dust trail
+- smoke trail
+- sparkles
+- fire trail
+- speed streaks
+- lightning aura
+
+Implement effects in a lightweight way using canvas and/or layered DOM/canvas animation.
+Do NOT use heavy game engines.
+
+5. RARITY SYSTEM
+Add rarity selection with visuals attached.
+
+Rarities:
+- Common
+- Uncommon
+- Rare
+- Epic
+- Legendary
+
+Example visual behavior:
+- Common = no effect
+- Uncommon = subtle outline
+- Rare = glow
+- Epic = glow + trail
+- Legendary = glow + trail + particles
+
+Make rarity configurable so I can later change what visuals each rarity uses.
+
+6. HORSE STATS
+Each horse needs editable stat fields.
+Add at least:
+- speed
+- stamina
+- acceleration
+- luck
+
+Use reasonable min/max validation.
+Make stats editable manually.
+Also allow random generation within configured ranges.
+
+7. HORSE DATA MODEL
+Saved horses must be stored as structured data, not only as flattened images.
+
+Each horse record should include:
+- id
+- name
+- baseSpriteKey
+- category
+- color
+- rarity
+- effectType
+- glowColor
+- outlineColor
+- speed
+- stamina
+- acceleration
+- luck
+- createdAt
+- updatedAt
+
+8. HORSE STORAGE / CRUD
+Add full CRUD for horses:
+- create horse
+- view horse list
+- edit horse
+- duplicate horse
+- delete horse
+
+If the project already has a database, use the existing database structure/style.
+If not, create the proper backend model and API routes cleanly.
+
+9. RANDOM HORSE GENERATOR
+Add a “Generate Random Horse” button.
+It should randomly pick:
+- base sprite
+- rarity
+- effect
+- glow/outline colors
+- stat spread
+- random generated name placeholder
+
+The randomizer should make believable combinations and help me quickly make many horses.
+
+10. HORSE MANAGEMENT LIST
+Add a table/list/grid of saved horses with:
+- small animated or static preview
+- horse name
+- rarity
+- base type
+- effect
+- stats summary
+- edit button
+- duplicate button
+- delete button
+
+11. RACE VIEW COMPATIBILITY
+Build the horse system so saved horses can later be used directly in the actual horse race view.
+That means each saved horse config should be renderable by the same reusable horse renderer used in the creator.
+
+12. ACCESS CONTROL
+Make the Horse Creator admin/staff only.
+Normal players should not see creator controls.
+
+13. FILE / CODE ORGANIZATION
+Keep this clean and modular.
+
+Suggested structure:
+- HorseRacingTab / HorseCreator page
+- HorseSpriteRenderer component
+- HorseEffects renderer/utilities
+- horse config registry for sprite sheets
+- horse model/schema
+- horse API routes
+- horse admin list/editor components
+
+14. ASSET REGISTRY
+Create a clean asset registry file where I can easily add more horse sprite sheets later.
+For example:
+- key
+- label
+- file path
+- category
+- color
+- frame size
+- animation rows
+
+Do not force me to change code everywhere just to add another horse PNG later.
+
+15. IMPORTANT VISUAL RULES
+- Keep it 2D only
+- No 3D engine
+- No unnecessary overcomplication
+- Focus on working browser-based animation and effects
+- Prioritize clean UI and maintainability
+- Make it work well with my existing website styling
+
+16. FINAL DELIVERABLE
+I want a working Horse Creator integrated into the Horse Racing tab that lets me:
+- preview animated horses from my sprite sheets
+- customize them with simple effects and rarity
+- assign stats
+- save and edit horses
+- generate many unique horses quickly
+- reuse saved horses later in the actual races
+
+If needed, create sample starter horse entries using my current sprite sheets.
+
+Before finishing, make sure:
+- the Horse Racing tab still works
+- the new creator is wired into the UI properly
+- the sprite renderer actually animates from the PNG sheet
+- saved horses persist correctly
+- the code is production-clean and not a hacked prototype

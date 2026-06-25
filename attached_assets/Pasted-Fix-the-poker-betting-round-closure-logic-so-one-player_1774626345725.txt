@@ -1,0 +1,94 @@
+Fix the poker betting-round closure logic so one player cannot hold the hand hostage before the flop.
+
+Current bug:
+- Preflop does not end when action is properly closed.
+- Players can keep calling over and over before the flop.
+- The flop only appears if a raise happens and people respond to the raise.
+- One player can stall the game because the engine keeps giving turns even when all required action is already complete.
+
+I need proper Texas Hold’em betting round logic.
+
+Requirements:
+
+1. CLOSE ACTION CORRECTLY
+A betting round must end immediately when all remaining actionable players have:
+- folded
+- gone all-in
+- or matched the current highest bet for that round
+
+Do NOT keep rotating action after that.
+Do NOT require a raise to make the round end.
+
+2. TRACK WHO STILL NEEDS ACTION
+For each betting round, track whether each player still owes action.
+A player only needs action if all are true:
+- they are still in the hand
+- they are not folded
+- they are not all-in
+- they have chips remaining
+- they have not yet matched the current highest bet after the latest raise
+
+Once a player calls and matches the current bet, they should be marked as done for that round unless someone raises afterward.
+
+3. RAISE RESET RULE
+Only a raise should reopen action.
+When a raise happens:
+- players who already acted but are now below the new amount to call must become pending again
+- players who already match the new amount do not need action
+- the raiser is done unless another raise happens later
+
+4. CALL / CHECK RULES
+- “Call” should only be available if amountToCall > 0
+- after a successful call that matches the highest bet, that player should not receive another turn unless action is reopened by a raise
+- “Check” should only be available if amountToCall = 0
+- if everyone checks, the round ends immediately
+
+5. END ROUND AUTOMATICALLY
+After every action, run a function like:
+isBettingRoundComplete()
+
+That function should return true if:
+- only one non-folded player remains
+OR
+- every non-folded, non-all-in player has matched the current bet and no one else owes action
+
+If true:
+- advance to next street immediately
+- preflop -> flop
+- flop -> turn
+- turn -> river
+- river -> showdown
+
+6. DO NOT ADVANCE TURN IF ROUND IS CLOSED
+Before selecting the next acting player:
+- first check if the round is already complete
+- if complete, advance street instead of assigning another turn
+
+7. ALL-IN PLAYERS
+All-in players remain in the hand but never count as needing action.
+They should be skipped in turn order and ignored in “who still owes action” checks.
+
+8. DEBUG LOGGING
+Add logs after every action:
+- current street
+- current highest bet
+- each player’s round contribution
+- each player’s folded/all-in status
+- each player’s owesAction status
+- whether betting round is complete
+- next acting seat
+- when street advances
+
+9. PRESERVE CURRENT UI
+Do not rewrite the interface.
+Fix only the poker engine / state logic and websocket state updates needed for correct turn flow.
+
+Important:
+The betting round must not depend on a raise to finish.
+A completed ring of calls/checks should immediately move the game forward.
+Test with:
+- everyone limping preflop
+- one raise and multiple callers
+- check-check on flop
+- player all-in preflop
+- heads-up action

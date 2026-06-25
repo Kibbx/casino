@@ -1,0 +1,93 @@
+I want to implement a full loan system into the existing player management system in the staff dashboard.
+
+GOAL:
+Add a "Loans" tab inside each player card (next to Deposit / Withdraw / Gift), allowing bankers to manage casino loans.
+
+FRONTEND REQUIREMENTS:
+
+1. Player Card Update:
+- Add a new tab labeled "Loans"
+- Tabs should now be: Deposit / Withdraw / Gift / Loans
+
+2. Loans Tab UI:
+- Show summary at top:
+  - Total outstanding debt
+  - Number of active loans
+- List all loans with:
+  - Loan amount
+  - Interest rate (%)
+  - Total owed
+  - Remaining balance
+  - Due date
+  - Status (Active, Paid, Defaulted, Overdue)
+
+3. Actions:
+- Button: "Create Loan"
+- Button: "Record Payment"
+- Button: "Mark Default"
+- Button: "Close Loan"
+
+4. Create Loan Modal:
+Fields:
+- Amount
+- Interest Rate (%)
+- Due Date
+- Notes
+
+On submit:
+- Add chips to player balance
+- Create loan record in backend
+
+5. Record Payment:
+- Allow banker to input payment amount
+- Deduct from player balance
+- Apply toward loan remaining balance
+
+BACKEND REQUIREMENTS:
+
+1. Create Loan Model:
+Loan {
+  id
+  playerId
+  bankerId
+  principalAmount
+  interestRate
+  totalOwed
+  remainingBalance
+  createdAt
+  dueDate
+  status
+  paymentHistory[]
+}
+
+2. Loan Logic:
+- totalOwed = principal + (principal * interestRate / 100)
+- remainingBalance decreases with payments
+- status updates automatically:
+  - paid → remainingBalance = 0
+  - overdue → current date > dueDate
+  - defaulted → manually set
+
+3. Transactions:
+- Creating a loan logs a transaction ("Loan issued")
+- Payments log ("Loan repayment")
+
+4. Auto Repayment Hook:
+- When a player deposits chips, check for active loans
+- Optionally auto-deduct a portion toward loan repayment
+
+STATS PAGE UPDATE:
+
+Add new "Loans" section for bankers:
+- Total loaned out
+- Total repaid
+- Interest earned
+- Default losses
+- Active outstanding debt
+
+STYLE:
+- Must match existing casino UI theme (dark, red accents)
+- Keep consistent with player card design
+
+DO NOT break existing deposit/withdraw system.
+Integrate cleanly into current architecture.

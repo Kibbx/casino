@@ -1,0 +1,134 @@
+root@vps-fe19483c:/opt/backalleybets# BASE_PATH=/ pnpm build casino
+
+> workspace@0.0.0 build /opt/backalleybets
+> pnpm run typecheck && pnpm -r --if-present run build casino
+
+
+> workspace@0.0.0 typecheck /opt/backalleybets
+> pnpm run typecheck:libs && pnpm -r --filter "./artifacts/**" --filter "./scripts" --if-present run typecheck
+
+
+> workspace@0.0.0 typecheck:libs /opt/backalleybets
+> tsc --build
+
+Scope: 4 of 10 workspace projects
+artifacts/api-server typecheck$ tsc -p tsconfig.json --noEmit
+│ src/lib/objectStorage.ts(265,11): error TS2339: Property 'signed_url' does not exist on type 'unknown'.
+│ src/lib/table-ws.ts(444,37): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(444,78): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(445,32): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(454,38): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(454,81): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(455,33): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(467,42): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(467,93): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/lib/table-ws.ts(468,37): error TS2345: Argument of type 'number | null' is not assignable to parameter of type …
+│   Type 'null' is not assignable to type 'number'.
+│ src/middleware/auth.ts(4,17): error TS7030: Not all code paths return a value.
+│ src/middleware/auth.ts(15,17): error TS7030: Not all code paths return a value.
+│ src/middleware/auth.ts(26,17): error TS7030: Not all code paths return a value.
+│ src/routes/banker.ts(51,23): error TS7030: Not all code paths return a value.
+│ src/routes/banker.ts(123,40): error TS7030: Not all code paths return a value.
+│ src/routes/banker.ts(142,45): error TS7030: Not all code paths return a value.
+│ src/routes/banker.ts(143,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/banker.ts(173,46): error TS7030: Not all code paths return a value.
+│ src/routes/banker.ts(174,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/blackjack.ts(153,27): error TS2345: Argument of type 'string | string[]' is not assignable to parameter …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/blackjack.ts(199,27): error TS2345: Argument of type 'string | string[]' is not assignable to parameter …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/blackjack.ts(253,27): error TS2345: Argument of type 'string | string[]' is not assignable to parameter …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/players.ts(26,26): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(58,23): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(78,39): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(79,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/players.ts(93,44): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(94,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/players.ts(106,48): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(107,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/players.ts(139,52): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(140,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/players.ts(158,48): error TS7030: Not all code paths return a value.
+│ src/routes/players.ts(159,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/roulette.ts(54,37): error TS7030: Not all code paths return a value.
+│ src/routes/slots.ts(50,37): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(24,33): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(60,25): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(96,43): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(97,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of t…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(124,46): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(125,28): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(221,47): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(222,28): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(301,57): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(302,34): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(414,47): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(415,28): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(432,47): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(433,28): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(479,47): error TS7030: Not all code paths return a value.
+│ src/routes/tables.ts(480,28): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tables.ts(518,28): error TS2345: Argument of type 'string | string[]' is not assignable to parameter of …
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(51,20): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(63,33): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(96,37): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(97,23): error TS2345: Argument of type 'string | string[]' is not assignable to parameter…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(127,38): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(128,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(158,45): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(159,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(212,47): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(213,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(249,42): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(250,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(363,42): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(364,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(471,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(478,43): error TS7030: Not all code paths return a value.
+│ src/routes/tournaments.ts(479,23): error TS2345: Argument of type 'string | string[]' is not assignable to paramete…
+│   Type 'string[]' is not assignable to type 'string'.
+│ src/routes/tournaments.ts(675,32): error TS7030: Not all code paths return a value.
+└─ Failed in 2.6s at /opt/backalleybets/artifacts/api-server
+artifacts/casino typecheck$ tsc -p tsconfig.json --noEmit
+└─ Running...
+artifacts/mockup-sandbox typecheck$ tsc -p tsconfig.json --noEmit
+└─ Running...
+scripts typecheck$ tsc -p tsconfig.json --noEmit
+└─ Done in 650ms
+/opt/backalleybets/artifacts/api-server:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/api-server@0.0.0 typecheck: `tsc -p tsconfig.json --noEmit`
+Exit status 2
+ ELIFECYCLE  Command failed with exit code 2.
+ ELIFECYCLE  Command failed with exit code 2.
+root@vps-fe19483c:/opt/backalleybets#

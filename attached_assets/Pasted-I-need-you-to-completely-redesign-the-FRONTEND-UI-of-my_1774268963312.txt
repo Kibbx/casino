@@ -1,0 +1,159 @@
+I need you to completely redesign the FRONTEND UI of my multiplayer blackjack table.
+
+Current problem:
+- The table is extremely small and centered
+- The layout looks cramped and low quality
+- Seats are too close together
+- Avatars and cards are hard to see
+- It does NOT feel like a real casino table
+- It looks like a prototype, not a finished product
+
+Goal:
+Make this look like a FULL-SCREEN professional blackjack table UI similar to real online casinos.
+
+DO NOT change backend logic — focus on UI/UX and layout.
+
+---
+
+## 🎯 Main UI Goals
+
+1. FULL SCREEN TABLE
+- The blackjack table should take up MOST of the screen
+- Scale the table to fit width (responsive)
+- Remove excessive empty black space
+- The table should feel large and central
+
+2. PROPER TABLE LAYOUT
+- Use a semi-circle table layout (dealer at top, players at bottom)
+- Spread 6 seats evenly along the curve
+- Seats should NOT be cramped together
+- Each seat should have space for:
+  - avatar
+  - cards
+  - bet display
+
+3. SEAT DESIGN (VERY IMPORTANT)
+Each seat must include:
+- circular avatar (player profile image)
+- player name under avatar
+- bet amount clearly visible
+- card area in front of seat
+
+Empty seats:
+- show “+ Sit” or “Empty Seat”
+- clearly clickable
+
+4. AVATAR IMPROVEMENTS
+- Increase avatar size significantly
+- Add:
+  - circular frame
+  - glow or border
+- Highlight active player:
+  - glowing ring or pulsing effect
+
+5. CARD DISPLAY
+- Cards must be LARGE and readable
+- Each player’s cards appear in front of their seat
+- Dealer cards at top center
+- Add spacing so cards don’t overlap poorly
+
+6. DEALER AREA
+- Dealer sits clearly at the top center
+- Label “DEALER”
+- Dealer cards centered and large
+
+7. TABLE VISUAL DESIGN
+- Use a proper casino-style table:
+  - green felt
+  - subtle gradients
+  - soft shadows
+- Add depth:
+  - shadows under avatars and cards
+  - slight glow on active elements
+
+8. GAME INFO UI
+Add a clean HUD:
+- top center: “BLACKJACK”
+- show game state:
+  - waiting for players
+  - betting
+  - player turn
+  - dealer turn
+- show player balance clearly
+
+9. ACTION BUTTONS
+- Place buttons at bottom center:
+  - HIT
+  - STAND
+  - DOUBLE
+- Large, clickable, clean layout
+- Only show when it’s the player’s turn
+
+10. RESPONSIVENESS
+- Must scale properly for:
+  - desktop
+  - smaller screens
+- Keep proportions clean
+
+---
+
+## 🧱 Layout Structure (IMPORTANT)
+
+Rebuild layout using something like:
+- main container (full screen)
+- centered table container (large)
+- absolute positioning for:
+  - seats (in arc)
+  - dealer (top center)
+  - cards (relative to seats)
+
+DO NOT stack everything in a small centered box.
+
+---
+
+## ⚙️ Technical Requirements
+
+- Use CSS flexbox or absolute positioning for layout
+- Avoid hardcoded tiny widths/heights
+- Use relative units (%, vw, vh)
+- Make seat positions configurable
+- Keep components modular:
+  - Table
+  - Seat
+  - Dealer
+  - PlayerHand
+  - Controls
+
+---
+
+## 🎨 Design Direction
+
+I want this to feel:
+- immersive
+- clean
+- modern
+- like a real gambling site
+
+NOT:
+- tiny
+- cramped
+- prototype-looking
+- text-heavy
+
+---
+
+## ✅ What I want from you:
+
+1. Redesign the blackjack table UI layout
+2. Scale everything properly
+3. Reposition seats in a proper arc
+4. Improve avatar + card visibility
+5. Improve overall styling
+6. Keep multiplayer functionality intact
+7. Explain what you changed
+
+---
+
+Important:
+Do NOT just tweak spacing slightly.
+This needs a FULL UI REBUILD of the table layout.

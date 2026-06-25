@@ -1,0 +1,204 @@
+**OWNER-ONLY DASHBOARD + RTP PRESETS SYSTEM (STRICT ACCESS CONTROL)**
+
+Implement an Owner-only dashboard section that includes RTP controls and preset switching. This system must be completely hidden and inaccessible to all non-owner roles.
+
+---
+
+## 🔐 ACCESS CONTROL (CRITICAL)
+
+### Visibility Rules
+
+* ONLY users with role: `owner` can:
+
+  * See "Owner Dashboard"
+  * Access RTP settings
+  * Use RTP presets
+
+* ALL other roles:
+
+  * ❌ Cannot see Owner Dashboard in UI
+  * ❌ Cannot access routes
+  * ❌ Cannot trigger RTP changes
+
+---
+
+### Backend Protection (REQUIRED)
+
+Apply to ALL owner routes:
+
+```js
+if (user.role !== 'owner') {
+  return res.status(403).json({ error: 'Unauthorized' });
+}
+```
+
+---
+
+### Frontend Protection
+
+* Do NOT render Owner Dashboard unless:
+
+```js
+user.role === 'owner'
+```
+
+* Do NOT rely only on frontend — backend must enforce
+
+---
+
+## 🧠 RTP PRESET SYSTEM
+
+Create a preset system for quick switching between balancing modes.
+
+---
+
+### Preset Structure
+
+Each preset contains configs per game:
+
+```json
+{
+  "name": "Standard",
+  "games": {
+    "slots": { "payoutMultiplier": 1.0, "volatility": 1.0 },
+    "blackjack": { "blackjackPayout": 1.5 },
+    "roulette": { "payoutModifier": 1.0 },
+    "plinko": { "risk": "medium" },
+    "crash": { "growthModifier": 1.0 }
+  }
+}
+```
+
+---
+
+### Default Presets
+
+#### 🟢 Standard (Balanced)
+
+* Target RTP: ~94–96%
+
+#### 🔴 Tight (House Favoring)
+
+* Lower payouts
+* Lower hit frequency
+* Target RTP: ~88–92%
+
+#### 🟡 Loose (Event Mode)
+
+* Higher payouts
+* Higher hit frequency
+* Target RTP: ~96–98%
+
+---
+
+## ⚙️ PRESET SWITCHING
+
+When Owner selects a preset:
+
+1. Load preset config
+2. Apply to all game RTP configs
+3. Save to DB
+4. Broadcast update
+
+---
+
+### Apply Logic
+
+```js
+function applyPreset(preset) {
+  for (const game in preset.games) {
+    updateGameConfig(game, preset.games[game]);
+  }
+
+  broadcastRTPUpdate(preset.name);
+}
+```
+
+---
+
+## 🔄 LIVE UPDATE BEHAVIOR
+
+* Applies ONLY to new rounds
+* Does NOT interrupt active games
+
+---
+
+## 🔌 SOCKET EVENT
+
+event: game:rtpPresetChanged
+
+Payload:
+
+```json
+{
+  "preset": "Tight",
+  "updatedBy": ownerId
+}
+```
+
+---
+
+## 🖥️ OWNER DASHBOARD UI
+
+Add section:
+
+### "Game Balancing"
+
+Include:
+
+#### Preset Selector
+
+* Dropdown or buttons:
+
+  * Standard
+  * Tight
+  * Loose
+
+#### Current Mode Display
+
+* Show active preset
+* Show estimated RTP per game
+
+#### Optional:
+
+* “Apply Preset” button
+* Confirmation modal
+
+---
+
+## 🚨 SAFETY RULES
+
+* Clamp all configs to safe ranges
+* Prevent RTP exceeding 99%
+* Prevent RTP below 85%
+* Validate all preset configs before applying
+
+---
+
+## 💾 API
+
+GET /api/owner/rtp-presets
+POST /api/owner/apply-preset
+
+---
+
+## 🧪 OPTIONAL (HIGH VALUE)
+
+Track:
+
+* Current preset
+* Historical preset changes
+* Timestamp + owner who changed it
+
+---
+
+## ✅ FINAL RESULT
+
+* Owner has full control of casino economy
+* One-click balance changes (no coding needed)
+* Fully hidden from all other roles
+* Safe, controlled RTP system
+
+---
+
+Ensure all access is validated server-side and cannot be bypassed.

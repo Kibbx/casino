@@ -1,0 +1,145 @@
+Create a dedicated Slots page and preserve the exact visual design, layout, and styling shown in the provided implementation.
+
+Requirements:
+
+Use route:
+
+Path: /slots
+
+Page name: Slots
+
+Keep the existing shared app shell:
+
+Top header remains visible
+
+Left sidebar remains visible
+
+Sidebar active state highlights Slots
+
+Content renders to the right of the sidebar and below the header
+
+Preserve the current casino theme:
+
+Dark background
+
+Neon accent styling
+
+Glowing borders
+
+Consistent spacing and typography
+
+Use the exact section layout shown:
+
+Centered neon section title: SLOTS
+
+Horizontal neon divider lines on both sides of the title
+
+Responsive card layout centered within the page
+
+IMPORTANT:
+
+Only display TWO slot cards.
+
+Remove any additional slot cards.
+
+The two cards must be:
+
+1. Fortuna
+2. Deadwood Dollars
+
+Card Requirements:
+
+Fortuna Card
+
+Badge: POPULAR
+
+Status badge: OPEN
+
+Title: FORTUNA
+
+Description:
+"Spin the reels of fortune and uncover massive wins in this classic slot."
+
+Player Mode: Solo
+
+Bet Range: $50 – $1000
+
+CTA Button:
+PLAY NOW
+
+Maintain purple neon border glow and styling.
+
+Deadwood Dollars Card
+
+Badge: NEW
+
+Status badge: OPEN
+
+Title: DEADWOOD DOLLARS
+
+Description:
+"Saddle up for big wins in the wild west with Deadwood Dollars."
+
+Player Mode: Solo
+
+Bet Range: $50 – $1000
+
+CTA Button:
+PLAY NOW
+
+Maintain green neon border glow and styling.
+
+Responsive Behavior:
+
+Large screens:
+Display both cards side-by-side in a 2-column layout.
+
+Tablet screens:
+Maintain centered layout with proper spacing.
+
+Mobile screens:
+Stack cards vertically.
+
+No horizontal overflow.
+
+Keep card dimensions visually consistent with the Mini Games page.
+
+Sidebar Navigation:
+
+Ensure the Slots sidebar item routes to /slots.
+
+Ensure active state styling works correctly.
+
+Preserve all existing sidebar icons and styling.
+
+Verify:
+
+/slots loads successfully
+
+Header remains visible
+
+Sidebar remains visible
+
+Slots item highlights when active
+
+Exactly two cards render
+
+No extra slot cards exist
+
+Fortuna card displays correctly
+
+Deadwood Dollars card displays correctly
+
+Responsive layout works on all screen sizes
+
+No TypeScript errors
+
+No ESLint errors
+
+No broken imports
+
+No build errors
+
+Important:
+
+Do not create placeholder content. Match the existing Mini Games design language exactly, but render only the two slot cards: Fortuna and Deadwood Dollars.

@@ -1,0 +1,99 @@
+I want to upgrade my multiplayer roulette table so that player profile images are used as the visual bet markers instead of standard chips.
+
+Goal:
+- Replace traditional chip graphics with each player’s profile image (avatar)
+- Each bet placed should show the player’s avatar directly on the table
+- The system must remain clean, readable, and scalable when multiple players are betting on the same spot
+
+Core requirements:
+
+1. Avatar-based bet markers
+- Each bet placed by a player should render their profile image at the bet location
+- The avatar should act as the “chip”
+- If a player places multiple chips on the same spot, show:
+  - either a stack indicator (e.g. small number overlay)
+  - or slightly layered avatars
+- Avatar markers should scale visually based on bet size if possible (optional)
+
+2. Readability and clarity (VERY IMPORTANT)
+- Avatars must be clearly visible and not cluttered
+- Add:
+  - a circular frame or border around each avatar
+  - a subtle shadow or glow to separate it from the table
+- Add a small overlay label for:
+  - bet amount OR
+  - chip count
+- Ensure avatars do not overlap in a messy way
+
+3. Handling multiple players on the same bet spot
+- If multiple players bet on the same position:
+  - group avatars into a small cluster
+  - limit visible avatars to 3–5
+  - if more players exist, show:
+    + “+3” or “+5” indicator
+- Arrange avatars in a clean grid or arc layout within the bet zone
+- Do NOT stack everything directly on top of each other
+
+4. Player identification
+- On hover (or tap on mobile):
+  - show tooltip with:
+    - player name
+    - total bet on that spot
+- Make it easy to distinguish who bet what
+
+5. Color / identity system
+- Add optional colored ring or border around avatars to differentiate players
+- Example:
+  - Player 1 = purple ring
+  - Player 2 = red ring
+- Keep colors subtle but visible
+
+6. Performance considerations
+- Optimize rendering so many avatars don’t lag the table
+- Reuse avatar images (cache them)
+- Avoid re-rendering the entire table when only one bet updates
+
+7. Backend / data handling
+- Ensure each bet includes:
+  - playerId
+  - avatar URL
+  - bet amount
+  - bet position
+- Group bets per position server-side or client-side for rendering
+
+8. UI behavior
+- When a player places a bet:
+  - animate avatar appearing on the table
+- When bets are cleared:
+  - animate fade-out or removal
+- When round ends:
+  - highlight winning bets (avatars glow or pulse)
+
+9. Mobile support
+- Ensure avatars remain readable on smaller screens
+- Scale cluster size appropriately
+- Avoid overcrowding
+
+10. Configurable settings
+Add a config section for:
+- max avatars per spot
+- avatar size
+- spacing between avatars
+- whether to show bet amount or not
+- whether to group bets or show individually
+
+What I want from you:
+1. Review my current roulette table UI
+2. Replace chip markers with avatar-based markers
+3. Implement a clean grouping system for multiple players per spot
+4. Add hover/tooltip support for player info
+5. Keep the UI readable and visually clean
+6. Optimize rendering performance
+7. Provide clean, modular code that I can tweak later
+8. Explain how the grouping and rendering system works
+
+Important design direction:
+- This should feel like a live social table
+- I should instantly see where people are betting
+- It should NEVER look cluttered or messy
+- Readability is more important than showing every single avatar at once

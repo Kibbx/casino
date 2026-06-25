@@ -1,0 +1,64 @@
+Update the roulette table UI to fix visibility issues on embedded browsers (FiveM / NoPixel tablet CEF) WITHOUT changing any game logic, betting system, or event handling.
+
+STRICT RULES:
+- Do NOT modify any JavaScript logic, bet calculations, or event listeners
+- Do NOT change how bets are stored or processed
+- ONLY modify HTML structure (if needed) and CSS styling
+
+GOAL:
+Replace the current CSS grid / transparent table with a high-contrast, image-based layout that renders correctly on all devices.
+
+CHANGES TO MAKE:
+
+1. TABLE BACKGROUND
+- Convert the roulette table container into a background image-based layout
+- Use:
+  background: url('/assets/roulette-table.png') center/contain no-repeat;
+- Add:
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  aspect-ratio: 2 / 1;
+
+2. KEEP ALL EXISTING BET ELEMENTS
+- Do NOT remove or recreate betting elements
+- Keep all existing classes, IDs, and click handlers intact
+
+3. CONVERT BET CELLS INTO CLICK ZONES
+- Force all bet cells to:
+  position: absolute;
+  background: transparent;
+  border: none;
+- They should act as invisible clickable overlays on top of the table image
+
+4. ADD HOVER FEEDBACK
+- On hover:
+  outline: 2px solid #d4af37;
+  background: rgba(212, 175, 55, 0.2);
+
+5. REMOVE PROBLEMATIC STYLES
+- Remove ALL of the following if present:
+  backdrop-filter
+  filter: blur
+  glassmorphism effects
+  low-opacity backgrounds
+  ultra-thin borders
+- Ensure NO reliance on transparency for structure
+
+6. FORCE HIGH CONTRAST
+- All visible UI elements must use:
+  dark solid backgrounds (#0b0b0b or #111)
+  white text (#ffffff)
+  gold accents (#d4af37)
+
+7. ENSURE COMPATIBILITY
+- UI must render correctly in Chromium Embedded Framework (CEF)
+- Avoid advanced CSS features that may not be supported
+
+FINAL RESULT:
+- The roulette table is always clearly visible
+- Betting zones still function exactly the same
+- No logic changes anywhere in the system
+- UI looks clean, flat, and readable (GTA-style)
+
+Do not explain changes. Just apply them cleanly.

@@ -1,0 +1,132 @@
+Create a pixel-perfect recreation of the attached login landing page using React + Tailwind CSS. Match the layout, spacing, typography, colors, glow effects, borders, and proportions as closely as possible.
+
+Overall Design
+Full-screen dark cyberpunk/gaming login portal.
+Background: nearly pure black (#030303) with a subtle radial orange-red glow centered behind the content.
+Content vertically and horizontally centered.
+Everything should feel premium, futuristic, minimal, and inspired by GTA roleplay/server login systems.
+Header
+Small text above title:
+"EST. LOS SANTOS"
+Uppercase
+Very small size
+Orange-red color (#ff5a1f)
+Thin horizontal divider lines extending left and right.
+Main title:
+"BIG HOUSE"
+Large bold futuristic square font.
+White.
+Strong presence.
+Slight orange glow beneath the text.
+Card Container
+Width approximately 460px.
+Three stacked menu cards.
+18–20px vertical spacing between cards.
+Card Style
+
+Each card should:
+
+Have rounded corners (~16px).
+Dark background (#070707).
+Thin border (#1c1c1c).
+Soft outer shadow.
+Hover:
+Slight lift.
+Border becomes brighter.
+Glow increases.
+Cursor pointer.
+Card Layout
+
+Horizontal flex layout:
+
+Left icon container.
+Center text.
+Right arrow.
+Left Icon Box
+Rounded square.
+About 48x48px.
+Thin colored border matching card theme.
+Slight colored glow.
+
+Card 1 color:
+
+Orange-red (#ff5a1f)
+
+Card 2 color:
+
+Amber/gold (#ffb000)
+
+Card 3 color:
+
+Purple (#8b3dff)
+Icons
+
+Card 1:
+
+User outline icon.
+
+Card 2:
+
+User-plus icon.
+
+Card 3:
+
+Shield outline icon.
+
+Use Lucide React icons.
+
+Text
+
+Primary text:
+
+White.
+Bold.
+Uppercase.
+Futuristic font styling.
+
+Secondary text:
+
+Gray (#7a7a7a).
+Small.
+Matches screenshot.
+
+Content:
+
+Card 1:
+Title: PLAYER LOGIN
+Subtitle: Sign in with your State ID and PIN.
+
+Card 2:
+Title: NEW PLAYER
+Subtitle: Register and get in the game.
+
+Card 3:
+Title: STAFF ACCESS
+Subtitle: Authorised personnel only.
+
+Right Arrow
+Thin arrow icon.
+Same color as card accent.
+Vertically centered.
+Small glow effect.
+Effects
+Large orange radial glow behind title and cards.
+Subtle ambient glow around entire login area.
+Smooth transitions (250ms).
+No visible scrollbars.
+Perfect vertical alignment.
+Font
+
+Use Orbitron or a similar futuristic sci-fi font from Google Fonts.
+
+Technical Requirements
+React
+Tailwind CSS
+Responsive
+Single component
+Clean structure
+Reusable menu card component
+Lucide React icons
+Exact spacing and proportions matching the reference image.
+
+The final result should look virtually identical to the uploaded screenshot, including lighting, glow intensity, sizing, and positioning.

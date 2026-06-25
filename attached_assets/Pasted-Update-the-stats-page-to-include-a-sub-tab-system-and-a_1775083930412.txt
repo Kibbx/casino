@@ -1,0 +1,129 @@
+Update the stats page to include a sub-tab system and add a dedicated "Loans" tab inside the stats page.
+
+GOAL:
+Keep everything inside the stats page, but organize it using tabs to reduce clutter.
+
+-------------------------------------
+1. STATS PAGE TABS
+-------------------------------------
+
+Convert the stats page into tab navigation:
+
+Tabs:
+- Overview
+- Games
+- Players
+- Loans
+
+Default tab: Overview
+
+-------------------------------------
+2. LOANS TAB CONTENT
+-------------------------------------
+
+Inside the Loans tab, create 3 sections:
+
+-------------------------------------
+A. LOAN OVERVIEW (TOP)
+-------------------------------------
+
+Display:
+
+- Total Loaned Out
+- Total Repaid
+- Interest Earned
+- Default Losses
+- Active Outstanding Debt
+
+Additional metrics:
+- Average loan size
+- Average repayment time
+- Default rate (%)
+- High-risk player count
+
+-------------------------------------
+B. LIVE LOAN MONITOR
+-------------------------------------
+
+Create a table showing active loans:
+
+Columns:
+- Player Name
+- Credit Score
+- Loan Tier
+- Remaining Balance
+- Loan Stage (active, overdue, delinquent, collections)
+- Risk Level
+
+Add filters:
+- Show overdue only
+- Show collections only
+- Show high-risk players
+
+-------------------------------------
+C. LOAN SETTINGS (COLLAPSIBLE)
+-------------------------------------
+
+Add a collapsible settings section at the bottom.
+
+Include:
+
+1. Credit Settings
+- deposit multiplier
+- repayment bonus
+- penalties
+
+2. Loan Limits
+- base multiplier
+- minimum requirements
+
+3. Tier System
+- editable table (requiredRepaid + cap)
+- allow add/edit/remove
+
+4. Interest Settings
+- flat vs daily
+- base rate
+- scaling
+- max cap
+
+5. Escalation Settings
+- overdueDays
+- delinquentDays
+- collectionsDays
+- toggles:
+  - block withdrawals
+  - auto-deduct deposits
+  - alert security
+
+6. Anti-Exploit Settings
+- minQualifyingLoan
+- deposit validation
+- progression blocking
+
+-------------------------------------
+3. UI REQUIREMENTS
+-------------------------------------
+
+- Keep layout consistent with casino theme
+- Tabs should be clean and horizontal
+- Loan settings must be collapsible (hidden by default)
+- Overview stats should be visible immediately
+
+-------------------------------------
+4. INTEGRATION
+-------------------------------------
+
+- Must connect to:
+  - loan system
+  - credit system
+  - player system
+  - security system
+
+- Do not break existing stats functionality
+
+-------------------------------------
+END GOAL
+-------------------------------------
+
+Create a clean tabbed stats page where loans are fully manageable without cluttering the main stats view.

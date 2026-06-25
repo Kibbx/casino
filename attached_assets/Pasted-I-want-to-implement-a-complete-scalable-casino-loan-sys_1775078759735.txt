@@ -1,0 +1,341 @@
+I want to implement a complete, scalable casino loan system integrated into the existing player management and staff dashboard.
+
+GOAL:
+Create a full loanshark-style system with:
+
+* Credit score system
+* Loan creation & tracking
+* Debt escalation stages
+* Daily interest system
+* VIP credit tiers
+* Full banker control panel for all settings
+
+This must integrate cleanly with the existing casino systems (players, transactions, stats, security).
+
+---
+
+1. CREDIT SCORE SYSTEM
+
+---
+
+Each player has a creditScore (0–1000) based on behavior.
+
+Track metrics:
+
+* lifetimeDeposits
+* totalWagered
+* loansRepaid
+* defaults
+* overdueLoans
+* activeDays
+
+Formula:
+
+score =
+(Math.sqrt(lifetimeDeposits) * 0.5) +
+(Math.sqrt(totalWagered) * 0.4) +
+(loansRepaid * 35) +
+(activeDays * 5)
+
+* (defaults * 100)
+* (overdueLoans * 50)
+
+Clamp between 0 and 1000.
+
+Rules:
+
+* Require at least 3 activeDays AND 50k totalWagered before loans allowed
+* Update score automatically on:
+
+  * deposits
+  * wagers
+  * loan repayment
+  * overdue/default events
+
+---
+
+2. LOAN SYSTEM
+
+---
+
+Create Loan model:
+
+Loan {
+id
+playerId
+bankerId
+principalAmount
+interestRate
+totalOwed
+remainingBalance
+createdAt
+dueDate
+status (active, overdue, delinquent, collections, defaulted, paid)
+stage
+paymentHistory[]
+interestAccrued
+}
+
+Loan rules:
+
+* totalOwed = principal + interest (flat OR daily depending on settings)
+* remainingBalance decreases with payments
+* Loan creation adds chips to player balance
+* All actions log transactions:
+
+  * "Loan issued"
+  * "Loan repayment"
+  * "Interest applied"
+
+Loan limits:
+
+maxLoan = creditScore * loanMultiplier (from settings)
+
+Interest rate:
+
+interestRate = baseRate - (creditScore / 1000 * scaling)
+
+---
+
+3. PLAYER UI UPDATE
+
+---
+
+Update player card:
+
+Add:
+
+* Credit Score display (number + tier label)
+* Max loan amount
+* Estimated interest rate
+
+Add new tab:
+"Loans"
+
+Inside Loans tab:
+
+* Show all loans
+* Show:
+
+  * amount
+  * interest rate
+  * remaining balance
+  * due date
+  * status
+  * stage
+
+Actions:
+
+* Create Loan
+* Record Payment
+* Mark Default
+* Close Loan
+
+Create Loan modal:
+
+* Amount
+* Due date
+* Notes
+* Auto-fill interest rate
+* Prevent exceeding max loan
+
+---
+
+4. DEBT ESCALATION SYSTEM
+
+---
+
+Loan stages:
+
+* active
+* overdue
+* delinquent
+* collections
+* defaulted
+
+Stage triggers:
+
+* overdue: after dueDate
+* delinquent: overdueDays
+* collections: collectionsDays
+
+Banker-configurable settings:
+
+overdueDays
+delinquentDays
+collectionsDays
+
+Penalties:
+
+* Score reduction per stage
+* Status updates
+
+Optional enforcement toggles:
+
+* block withdrawals
+* auto-deduct % from deposits
+* limit betting
+* send alert to security system
+* mark player as debtor
+
+Escalation must update automatically via scheduled job.
+
+---
+
+5. DAILY INTEREST SYSTEM
+
+---
+
+Support two modes:
+
+* flat interest
+* daily interest
+
+If daily:
+
+Run a daily job:
+
+* Apply interest to remainingBalance
+* Increase interestAccrued
+* Log transaction
+
+Settings:
+
+interestMode (flat/daily)
+dailyInterestEnabled (true/false)
+maxInterestCap
+
+---
+
+6. VIP CREDIT TIERS
+
+---
+
+Create configurable tiers:
+
+Tier {
+name
+minScore
+interestModifier
+loanMultiplier
+}
+
+Example:
+
+* Trusted (700+)
+* VIP (850+)
+
+Perks:
+
+* reduced interest
+* higher loan cap
+* optional perks (future)
+
+Apply automatically based on creditScore.
+
+---
+
+7. BANKER SETTINGS PANEL
+
+---
+
+Add new section in staff dashboard:
+
+"Loan System Settings"
+
+Tabs:
+
+1. Credit Settings
+
+* multipliers
+* minimum requirements
+
+2. Loan Settings
+
+* base interest rate
+* scaling formula
+* loan multiplier
+
+3. Escalation Settings
+
+* overdueDays
+* delinquentDays
+* collectionsDays
+* penalties
+* enforcement toggles
+
+4. Interest Settings
+
+* flat vs daily
+* enable/disable
+* max cap
+
+5. Credit Tiers
+
+* create/edit/delete tiers
+
+6. Permissions (optional)
+
+* limit who can issue loans
+* max loan per banker
+
+All settings must be dynamic (stored in DB, not hardcoded).
+
+---
+
+8. AUTOMATION
+
+---
+
+Add scheduled jobs:
+
+1. Daily interest application
+2. Escalation checks
+3. Overdue detection
+
+---
+
+9. STATS PAGE UPDATE
+
+---
+
+Add loan analytics:
+
+* Total loaned out
+* Total repaid
+* Interest earned
+* Default losses
+* Active outstanding debt
+* Average credit score
+* High-risk player %
+
+---
+
+10. SECURITY INTEGRATION
+
+---
+
+* Flag players in escalation stages
+* Send alerts to security dashboard
+* Allow linking loan risk to player flags
+
+---
+
+11. REQUIREMENTS
+
+---
+
+* Do NOT break existing systems
+
+* Must match current casino UI style
+
+* Must integrate with:
+
+  * player system
+  * transactions
+  * stats page
+  * security system
+
+* Keep system performant and scalable
+
+* Ensure all logic is centralized and reusable

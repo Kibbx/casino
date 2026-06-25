@@ -1,0 +1,166 @@
+Fix the poker engine so both NORMAL POKER LOBBIES and TOURNAMENT POKER use the same correct Texas Hold’em hand logic.
+
+Current bugs:
+1. A player who goes all-in is being eliminated instantly before the hand finishes.
+2. Preflop betting can get stuck because players can keep calling and the flop does not always advance correctly.
+3. These fixes must apply to BOTH:
+   - normal poker lobbies / cash tables
+   - tournament poker tables
+
+Important architecture rule:
+Use one shared hand engine/state flow for all poker tables.
+Do NOT maintain separate broken logic for normal lobbies vs tournaments.
+Normal tables and tournaments should share the same hand rules, betting round rules, all-in logic, showdown flow, and side-pot handling.
+Only the table meta/rules should differ (ex: tournament elimination, rebuy policy, blinds schedule, placements).
+
+REQUIRED FIXES
+
+1. ALL-IN MUST NOT INSTANTLY ELIMINATE A PLAYER
+When a player goes all-in:
+- set stack to 0 if they used all remaining chips
+- set allIn = true
+- keep them active in the current hand
+- keep them eligible for the main pot and any side pot they qualify for
+- do NOT remove them from the hand
+- do NOT remove them from the table
+- do NOT mark them eliminated immediately
+
+A player can only be removed after the hand fully resolves.
+
+2. ELIMINATION TIMING RULE
+For ALL poker tables:
+- no player should be removed from the hand during betting just because stack hit 0
+- they stay in-hand until showdown / hand resolution unless folded earlier
+
+For TOURNAMENT tables specifically:
+- only eliminate a player AFTER the hand is complete AND their stack is still 0
+- then update tournament placement / bust-out order
+- if they win chips back from the pot, they remain in the tournament
+
+For NORMAL CASH TABLES specifically:
+- do NOT mark them tournament-eliminated obviously
+- after the hand, if stack is 0, handle them as busted at the table according to current cash-table behavior
+- but never before the hand completes
+
+3. FIX BETTING ROUND CLOSURE
+A betting round must end immediately when all remaining actionable players have:
+- folded
+- gone all-in
+- or matched the current highest bet for that round
+
+Do NOT keep rotating action after that.
+Do NOT require a raise for the round to end.
+Do NOT allow one player to keep the game hostage by repeatedly being given turns after already calling.
+
+4. WHO COUNTS AS ACTIONABLE
+A player should NOT be prompted for action if:
+- folded = true
+- allIn = true
+- eliminated = true
+- stack = 0 and allIn = true
+- sittingOut = true (if your system has this)
+
+Only players who are still able to make a decision should count toward “owes action”.
+
+5. REOPEN ACTION ONLY ON A RAISE
+After a player calls and matches the highest bet:
+- they are done for that round
+- they should not act again unless another player raises
+
+If a raise happens:
+- players below the new amount to call become pending again
+- the raiser is done unless action comes back because of a later raise
+
+6. PROPER HAND FLOW FOR BOTH GAME MODES
+Use this exact shared hand flow:
+- start hand
+- assign dealer/button
+- post blinds
+- deal hole cards
+- run preflop betting
+- if round complete, deal flop
+- run flop betting
+- deal turn
+- run turn betting
+- deal river
+- run river betting
+- resolve showdown
+- award main pot and side pots
+- then handle post-hand player status
+
+Do not skip this flow for tournaments or normal tables.
+
+7. AUTO-RUNOUT WHEN ALL REMAINING PLAYERS ARE ALL-IN
+If no more decisions are possible because all remaining non-folded players are all-in:
+- automatically reveal remaining board cards
+- go directly to showdown
+- do not wait for more actions
+- do not eliminate anyone until pot resolution is complete
+
+8. SIDE POTS MUST WORK CORRECTLY
+For both normal and tournament tables:
+- all-in players can only win the amount they contributed toward
+- larger stacks continue contesting side pots
+- resolve main pot first, then side pots
+- only after all pots are awarded should post-hand stack/elimination logic run
+
+9. TURN SELECTION SAFETY
+Before assigning the next player turn after any action:
+- first check if the betting round is already complete
+- if complete, advance to next street immediately
+- do not assign another turn if the street should end
+
+Also add guards:
+- a player cannot act twice in a row unless action was reopened by a raise
+- “call” only appears if amountToCall > 0
+- “check” only appears if amountToCall = 0
+- if everyone has checked, advance street immediately
+
+10. TOURNAMENT-SPECIFIC POST-HAND RULES
+After a tournament hand resolves:
+- identify players whose stack is still 0
+- mark them eliminated only now
+- assign placement correctly
+- if multiple players bust in the same hand, rank them using correct showdown/pot resolution order already supported by the system, or add deterministic handling if missing
+- rebuy logic should only apply after hand resolution, not mid-hand
+
+11. NORMAL TABLE POST-HAND RULES
+After a normal/cash table hand resolves:
+- players with 0 chips should be treated as busted only after the hand ends
+- preserve existing buy-in / reload / leave-table logic
+- do not force tournament-style elimination behavior onto normal tables
+
+12. DEBUG LOGGING
+Add detailed logs for both table types:
+- table type: normal or tournament
+- hand started
+- blinds posted
+- player action
+- current street
+- current amount to call
+- each player’s stack
+- each player’s round contribution
+- each player’s owesAction status
+- each player’s folded/allIn status
+- betting round completed
+- flop/turn/river dealt
+- showdown started
+- main pot / side pot payouts
+- player removed/eliminated AFTER hand resolution only
+
+13. IMPORTANT IMPLEMENTATION RULE
+Do not do a full UI rewrite.
+Do not change registration, lobby seating, or table creation unless required.
+Fix the shared backend poker hand engine and related websocket updates.
+Make normal poker and tournament poker call the same core hand-resolution and betting-round logic.
+
+14. REQUIRED TEST CASES
+After implementing, test all of these:
+- normal table: everyone limps preflop and flop appears correctly
+- normal table: player goes all-in preflop and stays in until showdown
+- normal table: multi-way all-in with side pot
+- tournament: player goes all-in and loses, only eliminated after hand resolves
+- tournament: player goes all-in and wins, remains active
+- tournament: one raise and several callers, street advances correctly
+- tournament: all remaining players all-in before river, board auto-runs out
+- heads-up table behavior still works correctly

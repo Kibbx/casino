@@ -1,0 +1,84 @@
+Create a fully responsive casino dashboard header identical in style and layout to the attached reference image.
+
+Requirements:
+
+Build with React + Tailwind CSS.
+Header must be 100% responsive and adapt smoothly across desktop, laptop, tablet, and mobile breakpoints.
+Use Flexbox and CSS Grid where appropriate.
+Never use fixed widths or absolute positioning for layout structure.
+All spacing should use responsive units (rem, %, clamp(), vw).
+Header height should scale proportionally with screen size.
+
+Desktop Layout (left → right):
+
+Hamburger menu icon
+Brand logo text:
+"BIG HOUSE" in white
+"CASINO" in orange
+Volume control with icon and slider
+Two-tab segmented control:
+CASINO (active orange state)
+MARKET
+Center search bar
+Full-width responsive
+Search icon
+Placeholder: "Search games, events, players..."
+User stats section:
+Silver II rank badge
+Progress bar showing percentage to next level
+Chips balance card
+User profile card with avatar, username, and membership status
+Logout/action icon
+
+Responsive Behavior
+
+Large Desktop (1440px+)
+Match reference layout exactly.
+Search bar occupies remaining available space.
+Laptop (1024–1439px)
+Reduce spacing proportionally.
+Shrink search bar before shrinking cards.
+User cards remain visible.
+Tablet (768–1023px)
+Move search bar to second row.
+Keep logo and profile controls on first row.
+Wrap navigation controls naturally.
+Mobile (<768px)
+First row:
+Hamburger
+Logo
+User avatar
+Second row:
+Search bar full width
+Third row:
+Casino/Market toggle
+Hide non-essential stats cards.
+Replace rank/chips panels with compact badges.
+
+Visual Style
+
+Dark cyberpunk casino theme
+Background: #0A0A0A
+Neon orange accents
+Purple borders/glows
+Rounded corners (10–14px)
+Subtle glassmorphism effects
+Hover transitions
+Soft neon shadows
+
+Technical Requirements
+
+Use clamp() for typography scaling.
+Use CSS variables for colors.
+Support screen widths from 320px to 2560px.
+No horizontal scrolling at any breakpoint.
+Follow modern dashboard UI best practices.
+Create reusable components:
+Header
+SearchBar
+RankBadge
+ChipsCard
+UserProfile
+SegmentedToggle
+
+Deliver production-ready React/Tailwind code with clean component structure and responsive breakpoints.

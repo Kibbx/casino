@@ -1,0 +1,260 @@
+You are modifying an existing full-stack casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, PostgreSQL + Drizzle, WebSockets already in use).
+
+GOAL:
+
+1. Add sub-tabs inside the existing "Tables" tab:
+
+   * "Poker Tables" (existing UI unchanged)
+   * "Horse Racing" (new admin panel)
+
+2. Build a complete Horse Racing system with:
+
+   * 100 configurable horses (admin editable name + odds)
+   * Automated race generation
+   * Weighted winner selection
+   * Betting + payouts
+   * Admin control panel inside Tables → Horse Racing
+
+---
+
+## FRONTEND TASKS
+
+1. TABLES SUB-TABS
+
+Inside the existing Tables page:
+
+* Add sub-navigation at the top:
+  [ Poker Tables ] [ Horse Racing ]
+
+* Use state:
+  const [subTab, setSubTab] = useState("poker");
+
+* Render:
+  {subTab === "poker" && <PokerTables />}
+  {subTab === "horses" && <HorseRacingAdmin />}
+
+DO NOT break existing PokerTables component.
+
+---
+
+2. HORSE RACING ADMIN COMPONENT
+
+Create:
+components/admin/HorseRacingAdmin.tsx
+
+Layout sections:
+
+A) Race Status
+
+* status (betting / running / finished)
+* raceId
+* countdown timer
+
+B) Controls
+
+* Start Race
+* Force Finish
+* Cancel Race
+
+C) Current Race Table
+Columns:
+
+* Horse Name
+* Odds (display like 10/1)
+* Owner (optional, default "System")
+* Total Bets
+* Exposure
+
+D) Risk Display
+
+* totalExposure / safeLimit
+* text only (SAFE / HIGH)
+
+E) Horse Editor (IMPORTANT)
+
+Table of 100 horses:
+Columns:
+
+* ID
+* Name (editable input)
+* Odds (editable number 1–30)
+
+Button:
+[ Save Changes ]
+
+Fetch from:
+GET /api/admin/horses
+POST /api/admin/horses/update
+
+---
+
+## BACKEND TASKS
+
+1. DATABASE TABLE
+
+Create table: horses
+
+Fields:
+
+* id (1–100)
+* name (string)
+* odds (int, 1–30)
+* weight (float)
+
+Initialize with 100 default horses.
+
+---
+
+2. AUTO WEIGHT CALCULATION
+
+Weights are NOT set manually.
+
+When odds are saved, calculate:
+
+weight = 1 / (odds + 1)
+
+Then normalize all weights so total = 1.
+
+---
+
+3. ADMIN ROUTES
+
+GET /api/admin/horses
+→ returns all 100 horses
+
+POST /api/admin/horses/update
+→ input: [{id, name, odds}]
+→ update DB
+→ recalc weights
+
+---
+
+4. RACE SYSTEM
+
+Create race engine:
+
+State:
+
+* currentRaceId
+* status ("betting" | "running" | "finished")
+* selectedHorses (6 per race)
+* bets map
+
+---
+
+5. RACE GENERATION
+
+Every race:
+
+* Randomly select 6 UNIQUE horses from 100
+* Ensure at least:
+
+  * 1 low odds (1–5)
+  * 1 mid odds (6–15)
+  * 1 high odds (16–30)
+
+---
+
+6. BETTING
+
+Players can:
+POST /api/horse/bet
+
+* horseId
+* amount
+
+Store per race.
+
+---
+
+7. EXPOSURE CALC
+
+For each horse:
+
+exposure = totalBets * (odds + 1)
+
+Total exposure = sum of all horses.
+
+---
+
+8. WINNER SELECTION (CRITICAL)
+
+Use weighted random:
+
+function pickWinner(horses) {
+const totalWeight = horses.reduce((s, h) => s + h.weight, 0);
+let r = Math.random() * totalWeight;
+
+for (const h of horses) {
+if (r < h.weight) return h;
+r -= h.weight;
+}
+}
+
+---
+
+9. PAYOUT
+
+For winning horse:
+
+payout = bet * (odds + 1)
+
+Update player balances.
+
+---
+
+10. RACE LOOP
+
+* Betting phase: 15 seconds
+* Running phase: 5 seconds
+* Finish → payout
+* Wait 30–60s → next race
+
+---
+
+11. ADMIN CONTROLS
+
+POST endpoints:
+
+/api/admin/race/start
+/api/admin/race/finish
+/api/admin/race/cancel
+
+---
+
+12. WEBSOCKET EVENTS
+
+Emit:
+
+* race_status
+* race_timer
+* race_horses
+* race_result
+
+Reuse existing WS system.
+
+---
+
+## RULES / CONSTRAINTS
+
+* DO NOT modify existing poker system
+* DO NOT break existing API routes
+* Keep UI consistent with current Tailwind theme
+* Keep layout simple (cards + tables only)
+* No overengineering
+
+---
+
+## END RESULT
+
+* Tables tab has sub-tabs (Poker / Horse Racing)
+* Poker works as before
+* Horse Racing fully functional:
+
+  * 100 horses (admin editable)
+  * auto-balanced odds
+  * race system
+  * betting + payouts
+  * admin control panel
+
+Only output working code and necessary files.

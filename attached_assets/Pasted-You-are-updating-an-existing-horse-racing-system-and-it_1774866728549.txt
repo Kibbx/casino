@@ -1,0 +1,340 @@
+You are updating an existing horse racing system and its betting UI.
+
+GOAL:
+
+1. Fix race balance so high-stat horses are NOT guaranteed to win
+2. Improve betting UI so winnings are visible and betting is faster/easier
+
+DO NOT rewrite the entire system.
+Modify only race logic and betting UI components.
+
+---
+
+## PART 1 — RACE BALANCE FIX
+
+CURRENT PROBLEM:
+
+* Highest stat horse wins almost every race
+* System is too deterministic
+
+We must convert it into a probabilistic system.
+
+---
+
+1. APPLY DIMINISHING RETURNS TO STATS
+
+Replace linear stat scaling with:
+
+statEffect = Math.pow(stat / 100, 0.65)
+
+Apply to:
+
+* speedStat
+* staminaStat
+* accelerationStat
+
+---
+
+2. LIMIT TOTAL STAT IMPACT
+
+Stats should only contribute ~20–25% total.
+
+Example:
+
+speedContribution = statEffect * 0.25
+
+Do NOT exceed this cap.
+
+---
+
+3. ADD RACE VARIANCE
+
+Each horse gets per-race randomness:
+
+const variance = randomBetween(-0.08, 0.08)
+
+Apply:
+
+finalPerformance *= (1 + variance)
+
+---
+
+4. IMPLEMENT 3 RACE PHASES
+
+Split race into:
+
+START (0–20%)
+
+* Use accelerationStat
+* Apply burst bonus
+
+MID (20–80%)
+
+* Use speedStat
+* Add slight oscillation from luck
+
+FINAL (80–100%)
+
+* Use staminaStat
+* Allow “second wind” chance
+
+---
+
+5. ADD EVENT SYSTEM
+
+Each horse can trigger random events.
+
+Chance:
+
+eventChance = 5% + (luckStat * 0.05%)
+
+Events:
+
+* clean_stride → +5% speed (short duration)
+* stumble → -6% speed (short duration)
+* second_wind → +10% speed (final phase only)
+* lucky_surge → random burst
+
+Events must:
+
+* Be temporary
+* Stack with performance
+* Trigger during race loop
+
+---
+
+6. ADD PACK COMPRESSION
+
+Prevent runaway leaders.
+
+If ahead:
+
+* Apply -1% to -3% drag
+
+If behind:
+
+* Apply +1% to +3% boost
+
+---
+
+7. ADD WINNER FATIGUE
+
+Track wins per horse:
+
+fatigueStacks += 1 per win
+
+fatiguePenalty = fatigueStacks * 0.02
+
+Apply:
+
+finalPerformance -= fatiguePenalty
+
+Reset after:
+
+* A loss OR
+* Configurable number of races
+
+---
+
+8. LUCK RULE
+
+Luck must NOT increase base speed.
+
+Luck ONLY:
+
+* Increases event chance
+* Slightly increases variance range:
+
+varianceRange = 0.08 + (luckStat * 0.0005)
+
+---
+
+9. FINAL PERFORMANCE MODEL
+
+base = 1.0
+
+speedFactor = Math.pow(speedStat / 100, 0.65) * 0.25
+
+variance = randomBetween(-varianceRange, varianceRange)
+
+eventBoost = sum of active event effects
+
+fatiguePenalty = fatigueStacks * 0.02
+
+finalPerformance =
+base
+
+* speedFactor
+* eventBoost
+* variance
+
+- fatiguePenalty
+
+---
+
+10. TARGET OUTCOME
+
+* Best horse wins ~20–30% (NOT 100%)
+* Mid horses win sometimes
+* Low horses rarely win but can
+
+---
+
+## PART 2 — BETTING UI + UX IMPROVEMENTS
+
+GOAL:
+
+* Make winnings clearly visible (no popup reliance)
+* Allow custom bet input
+* Speed up betting flow
+
+---
+
+1. MOVE WINNINGS INTO MAIN UI
+
+Remove reliance on popup.
+
+Add a persistent "RESULTS / PAYOUT" section inside betting panel.
+
+Display:
+
+* Winning horse
+* Player bet
+* Result (win/loss)
+* Payout amount
+
+Example:
+
+Your Bets:
+
+* Horse #2 — 5,000 chips
+
+Race Result:
+
+* Winner: Horse #4
+
+Your Outcome:
+
+* ❌ Lost 5,000
+
+OR
+
+* ✅ Won 18,500 (+13,500)
+
+---
+
+2. PERSISTENT RESULT DISPLAY
+
+Results must:
+
+* Stay visible until next race starts
+* Fade/reset only when betting reopens
+
+---
+
+3. ADD DIRECT BET INPUT FIELD
+
+Add:
+
+<input type="number" min="0" step="100" />
+
+Players can:
+
+* Type exact bet amount
+* Edit before placing bet
+
+---
+
+4. IMPROVE QUICK BET BUTTONS
+
+Keep buttons:
+
++500
++1K
++5K
++10K
+MAX
+
+Behavior:
+
+* Buttons ADD to input value
+* MAX = player’s full balance
+
+---
+
+5. VALIDATION
+
+Before placing bet:
+
+* Amount > 0
+* Amount ≤ player balance
+* Respect table limits
+
+Show inline errors (no popups)
+
+---
+
+6. LIVE BET SUMMARY
+
+Display in panel:
+
+Total Bet:
+
+* 12,500 chips
+
+Potential Payout:
+
+* ~48,000 chips
+
+Update in real-time as user edits input
+
+---
+
+7. BET CONFIRMATION (INLINE)
+
+After placing bet:
+
+✔ Bet placed: 5,000 on Horse #3
+
+Update "Your Bets" instantly
+
+---
+
+8. MOST-BET HORSE INDICATOR
+
+Display:
+
+🔥 Most Bet Horse: #X
+
+Optional:
+
+* Show % of total pool per horse
+
+---
+
+9. MOBILE FRIENDLY
+
+Ensure:
+
+* Large tap targets
+* Input is easy to use
+* Layout stacks vertically
+
+---
+
+10. DO NOT BREAK BACKEND
+
+* Keep existing betting logic intact
+* Only update UI + input handling
+
+---
+
+FINAL REQUIREMENTS
+
+* Keep system performant (real-time race safe)
+* Maintain compatibility with existing horse data
+* Log race outcomes for balancing checks
+
+---
+
+END OF TASK

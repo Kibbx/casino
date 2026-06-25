@@ -1,0 +1,127 @@
+Build a complete High-Low (Higher or Lower) casino card game for a web-based casino.
+
+This must include FULL UI + game logic + animations in one build.
+
+----------------------------------------
+🎨 DESIGN REQUIREMENTS (VERY IMPORTANT)
+----------------------------------------
+
+Theme:
+- Dark casino style (black / charcoal background)
+- Subtle gold accents (Back Alley Bets style)
+- Clean, modern, GTA Online-inspired UI
+- NO clutter, NO gradients overload, NO cheap clipart
+
+Layout:
+- Centered game panel (max width ~500px)
+- Top: Player balance display
+- Middle: Large current card (main focus)
+- Below: Next card area (hidden until reveal)
+- Bottom: Action buttons (HIGHER / LOWER / CASH OUT)
+
+Cards:
+- Use a clean 52-card deck (PNG or CSS-based)
+- Large, readable, centered
+- Slight glow effect on active card
+- Smooth flip animation when revealing next card
+
+Buttons:
+- HIGHER (green accent glow)
+- LOWER (red accent glow)
+- CASH OUT (gold accent)
+
+Hover effects:
+- Subtle scale-up (1.05x)
+- Soft glow highlight
+
+----------------------------------------
+🎮 GAMEPLAY LOGIC
+----------------------------------------
+
+Game Flow:
+1. Player places a bet
+2. First card is dealt face-up
+3. Player chooses:
+   - HIGHER (next card is higher)
+   - LOWER (next card is lower)
+4. Next card flips with animation
+5. If correct → continue streak
+6. If wrong → lose bet
+7. Player can CASH OUT anytime
+
+Rules:
+- Ace = highest card
+- No ties (if equal rank, treat as loss OR auto redraw)
+- Use standard shuffled deck logic
+
+----------------------------------------
+💰 MULTIPLIER SYSTEM (IMPORTANT)
+----------------------------------------
+
+Start multiplier: 1.00x
+
+Each correct guess increases multiplier:
+- 1st correct → 1.25x
+- 2nd → 1.55x
+- 3rd → 1.95x
+- 4th → 2.50x
+- 5th → 3.20x
+- Continue scaling but with diminishing returns
+
+Display:
+- Show current multiplier above buttons
+- Animate multiplier increase on win
+
+----------------------------------------
+🎞️ ANIMATIONS
+----------------------------------------
+
+Card Flip:
+- Smooth 3D flip (rotateY)
+- 300–500ms duration
+
+Win:
+- Card glows green briefly
+- Multiplier pulses
+
+Loss:
+- Card flashes red
+- Screen shake (very subtle)
+
+----------------------------------------
+🧠 RNG / FAIRNESS
+----------------------------------------
+
+- Use proper deck shuffle (Fisher-Yates)
+- Draw cards sequentially from deck
+- Reset deck when game ends
+
+----------------------------------------
+🧩 TECH REQUIREMENTS
+----------------------------------------
+
+- HTML + CSS + JavaScript (single-page app)
+- No frameworks required (vanilla JS preferred)
+- Responsive (must work on tablet UI)
+- Clean, readable code structure
+
+----------------------------------------
+✨ EXTRA POLISH (IMPORTANT)
+----------------------------------------
+
+- Add subtle background vignette
+- Add chip/bet input UI
+- Add sound hooks (optional placeholders)
+- Add smooth transitions between states
+
+----------------------------------------
+🎯 FINAL GOAL
+----------------------------------------
+
+The game should feel like:
+- A real online casino game
+- Clean, premium, and responsive
+- NOT like a basic demo or school project
+
+Make it visually impressive but minimal.
+Focus on smooth UX, strong animations, and clarity.

@@ -1,0 +1,96 @@
+I want to upgrade my referral system with adjustable commission settings and banker-only access.
+
+Requirements:
+
+1. Referral System (keep existing logic)
+- Each user has:
+  referralCode
+  referredBy
+  totalDeposited
+  totalWithdrawn
+  totalWagered
+
+2. Commission Settings (NEW)
+- Add a global commission percentage setting
+- Default = 10%
+- Store in database or config table:
+
+table: settings
+{
+  key: "referralCommissionPercent",
+  value: "10"
+}
+
+- This value MUST be editable from admin (banker panel)
+
+3. Commission Calculation
+- Commission is based on player losses:
+  loss = totalDeposited - totalWithdrawn
+
+- Commission:
+  commission = loss * (commissionPercent / 100)
+
+- Only count players with:
+  totalWagered >= 10000
+
+4. Banker-Only Access (IMPORTANT)
+- Only banker/admin roles can:
+  - View referral stats
+  - View commission earned
+  - Edit commission %
+
+- Normal users should NOT see:
+  - commission %
+  - earnings
+  - backend referral analytics
+
+- Enforce this on BOTH:
+  - frontend UI
+  - backend API (must validate role)
+
+5. Admin / Banker Panel Updates
+- Add a "Referrals" tab
+
+Show:
+- referralCode
+- total referred users
+- totalDeposited
+- totalWithdrawn
+- netProfit
+- commissionEarned
+
+Also add:
+- input field to edit commission %
+- save button → updates settings table
+
+6. API Endpoints
+
+GET /api/admin/referrals
+- returns all referral stats
+- banker-only
+
+GET /api/admin/referral-settings
+- returns current commission %
+- banker-only
+
+POST /api/admin/referral-settings
+- update commission %
+- body: { percent: number }
+- banker-only
+
+7. Security / Anti Abuse
+- Prevent self-referrals:
+  - same account
+  - same IP
+
+- Commission should NOT go negative
+- If player is profitable → commission = 0
+
+8. Performance
+- Do NOT recalculate everything every request
+- Use efficient queries or cached aggregation if needed
+
+9. IMPORTANT
+- Do NOT break existing auth system
+- Do NOT change current game logic
+- Keep everything consistent with Node.js + Express + PostgreSQL + Drizzle setup

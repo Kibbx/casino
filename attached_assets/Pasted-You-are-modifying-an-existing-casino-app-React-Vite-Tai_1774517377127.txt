@@ -1,0 +1,265 @@
+You are modifying an existing casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, WebSockets already implemented).
+
+DO NOT break existing systems.
+
+GOAL:
+Upgrade Horse Racing visuals to GTA-style with:
+
+* Side-scrolling camera
+* Galloping animation illusion
+* Absolute-position race track (NOT grid)
+* Betting overlay UI
+* Fully integrated HorseSprite rendering
+
+---
+
+## CORE CHANGE (IMPORTANT)
+
+REMOVE:
+
+* grid-based race layout
+* vertical lane stacking using flex/space-y
+
+REPLACE WITH:
+
+* absolute-position track
+* animated horizontal movement
+* camera tracking system
+
+---
+
+## COMPONENTS TO CREATE
+
+components/horses/HorseRaceTrack.tsx
+components/horses/RaceCamera.tsx
+components/horses/BettingOverlay.tsx
+
+---
+
+## HORSE RACE TRACK (MAIN SYSTEM)
+
+Create a full-width track:
+
+* height: 320px
+* background: gradient green OR track image
+* overflow: hidden
+
+Inside:
+
+* horses positioned ABSOLUTELY
+* each horse moves independently
+
+---
+
+## SIDE-SCROLLING CAMERA (KEY FEATURE)
+
+Wrap track in a camera container:
+
+<div className="overflow-hidden w-full">
+  <motion.div animate={{ x: cameraOffset }}>
+    {/* horses */}
+  </motion.div>
+</div>
+
+---
+
+CAMERA LOGIC:
+
+* Track leading horse position
+* Move camera left as horses move right
+
+Example:
+
+cameraOffset = -leadingHorsePosition * 0.6
+
+This creates follow effect.
+
+---
+
+## HORSE POSITIONING
+
+Each horse:
+
+top = baseOffset + index * spacing + slight randomness
+
+Example:
+
+top = 40 + index * 40 + random(-5 to 5)
+
+Add scale for depth:
+
+scale = 0.9 + index * 0.03
+
+---
+
+## GALLOPING ANIMATION ILLUSION
+
+DO NOT use real animation frames.
+
+Fake it using:
+
+1. Vertical bounce:
+   animate y: [0, -3, 0]
+
+2. Slight rotation:
+   rotate: [-2deg, 2deg]
+
+3. Repeat infinitely during race
+
+Example:
+
+animate={{
+y: [0, -3, 0],
+rotate: [-2, 2, -2]
+}}
+
+transition={{
+duration: 0.4,
+repeat: Infinity
+}}
+
+---
+
+## HORSE MOVEMENT
+
+Animate X position:
+
+running:
+
+* random target between 60%–90%
+
+finished:
+
+* winner = 100%
+* others = 80–98%
+
+---
+
+## HORSE RENDERING
+
+Use HorseSprite component:
+
+Each horse shows:
+
+* layered visuals
+* owner tack color
+* number badge (#1–6)
+
+---
+
+## FINISH LINE
+
+Add right-side vertical line:
+
+<div className="absolute right-10 w-2 bg-white" />
+
+---
+
+## BETTING UI OVERLAY (GTA STYLE)
+
+Create top overlay:
+
+---
+
+## | Horse Icons + Odds Row            |
+
+Each horse:
+
+* small HorseSprite
+* odds below
+
+Highlight:
+
+* selected horse (player bet)
+* winning horse after race
+
+---
+
+Below overlay:
+
+---
+
+## | Betting Panel                     |
+
+Show:
+
+* selected horse
+* bet amount
+* confirm bet button
+
+---
+
+## RACE STATUS TEXT
+
+Overlay center text:
+
+* "BETTING OPEN"
+* "AND THEY'RE OFF!"
+* "FINAL STRETCH!"
+* "WINNER: [HORSE NAME]"
+
+---
+
+## CAMERA + TRACK IMPLEMENTATION
+
+Track width should be larger than screen:
+
+Example:
+width: 200%
+
+Camera moves inside it.
+
+---
+
+## WEBSOCKET INTEGRATION
+
+Listen for:
+
+race_start
+race_finish
+
+Update:
+
+* positions
+* winnerId
+
+---
+
+## PERFORMANCE RULES
+
+* max 6 horses
+* lightweight animation only
+* no physics engine
+* no canvas
+
+---
+
+## STYLE RULES
+
+* dark casino theme
+* neon highlights
+* smooth animation
+* no UI grid look
+
+---
+
+## IMPORTANT RULES
+
+* backend decides winner
+* animation is visual only
+* do not use emojis anywhere
+* do not use static list layout
+
+---
+
+## FINAL RESULT
+
+Horse racing now feels like:
+
+* GTA Inside Track
+* cinematic race experience
+* smooth side-scrolling camera
+* animated horses (not sliding boxes)
+* immersive betting UI
+
+Only output working code and required files.

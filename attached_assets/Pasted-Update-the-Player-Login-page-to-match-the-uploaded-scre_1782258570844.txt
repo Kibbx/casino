@@ -1,0 +1,83 @@
+Update the Player Login page to match the uploaded screenshot exactly.
+
+Build it in React + Tailwind CSS using the same dark cyberpunk style as the home screen.
+
+Requirements:
+
+Full-screen 16:9 black background.
+Large soft orange/red radial glow behind the login card.
+Centered login card.
+Card size approximately 400px wide and 505px tall.
+Card background: near-black #070707.
+Rounded corners around 16px.
+Thin border: rgba(255,255,255,0.08).
+Subtle dark shadow.
+
+Inside the card:
+
+Header
+Small top text: EST. LOS SANTOS
+Orange/red color.
+Tiny uppercase letter-spaced text.
+Thin horizontal lines on both sides.
+Main title: BIG HOUSE
+One line only.
+White futuristic bold font.
+Add a short orange underline below the title.
+Subtitle:
+Enter your State ID and PIN to continue
+Small muted gray text.
+Form
+
+Create two fields:
+
+First field:
+
+Label: STATE ID
+Small blue ID/card icon before label.
+Input placeholder: Your State ID number
+
+Second field:
+
+Label: PIN
+Small orange lock icon before label.
+Input placeholder: Enter your PIN
+
+Input styling:
+
+Full width.
+Height around 48px.
+Dark slate background #171820.
+Border #44495a.
+Rounded corners 10px.
+Text and placeholder should be pale blue-gray.
+Letter spacing slightly wide.
+Focus state should add orange glow/border.
+Button
+Full-width button.
+Height around 48px.
+Background: deep burnt orange #8f2508.
+Rounded corners 10px.
+Text: SIGN IN
+Uppercase, bold, letter-spaced.
+Subtle shadow/glow.
+Hover should brighten slightly.
+Footer Links
+Centered text:
+No account yet? Register here
+Gray text with Register here in orange/red.
+
+Below that:
+
+← BACK TO HOME
+Small muted gray uppercase text.
+Hover should turn orange.
+Layout Details
+Use Orbitron or similar futuristic Google font.
+Keep everything centered.
+Use generous vertical spacing like the screenshot.
+Do not make the card too wide.
+Do not stack the BIG HOUSE title.
+Match the screenshot proportions, glow, spacing, and typography as closely as possible.
+
+Create reusable components where appropriate, but prioritize pixel accuracy.

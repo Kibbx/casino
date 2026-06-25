@@ -1,0 +1,295 @@
+You are upgrading an existing multiplayer casino platform (Back Alley Bets).
+
+Add a COMPLETE BACCARAT SYSTEM including:
+
+* Multiplayer table gameplay
+* GTA-style UI
+* Dealer + Banker controls
+* Backend game logic
+* WebSocket sync
+* Integration with chips + staff roles
+
+---
+
+## 🎴 CORE GAME RULES (REQUIRED)
+
+Implement standard Punto Banco baccarat:
+
+Card values:
+
+* A = 1
+* 2–9 = face value
+* 10/J/Q/K = 0
+
+Hand total:
+
+* Only last digit counts (mod 10)
+
+Natural:
+
+* If Player or Banker has 8 or 9 → no more cards drawn
+
+Player rules:
+
+* 0–5 → draw 3rd card
+* 6–7 → stand
+
+Banker rules (MUST FOLLOW EXACT LOGIC):
+
+* Depends on Banker total AND Player third card
+
+Use standard table:
+
+* Banker draws on 0–2 always
+* Banker draws on 3 unless Player third card = 8
+* Banker draws on 4 if Player third card = 2–7
+* Banker draws on 5 if Player third card = 4–7
+* Banker draws on 6 if Player third card = 6–7
+* Otherwise stand
+
+---
+
+## 💰 BET TYPES + PAYOUTS
+
+* Player → 1:1
+* Banker → 1:1 minus commission (configurable)
+* Tie → configurable payout (default 8:1)
+
+Commission:
+
+* Default 5% on Banker wins
+* Adjustable by Banker role (0–10%)
+
+---
+
+## 🧩 MULTIPLAYER TABLE SYSTEM
+
+Tables behave like poker tables:
+
+* Multiple players per table
+* Shared round
+* All bets locked before dealing
+
+Game flow:
+
+1. Betting phase (timer configurable)
+2. Lock bets
+3. Deal cards (Player + Banker)
+4. Apply draw rules
+5. Resolve outcome
+6. Payouts
+7. Reset next round
+
+Use WebSocket:
+
+* Broadcast:
+
+  * bets per player
+  * total per side
+  * cards dealt
+  * round state
+  * countdown timer
+
+---
+
+## 🎮 FRONTEND UI (GTA-STYLE)
+
+Design a clean, minimal table UI:
+
+Layout:
+
+* Left: PLAYER bet zone (blue)
+* Center: TIE (gold, smaller)
+* Right: BANKER (red)
+
+Features:
+
+* Large clickable bet zones
+* Player avatars stack on each bet zone
+* Show total chips per zone
+* Show player’s own bet
+
+Center:
+
+* Card area with animations
+* Display totals clearly
+
+Bottom:
+
+* Chip selector (100, 500, 1k, 5k, 10k, all-in)
+* Buttons:
+
+  * Place Bet
+  * Clear Bet
+  * Repeat Bet
+
+Right side:
+
+* History grid (last results)
+
+  * Player = blue
+  * Banker = red
+  * Tie = gold
+
+Animations:
+
+* Cards slide in
+* Winning zone glows
+* Chips move to winners
+
+---
+
+## 👥 PLAYER INTERACTIONS
+
+Players can:
+
+* Join table
+* Place bets on Player / Banker / Tie
+* See other players betting live
+* Repeat previous bet
+
+---
+
+## 🏦 STAFF ROLES + PERMISSIONS
+
+🎩 OWNER
+
+* Full access
+
+🏦 HEAD BANKER
+
+* Full baccarat control
+* Set:
+
+  * Banker commission %
+  * Table min/max bets
+  * Tie payout
+  * Enable/disable tables
+
+👔 DEALER (NEW BEHAVIOR)
+Dealers DO NOT deal cards manually.
+
+Dealers CAN:
+
+* Lock/unlock table
+* Start/pause rounds
+* Set table password (optional private tables)
+* Open/close table
+* Adjust:
+
+  * min bet
+  * max bet
+
+Dealers CANNOT:
+
+* Change rake/commission
+
+---
+
+## 🔐 TABLE SETTINGS
+
+Each baccarat table must support:
+
+* tableId
+* name
+* password (optional)
+* isOpen (true/false)
+* minBet
+* maxBet
+* bankerCommission
+* tiePayout
+* bettingTimer (seconds)
+
+---
+
+## 🧠 BACKEND API (REQUIRED)
+
+Create endpoints:
+
+GET /baccarat/tables
+POST /baccarat/create
+POST /baccarat/join
+POST /baccarat/leave
+
+POST /baccarat/bet
+POST /baccarat/clear-bet
+
+POST /baccarat/start-round
+POST /baccarat/lock-bets
+
+POST /baccarat/set-limits
+POST /baccarat/set-password
+POST /baccarat/toggle-table
+
+POST /baccarat/set-commission (banker only)
+POST /baccarat/set-tie-payout (banker only)
+
+---
+
+## 🔄 WEBSOCKET EVENTS
+
+Emit:
+
+* baccarat:tables:update
+* baccarat:table:state
+* baccarat:bet:update
+* baccarat:round:start
+* baccarat:cards:dealt
+* baccarat:round:result
+
+---
+
+## 💰 PAYOUT LOGIC
+
+* Player wins → pay Player bets 1:1
+
+* Banker wins:
+
+  * subtract commission %
+  * pay remaining winnings
+
+* Tie:
+
+  * pay tie bets
+  * return Player + Banker bets (push)
+
+---
+
+## 📊 STATS INTEGRATION
+
+Track:
+
+* total bets
+* total paid out
+* house profit
+* banker commission earned
+* tie payouts
+
+Add to Stats page under:
+→ "Baccarat"
+
+---
+
+## 🛡️ ANTI-ABUSE / LIMITS
+
+* Limit number of bet placements per round (optional)
+* Prevent late bets after lock
+* Enforce max bet per player
+* Optional cooldown between rounds
+
+---
+
+## 🎯 FINAL REQUIREMENTS
+
+* Must match existing UI style (dark, gold accents, underground casino feel)
+* Must integrate with chip balance system
+* Must be multiplayer synced
+* Must follow existing role permission system
+* Must be scalable for multiple tables
+
+Return:
+
+* Backend logic
+* Frontend components
+* WebSocket integration
+* Clean modular structure

@@ -1,0 +1,272 @@
+Build a **multiplayer baccarat table system** for a web-based casino using a modern fullstack setup (Node.js backend + WebSocket real-time sync + React frontend).
+
+The system must be **server-authoritative** (all game logic and RNG handled on backend).
+
+---
+
+# 🎯 CORE GOAL
+
+Create a **real-time multiplayer baccarat table** where 1–6 players can sit, place bets, watch the same round, and receive payouts.
+
+Include spectators, betting trends, and a GTA-style UI.
+
+---
+
+# 🧱 BACKEND REQUIREMENTS (Node.js)
+
+## Game Engine
+
+* Implement standard baccarat rules:
+
+  * Player and Banker hands
+  * Card values:
+
+    * 2–9 = face value
+    * 10/J/Q/K = 0
+    * Ace = 1
+  * Hand total = last digit of sum (mod 10)
+
+* Third card rules:
+
+  * Player draws if total <= 5
+  * Banker follows full baccarat third-card rule table
+
+## RNG (IMPORTANT)
+
+* Use:
+
+  * crypto.randomInt() for card draws
+* Build a virtual shoe:
+
+  * 6 or 8 decks
+  * Shuffle server-side
+
+## Round Flow
+
+1. WAITING (players can sit)
+2. BETTING (10–15 seconds)
+3. LOCK (no more bets)
+4. DEAL
+5. RESULT
+6. PAYOUT
+7. RESET
+
+Use a state machine for this.
+
+## Betting System
+
+Each player can bet:
+
+* "player"
+* "banker"
+* "tie"
+
+Track per round:
+
+* totalPlayerBets
+* totalBankerBets
+* totalTieBets
+
+## Payouts
+
+* Player = 1:1
+* Banker = 0.95:1 (5% commission)
+* Tie = 8:1 (configurable to 9:1)
+
+## Table Object
+
+Each table should store:
+
+* id
+* players (max 6)
+* spectators (unlimited)
+* currentState
+* bets
+* history (last 20 results)
+* minBet / maxBet
+
+## WebSocket Events
+
+Implement:
+
+* joinTable
+* leaveTable
+* placeBet
+* removeBet
+* gameStateUpdate
+* roundResult
+* seatUpdate
+
+Broadcast all updates to connected clients.
+
+---
+
+# 🎮 FRONTEND (React)
+
+## Main Layout
+
+* Top:
+
+  * Table name
+  * Min / Max bets
+  * Leave button
+
+* Center:
+
+  * Baccarat table (Player / Banker / Tie zones)
+  * Card animations (flip from back to front)
+
+* Bottom:
+
+  * Betting buttons:
+
+    * Bet Player
+    * Bet Banker
+    * Bet Tie
+    * Undo
+
+* Right Panel:
+
+  * History (last 20 results as colored dots)
+  * Betting trends (percentages)
+
+* Around Table:
+
+  * 6 player seats showing:
+
+    * Avatar
+    * Name
+    * Current bet
+    * Win/loss indicator
+
+## UI Style (IMPORTANT)
+
+* Dark theme:
+
+  * Background: #0B0B0B
+  * Panels: #141414
+  * Gold accents: #C9A646
+* Subtle glow:
+
+  * Player = blue
+  * Banker = red
+  * Tie = gold
+
+---
+
+# 🔁 GAME FLOW (FRONTEND)
+
+## Betting Phase
+
+* Countdown timer visible
+* Players click betting zones
+* Chips visually stack on table
+
+## Lock Phase
+
+* Disable betting UI
+* Show "No More Bets"
+
+## Deal Phase
+
+* Animate 2 cards to Player + Banker
+* Show totals
+
+## Third Card
+
+* Animate automatically if triggered
+
+## Result
+
+* Highlight winning side
+* Animate chips moving to winners
+
+## Reset
+
+* Clear table
+* Start next round automatically
+
+---
+
+# 👀 SPECTATOR SYSTEM
+
+* Users can join as spectators
+* Spectators can:
+
+  * Watch game live
+  * See betting trends
+* Optional:
+
+  * Allow spectator betting (toggle setting)
+
+---
+
+# 🔐 SECURITY
+
+* ALL game logic must be server-side
+
+* Clients only send:
+
+  * bet actions
+
+* Server validates:
+
+  * chip balance
+  * bet limits
+
+* Prevent:
+
+  * multiple bets after lock
+  * invalid bet types
+
+---
+
+# ⚙️ CONFIG OPTIONS (ADMIN)
+
+* minBet / maxBet
+* tie payout (8:1 or 9:1)
+* enable/disable spectator betting
+* table password (optional)
+* table open/close toggle
+
+---
+
+# 📊 STATS INTEGRATION
+
+Track per player:
+
+* total bets
+* total wins
+* total losses
+* net profit
+
+Track per table:
+
+* total wagered
+* total paid out
+* house profit
+
+---
+
+# 🎯 EXTRA (IMPORTANT FOR RP FEEL)
+
+* Add table chat (simple message broadcast)
+* Add "streak indicator" (e.g., PLAYER 🔵 x3)
+* Add "most bet side" highlight
+
+---
+
+# 🚀 FINAL REQUIREMENTS
+
+* Fully real-time synced game
+* No client-side RNG
+* Fast rounds (20–30 seconds total)
+* Clean, minimal UI
+* Built to scale to multiple tables
+
+Return:
+
+* Backend structure (files + logic)
+* Frontend components (React)
+* WebSocket implementation
+* Example table instance

@@ -1,0 +1,1482 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: FiveM Casino API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: players
+    description: Player account management
+  - name: tables
+    description: Poker table management
+  - name: game
+    description: Poker game actions
+  - name: banker
+    description: Banker operations
+  - name: blackjack
+    description: Blackjack game
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /players:
+    get:
+      operationId: listPlayers
+      tags: [players]
+      summary: List all players (banker use)
+      responses:
+        "200":
+          description: List of players
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Player"
+
+  /players/register:
+    post:
+      operationId: registerPlayer
+      tags: [players]
+      summary: Player self-registers an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterPlayerRequest"
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "400":
+          description: Username already taken or invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /players/login:
+    post:
+      operationId: loginPlayer
+      tags: [players]
+      summary: Player logs in with username and PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerLoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /players/{playerId}:
+    get:
+      operationId: getPlayer
+      tags: [players]
+      summary: Get player by ID
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Player found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deletePlayer
+      tags: [players]
+      summary: Delete a player account (banker only)
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Player deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /players/{playerId}/chips:
+    post:
+      operationId: adjustChips
+      tags: [banker]
+      summary: Add or remove chips from player account (banker only)
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdjustChipsRequest"
+      responses:
+        "200":
+          description: Chips adjusted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Player"
+        "400":
+          description: Insufficient chips or validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /players/{playerId}/transactions:
+    get:
+      operationId: getPlayerTransactions
+      tags: [players]
+      summary: Get player transaction history
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Transaction history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Transaction"
+
+  /tables:
+    get:
+      operationId: listTables
+      tags: [tables]
+      summary: List all poker tables
+      responses:
+        "200":
+          description: List of tables
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PokerTable"
+    post:
+      operationId: createTable
+      tags: [tables]
+      summary: Create a new poker table (banker only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTableRequest"
+      responses:
+        "201":
+          description: Table created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+
+  /tables/{tableId}:
+    get:
+      operationId: getTable
+      tags: [tables]
+      summary: Get table state
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Table state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+    delete:
+      operationId: deleteTable
+      tags: [tables]
+      summary: Delete a poker table (banker only)
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Table deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /tables/{tableId}/join:
+    post:
+      operationId: joinTable
+      tags: [game]
+      summary: Player joins a poker table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinTableRequest"
+      responses:
+        "200":
+          description: Joined successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+        "400":
+          description: Cannot join (table full, already seated, insufficient chips)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tables/{tableId}/leave:
+    post:
+      operationId: leaveTable
+      tags: [game]
+      summary: Player leaves the table
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LeaveTableRequest"
+      responses:
+        "200":
+          description: Left successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+
+  /tables/{tableId}/start:
+    post:
+      operationId: startGame
+      tags: [game]
+      summary: Start the poker game (banker or host)
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Game started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+        "400":
+          description: Cannot start
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tables/{tableId}/action:
+    post:
+      operationId: playerAction
+      tags: [game]
+      summary: Player performs a game action (fold, check, call, raise)
+      parameters:
+        - name: tableId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlayerActionRequest"
+      responses:
+        "200":
+          description: Action processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PokerTable"
+        "400":
+          description: Invalid action
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /banker/login:
+    post:
+      operationId: bankerLogin
+      tags: [banker]
+      summary: Banker login with PIN
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BankerLoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankerLoginResponse"
+        "401":
+          description: Invalid PIN
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /banker/accounts:
+    get:
+      operationId: listBankerAccounts
+      tags: [banker]
+      summary: List all banker accounts (admin only)
+      responses:
+        "200":
+          description: List of banker accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BankerAccount"
+    post:
+      operationId: createBankerAccount
+      tags: [banker]
+      summary: Create a new banker account (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBankerAccountRequest"
+      responses:
+        "200":
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankerAccount"
+
+  /banker/accounts/{id}:
+    patch:
+      operationId: updateBankerAccount
+      tags: [banker]
+      summary: Update a banker account (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBankerAccountRequest"
+      responses:
+        "200":
+          description: Account updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankerAccount"
+    delete:
+      operationId: deleteBankerAccount
+      tags: [banker]
+      summary: Delete a banker account (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required: [success]
+
+  /banker/rake-settings:
+    get:
+      operationId: getRakeSettings
+      tags: [banker]
+      summary: Get current rake settings
+      responses:
+        "200":
+          description: Rake settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RakeSettings"
+    post:
+      operationId: updateRakeSettings
+      tags: [banker]
+      summary: Update rake settings (banker only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RakeSettings"
+      responses:
+        "200":
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RakeSettings"
+
+  /banker/stats:
+    get:
+      operationId: getBankerStats
+      tags: [banker]
+      summary: Get casino stats (total rake collected, hands played, etc.)
+      responses:
+        "200":
+          description: Casino stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CasinoStats"
+
+  /banker/stats/reset:
+    post:
+      operationId: resetStats
+      tags: [banker]
+      summary: Reset all casino stats and transaction history for a fresh session
+      responses:
+        "200":
+          description: Stats reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                required: [message]
+
+  /banker/blackjack-settings:
+    get:
+      operationId: getBlackjackSettings
+      tags: [banker]
+      summary: Get blackjack table settings
+      responses:
+        "200":
+          description: Blackjack settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackSettings"
+    post:
+      operationId: updateBlackjackSettings
+      tags: [banker]
+      summary: Update blackjack table settings (enable/disable, bet limits)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlackjackSettings"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackSettings"
+
+  /slots/status:
+    get:
+      operationId: getSlotsStatus
+      tags: [slots]
+      summary: Get slot machine status and limits (public)
+      responses:
+        "200":
+          description: Slot machine status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlotsStatus"
+
+  /slots/banker-settings:
+    get:
+      operationId: getSlotsSettings
+      tags: [slots]
+      summary: Get slot machine settings (banker only)
+      responses:
+        "200":
+          description: Slot settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlotsSettings"
+    post:
+      operationId: updateSlotsSettings
+      tags: [slots]
+      summary: Update slot machine settings (banker only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SlotsSettings"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlotsSettings"
+
+  /slots/spin:
+    post:
+      operationId: spinSlots
+      tags: [slots]
+      summary: Spin the slot machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bet:
+                  type: integer
+              required: [bet]
+      responses:
+        "200":
+          description: Spin result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SlotsSpinResult"
+
+  /roulette/status:
+    get:
+      operationId: getRouletteStatus
+      tags: [roulette]
+      summary: Get roulette table status (public)
+      responses:
+        "200":
+          description: Table status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouletteStatus"
+
+  /roulette/banker-settings:
+    get:
+      operationId: getRouletteSettings
+      tags: [roulette]
+      summary: Get roulette settings (banker only)
+      responses:
+        "200":
+          description: Roulette settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouletteSettings"
+    post:
+      operationId: updateRouletteSettings
+      tags: [roulette]
+      summary: Update roulette settings (banker only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RouletteSettings"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouletteSettings"
+
+  /roulette/spin:
+    post:
+      operationId: spinRoulette
+      tags: [roulette]
+      summary: Place bets and spin the roulette wheel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bets:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/RouletteBet"
+              required: [bets]
+      responses:
+        "200":
+          description: Spin result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RouletteSpinResult"
+
+  /blackjack/status:
+    get:
+      operationId: getBlackjackStatus
+      tags: [blackjack]
+      summary: Get blackjack table status and limits
+      responses:
+        "200":
+          description: Table status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackSettings"
+
+  /blackjack/deal:
+    post:
+      operationId: blackjackDeal
+      tags: [blackjack]
+      summary: Start a new blackjack hand
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlackjackDealRequest"
+      responses:
+        "200":
+          description: New hand dealt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackDealResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Table closed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /blackjack/{gameId}/hit:
+    post:
+      operationId: blackjackHit
+      tags: [blackjack]
+      summary: Player takes another card
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlackjackActionRequest"
+      responses:
+        "200":
+          description: Card dealt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackActionResponse"
+
+  /blackjack/{gameId}/stand:
+    post:
+      operationId: blackjackStand
+      tags: [blackjack]
+      summary: Player stands, dealer plays out
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlackjackActionRequest"
+      responses:
+        "200":
+          description: Game resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackActionResponse"
+
+  /blackjack/{gameId}/double:
+    post:
+      operationId: blackjackDouble
+      tags: [blackjack]
+      summary: Player doubles down (first move only)
+      parameters:
+        - name: gameId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BlackjackActionRequest"
+      responses:
+        "200":
+          description: Game resolved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlackjackActionResponse"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required: [success, message]
+
+    Player:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+          description: Player's full name
+        stateId:
+          type: string
+          nullable: true
+          description: Roleplay State ID (unique)
+        phoneNumber:
+          type: string
+          nullable: true
+          description: Roleplay phone number
+        chips:
+          type: integer
+        avatarUrl:
+          type: string
+          nullable: true
+          description: URL of the player's avatar image
+        createdAt:
+          type: string
+          format: date-time
+        sessionToken:
+          type: string
+          nullable: true
+          description: Session token returned only on login/register
+      required: [id, username, chips, createdAt]
+
+    CreatePlayerRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        initialChips:
+          type: integer
+      required: [username, initialChips]
+
+    RegisterPlayerRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Player's full name
+        stateId:
+          type: string
+          description: Roleplay State ID (unique identifier used to log in)
+        phoneNumber:
+          type: string
+          description: Roleplay phone number
+        pin:
+          type: string
+          description: 4+ digit PIN to secure the account
+      required: [username, stateId, phoneNumber, pin]
+
+    PlayerLoginRequest:
+      type: object
+      properties:
+        stateId:
+          type: string
+          description: Roleplay State ID
+        pin:
+          type: string
+      required: [stateId, pin]
+
+    AdjustChipsRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: Positive to add, negative to remove
+        reason:
+          type: string
+          description: Reason for the adjustment (e.g. "Player handed $500 cash")
+      required: [amount, reason]
+
+    Transaction:
+      type: object
+      properties:
+        id:
+          type: integer
+        playerId:
+          type: integer
+        amount:
+          type: integer
+        type:
+          type: string
+          enum: [deposit, withdrawal, win, loss, rake]
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, playerId, amount, type, description, createdAt]
+
+    PokerTable:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        status:
+          type: string
+          enum: [waiting, playing, finished]
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        rakePercent:
+          type: number
+        rakeCap:
+          type: integer
+        seats:
+          type: array
+          items:
+            $ref: "#/components/schemas/Seat"
+        gameState:
+          $ref: "#/components/schemas/GameState"
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, name, status, smallBlind, bigBlind, minBuyIn, maxBuyIn, rakePercent, rakeCap, seats, createdAt]
+
+    Seat:
+      type: object
+      properties:
+        seatIndex:
+          type: integer
+        playerId:
+          type: integer
+          nullable: true
+        playerName:
+          type: string
+          nullable: true
+        chips:
+          type: integer
+          nullable: true
+        status:
+          type: string
+          enum: [empty, sitting, folded, allIn]
+      required: [seatIndex, status]
+
+    GameState:
+      type: object
+      properties:
+        phase:
+          type: string
+          enum: [preflop, flop, turn, river, showdown]
+        pot:
+          type: integer
+        currentBet:
+          type: integer
+        currentPlayerSeat:
+          type: integer
+        communityCards:
+          type: array
+          items:
+            type: string
+        playerHands:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        dealerSeat:
+          type: integer
+        sidePots:
+          type: array
+          items:
+            $ref: "#/components/schemas/SidePot"
+        winner:
+          nullable: true
+          $ref: "#/components/schemas/WinnerInfo"
+      required: [phase, pot, currentBet, currentPlayerSeat, communityCards, playerHands, dealerSeat, sidePots]
+
+    SidePot:
+      type: object
+      properties:
+        amount:
+          type: integer
+        eligibleSeats:
+          type: array
+          items:
+            type: integer
+      required: [amount, eligibleSeats]
+
+    WinnerInfo:
+      type: object
+      properties:
+        seatIndex:
+          type: integer
+        playerId:
+          type: integer
+        playerName:
+          type: string
+        amount:
+          type: integer
+        handDescription:
+          type: string
+        rakeCollected:
+          type: integer
+      required: [seatIndex, playerId, playerName, amount, handDescription, rakeCollected]
+
+    CreateTableRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        smallBlind:
+          type: integer
+        bigBlind:
+          type: integer
+        minBuyIn:
+          type: integer
+        maxBuyIn:
+          type: integer
+        rakePercent:
+          type: number
+        rakeCap:
+          type: integer
+      required: [name, smallBlind, bigBlind, minBuyIn, maxBuyIn, rakePercent, rakeCap]
+
+    JoinTableRequest:
+      type: object
+      properties:
+        playerId:
+          type: integer
+        buyIn:
+          type: integer
+        seatIndex:
+          type: integer
+          description: Specific seat index to sit at (0-7). If omitted, first empty seat is used.
+      required: [playerId, buyIn]
+
+    LeaveTableRequest:
+      type: object
+      properties:
+        playerId:
+          type: integer
+      required: [playerId]
+
+    PlayerActionRequest:
+      type: object
+      properties:
+        playerId:
+          type: integer
+        action:
+          type: string
+          enum: [fold, check, call, raise]
+        amount:
+          type: integer
+          description: Only for raise action
+      required: [playerId, action]
+
+    BankerLoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+
+    BankerLoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        token:
+          type: string
+        username:
+          type: string
+        isAdmin:
+          type: boolean
+      required: [success, token, username, isAdmin]
+
+    BankerAccount:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        isActive:
+          type: boolean
+        isAdmin:
+          type: boolean
+        createdAt:
+          type: string
+        lastLoginAt:
+          type: string
+          nullable: true
+        failedAttempts:
+          type: integer
+        lockedUntil:
+          type: string
+          nullable: true
+      required: [id, username, isActive, isAdmin, createdAt, failedAttempts]
+
+    CreateBankerAccountRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        isAdmin:
+          type: boolean
+      required: [username, password]
+
+    UpdateBankerAccountRequest:
+      type: object
+      properties:
+        isActive:
+          type: boolean
+        isAdmin:
+          type: boolean
+        password:
+          type: string
+
+    RakeSettings:
+      type: object
+      properties:
+        pokerRakePercent:
+          type: number
+          description: Percentage of pot taken as rake (e.g. 5 for 5%)
+        pokerRakeCap:
+          type: integer
+          description: Maximum chips taken as rake per hand
+        blackjackHouseEdge:
+          type: number
+          description: House edge % for blackjack (for future use)
+        slotsRtp:
+          type: number
+          description: Return to player % for slots (for future use)
+        slotsRakeEnabled:
+          type: boolean
+          description: Whether rake is collected on slots payouts
+        rouletteType:
+          type: string
+          enum: [american, european]
+          description: Roulette wheel type (for future use)
+      required: [pokerRakePercent, pokerRakeCap, blackjackHouseEdge, slotsRtp, rouletteType]
+
+    GameStats:
+      type: object
+      properties:
+        bets:
+          type: integer
+          description: Total chips wagered
+        payouts:
+          type: integer
+          description: Total chips paid out as winnings
+        profit:
+          type: integer
+          description: House profit (bets minus payouts)
+        rounds:
+          type: integer
+          description: Number of rounds/hands/spins played
+        rake:
+          type: integer
+          description: Explicit rake collected (poker only)
+      required: [bets, payouts, profit, rounds, rake]
+
+    CasinoStats:
+      type: object
+      properties:
+        totalRakeCollected:
+          type: integer
+        totalHandsPlayed:
+          type: integer
+        totalPlayersRegistered:
+          type: integer
+        totalChipsInCirculation:
+          type: integer
+        activeTables:
+          type: integer
+        totalDeposited:
+          type: integer
+          description: Total chips added to player accounts by the banker (cash collected)
+        totalWithdrawn:
+          type: integer
+          description: Total chips removed from player accounts by the banker (cash paid out)
+        netChipIssuance:
+          type: integer
+          description: Net chips issued (deposits minus withdrawals) — represents cash held in the crate
+        totalBetsPlaced:
+          type: integer
+          description: Total chips wagered across all games
+        totalPaidOut:
+          type: integer
+          description: Total chips paid out as winnings across all games
+        netGameProfit:
+          type: integer
+          description: House profit from gameplay (bets placed minus payouts)
+        blackjack:
+          $ref: "#/components/schemas/GameStats"
+        roulette:
+          $ref: "#/components/schemas/GameStats"
+        slots:
+          $ref: "#/components/schemas/GameStats"
+        poker:
+          $ref: "#/components/schemas/GameStats"
+      required: [totalRakeCollected, totalHandsPlayed, totalPlayersRegistered, totalChipsInCirculation, activeTables, totalDeposited, totalWithdrawn, netChipIssuance, totalBetsPlaced, totalPaidOut, netGameProfit, blackjack, roulette, slots, poker]
+
+    BlackjackSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        minBet:
+          type: integer
+        maxBet:
+          type: integer
+        houseEdge:
+          type: number
+      required: [enabled, minBet, maxBet, houseEdge]
+
+    SlotsStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        minBet:
+          type: integer
+        maxBet:
+          type: integer
+      required: [enabled, minBet, maxBet]
+
+    SlotsSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        minBet:
+          type: integer
+        maxBet:
+          type: integer
+        fortunaBetSteps:
+          type: array
+          items:
+            type: integer
+        westernSlotsBetSteps:
+          type: array
+          items:
+            type: integer
+      required: [enabled, minBet, maxBet]
+
+    SlotsSpinResult:
+      type: object
+      properties:
+        reels:
+          type: array
+          items:
+            type: string
+        multiplier:
+          type: number
+        payout:
+          type: integer
+        outcome:
+          type: string
+          enum: [jackpot, big_win, win, small_win, lose]
+        playerChips:
+          type: integer
+      required: [reels, multiplier, payout, outcome, playerChips]
+
+    RouletteStatus:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        wheelType:
+          type: string
+          enum: [european, american]
+        minBet:
+          type: integer
+        maxBet:
+          type: integer
+        maxBetsPerSpin:
+          type: integer
+          description: Maximum number of individual bets per spin. 0 means unlimited.
+      required: [enabled, wheelType, minBet, maxBet, maxBetsPerSpin]
+
+    RouletteSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        wheelType:
+          type: string
+          enum: [european, american]
+        minBet:
+          type: integer
+        maxBet:
+          type: integer
+        maxBetsPerSpin:
+          type: integer
+          description: Maximum number of individual bets per spin. 0 means unlimited.
+      required: [enabled, wheelType, minBet, maxBet, maxBetsPerSpin]
+
+    RouletteBet:
+      type: object
+      properties:
+        type:
+          type: string
+        numbers:
+          type: array
+          items:
+            type: integer
+        amount:
+          type: integer
+      required: [type, numbers, amount]
+
+    RouletteBetResult:
+      type: object
+      properties:
+        type:
+          type: string
+        numbers:
+          type: array
+          items:
+            type: integer
+        amount:
+          type: integer
+        won:
+          type: boolean
+        payout:
+          type: integer
+      required: [type, numbers, amount, won, payout]
+
+    RouletteSpinResult:
+      type: object
+      properties:
+        winningNumber:
+          type: integer
+        wheelType:
+          type: string
+        bets:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouletteBetResult"
+        totalBet:
+          type: integer
+        totalPayout:
+          type: integer
+        netResult:
+          type: integer
+        playerChips:
+          type: integer
+      required: [winningNumber, wheelType, bets, totalBet, totalPayout, netResult, playerChips]
+
+    BlackjackCard:
+      type: object
+      properties:
+        rank:
+          type: string
+        suit:
+          type: string
+        hidden:
+          type: boolean
+          nullable: true
+      required: [rank, suit]
+
+    BlackjackGame:
+      type: object
+      properties:
+        id:
+          type: integer
+        playerId:
+          type: integer
+        status:
+          type: string
+          enum: [active, player_bust, player_blackjack, dealer_bust, player_win, dealer_win, push, abandoned]
+        playerCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlackjackCard"
+        dealerCards:
+          type: array
+          items:
+            $ref: "#/components/schemas/BlackjackCard"
+        bet:
+          type: integer
+        payout:
+          type: integer
+          nullable: true
+        playerValue:
+          type: integer
+        dealerValue:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required: [id, playerId, status, playerCards, dealerCards, bet, playerValue, dealerValue, createdAt]
+
+    BlackjackDealRequest:
+      type: object
+      properties:
+        playerId:
+          type: integer
+        bet:
+          type: integer
+      required: [playerId, bet]
+
+    BlackjackActionRequest:
+      type: object
+      properties:
+        playerId:
+          type: integer
+      required: [playerId]
+
+    BlackjackDealResponse:
+      type: object
+      properties:
+        game:
+          $ref: "#/components/schemas/BlackjackGame"
+        player:
+          $ref: "#/components/schemas/Player"
+      required: [game, player]
+
+    BlackjackActionResponse:
+      type: object
+      properties:
+        game:
+          $ref: "#/components/schemas/BlackjackGame"
+        player:
+          $ref: "#/components/schemas/Player"
+          nullable: true
+      required: [game]

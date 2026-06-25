@@ -1,0 +1,35 @@
+import { pgTable, integer, text, real, boolean } from "drizzle-orm/pg-core";
+
+export const horsesTable = pgTable("horses", {
+  id: integer("id").primaryKey(),
+  name: text("name").notNull(),
+  odds: integer("odds").notNull().default(10),
+  weight: real("weight").notNull().default(0.1),
+  ownerId: integer("owner_id"),
+  ownerCut: real("owner_cut").notNull().default(0.02),
+  totalEarnings: integer("total_earnings").notNull().default(0),
+  racesCount: integer("races_count").notNull().default(0),
+  winsCount: integer("wins_count").notNull().default(0),
+  lossesCount: integer("losses_count").notNull().default(0),
+  variantId: integer("variant_id").notNull().default(1),
+  visualBase: text("visual_base").notNull().default("brown"),
+  visualPattern: text("visual_pattern").notNull().default("none"),
+  visualFlair: text("visual_flair").notNull().default("none"),
+  rarity: text("rarity").notNull().default("common"),
+  speed: integer("speed").notNull().default(50),
+  stamina: integer("stamina").notNull().default(50),
+  acceleration: integer("acceleration").notNull().default(50),
+  luck: integer("luck").notNull().default(50),
+  baseSpriteKey: text("base_sprite_key"),
+  animFrames: text("anim_frames"),
+  animFps: integer("anim_fps").notNull().default(12),
+  effectType: text("effect_type").notNull().default("none"),
+  glowColor: text("glow_color"),
+  outlineColor: text("outline_color"),
+  tackColor: text("tack_color"),
+  avgStat: integer("avg_stat"),
+  price: integer("price"),
+  isForSale: boolean("is_for_sale").notNull().default(false),
+});
+
+export type Horse = typeof horsesTable.$inferSelect;

@@ -1,0 +1,316 @@
+I need to fully rebuild and stabilize the horse racing system to support scheduling, queue handling, multi-race betting, and delay handling.
+
+The system must behave like a real event scheduler + sportsbook.
+
+---
+
+## GOAL
+
+* Support races scheduled days ahead (EST)
+* Allow players to see and bet on upcoming races
+* Allow betting on multiple races at once
+* Only ONE race runs at a time
+* Prevent queue from being blocked by far-future races
+* Handle delays cleanly
+* Provide clear UI states (Starting Soon, Delayed, etc.)
+
+---
+
+1. DATA MODELS
+
+---
+
+RaceSchedule:
+
+* id
+* dayOfWeek (0–6, EST)
+* timeOfDay (HH:MM, EST)
+* isActive
+
+RaceInstance:
+
+* id
+* scheduledTime (EST timestamp)
+* actualStartTime
+* delayMs
+* status: QUEUED | UPCOMING | LOCKED | RUNNING | FINISHED
+* bettingOpensAt
+* bettingClosesAt
+* raceEndsAt
+* horses[]
+* bets[]
+* isInQueue (boolean)
+
+Horse:
+
+* id
+* isActive
+* isReserved
+* reservedRaceId
+* lastRaceTime
+* fatigueUntil
+
+---
+
+2. SCHEDULER (EST BASED)
+
+---
+
+* Run every 30–60 seconds
+
+* Convert server time → EST
+
+* For each RaceSchedule:
+  IF time matches AND no race exists:
+  → create RaceInstance
+
+* DO NOT add race to queue here
+
+---
+
+3. RACE CREATION
+
+---
+
+When creating a race:
+
+* bettingOpensAt = now
+
+* bettingClosesAt = scheduledTime - 10 seconds
+
+* status = QUEUED
+
+* Select 6 horses:
+
+  * isActive = true
+  * isReserved = false
+  * not racing
+  * fatigueUntil < now
+
+* Mark horses:
+
+  * isReserved = true
+  * reservedRaceId = race.id
+
+---
+
+4. QUEUE SYSTEM (CRITICAL FIX)
+
+---
+
+RaceQueue = []
+ActiveRace = null
+
+DEFINE:
+
+const QUEUE_WINDOW = 180000 // 3 minutes
+
+---
+
+5. QUEUE UPDATE LOOP
+
+---
+
+Run every few seconds:
+
+function updateRaceQueue() {
+const now = Date.now()
+
+const readyRaces = allRaces.filter(r =>
+r.status === 'QUEUED' &&
+r.scheduledTime <= now + QUEUE_WINDOW &&
+!r.isInQueue
+)
+
+for (const race of readyRaces) {
+RaceQueue.push(race)
+race.isInQueue = true
+}
+
+RaceQueue.sort((a, b) => a.scheduledTime - b.scheduledTime)
+}
+
+---
+
+6. RACE RUNNER
+
+---
+
+if (!ActiveRace && RaceQueue.length > 0) {
+ActiveRace = RaceQueue.shift()
+startRaceLifecycle(ActiveRace)
+}
+
+---
+
+7. RACE LIFECYCLE
+
+---
+
+When race starts:
+
+const now = Date.now()
+race.delayMs = Math.max(0, now - race.scheduledTime)
+race.actualStartTime = now
+
+PHASES:
+
+UPCOMING:
+
+* betting open until bettingClosesAt
+
+LOCKED:
+
+* starts at bettingClosesAt
+* lasts ~10 seconds
+
+RUNNING:
+
+* starts at actualStartTime
+* lasts ~2m 15s
+
+FINISHED:
+
+* lasts ~15s
+
+After finish:
+
+* release horses
+* clear reservations
+* apply fatigue if winner
+* ActiveRace = null
+
+---
+
+8. BETTING SYSTEM (MULTI-RACE)
+
+---
+
+CRITICAL RULE:
+
+Players can bet on ANY race where:
+
+Date.now() < race.bettingClosesAt
+
+* DO NOT check race.status
+* DO NOT check ActiveRace
+
+Each race has independent:
+
+* bets[]
+* pool totals
+
+---
+
+9. API REQUIREMENTS
+
+---
+
+GET /races/upcoming:
+
+* return all QUEUED/UPCOMING/LOCKED races
+* include:
+
+  * scheduledTime (EST)
+  * timeUntilStart
+  * bettingClosesIn
+  * horses[]
+  * delayMs
+  * isDelayed (delayMs > 30000)
+
+POST /races/:id/bet:
+
+* allow if Date.now() < bettingClosesAt
+
+---
+
+10. UI REQUIREMENTS
+
+---
+
+Race Board must show:
+
+* Day + time (EST)
+* Countdown (weeks/days/hours/minutes)
+* "Starting Soon" if < 2 minutes
+* Betting status
+* Horses
+* Bet button per race
+
+---
+
+11. COUNTDOWN FORMAT
+
+---
+
+* No seconds
+
+* Show:
+
+  * weeks (w)
+  * days (d)
+  * hours (h)
+  * minutes (m)
+
+* If < 2 minutes:
+  show "Starting Soon"
+
+---
+
+12. DELAY HANDLING
+
+---
+
+* If delayMs > 30000:
+  isDelayed = true
+
+UI:
+
+* Show badge: "DELAYED"
+
+Optional:
+
+* If > 60s:
+  show "Delayed Xm"
+
+---
+
+13. MANUAL STAFF CONTROL
+
+---
+
+Staff can:
+
+* Create race now (scheduledTime = now + 2 min)
+* Schedule custom race
+* Priority race (add to front of queue)
+* Cancel queued race
+
+Manual races MUST:
+
+* go through queue
+* follow full lifecycle
+
+---
+
+14. CRITICAL RULES
+
+---
+
+* Only ONE ActiveRace
+* Queue only holds near-term races
+* Future races stay out of queue
+* Betting is time-based only
+* Horses cannot be reused across races
+* No race starts instantly
+
+---
+
+## EXPECTED RESULT
+
+* Races scheduled days ahead do not block system
+* Players can see and bet on upcoming races
+* Multiple betting pools active at once
+* Queue stays clean and efficient
+* Delays handled cleanly
+* UI feels like a real sportsbook/event system

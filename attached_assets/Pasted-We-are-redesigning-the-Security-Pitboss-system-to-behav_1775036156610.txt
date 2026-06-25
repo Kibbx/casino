@@ -1,0 +1,232 @@
+We are redesigning the Security / Pitboss system to behave like a REAL casino floor monitoring system for an RP environment — NOT a generic admin log system.
+
+GOAL:
+Security should feel like they are watching the casino floor and getting meaningful “heads up” alerts when flagged players appear or act — not spammed with system events.
+
+---
+
+## CORE CONCEPT: "FLAGGED PRESENCE AWARENESS"
+
+We are NOT building a spam alert system.
+
+We are building:
+→ Awareness when a flagged player is ACTIVE or DOING something notable
+
+---
+
+1. FLAGGED PLAYER PRESENCE (PRIMARY FEATURE)
+
+---
+
+When a flagged player becomes active:
+
+TRIGGER:
+
+* Login
+* First activity after being inactive (ex: 5–10 min idle)
+
+SHOW ONE ALERT:
+
+"[⚠️ HIGH] John Doe is now active in the casino"
+→ Location: Lobby / Blackjack / etc.
+
+IMPORTANT:
+
+* This should ONLY trigger ONCE per session
+* Do NOT repeat unless they leave and come back later
+
+---
+
+2. MOVEMENT AWARENESS (LIGHT TOUCH)
+
+---
+
+When a flagged player moves between major areas:
+
+* Lobby → Blackjack
+* Blackjack → Roulette
+* etc.
+
+Show SMALL / QUIET update in feed:
+
+"John Doe moved to Blackjack"
+
+NO POPUP
+NO SOUND
+Just passive feed update
+
+---
+
+3. IMPORTANT ACTION ALERTS (ONLY BIG MOMENTS)
+
+---
+
+Only alert security when something meaningful happens:
+
+TRIGGERS:
+
+* Large deposit (configurable threshold, ex: 25k+)
+* Large withdrawal
+* Sitting at a table (first time only per session)
+* Big win (optional threshold)
+
+EXAMPLE:
+
+"[⚠️ HIGH] John Doe just deposited 50,000"
+"[⚠️ MED] John Doe sat at Blackjack"
+
+---
+
+4. ANTI-SPAM RULES (CRITICAL)
+
+---
+
+DO NOT alert on:
+
+* Every bet
+* Every chip change
+* Rapid repeated actions
+
+Implement:
+
+* Per-player cooldown (60–120 sec)
+* Ignore small transactions
+* Only first “sit” at table triggers (not every round)
+
+---
+
+5. PROFILE VISUAL IDENTITY (RP IMMERSION)
+
+---
+
+Each player can have:
+
+* profileImageUrl
+
+Security UI should show:
+
+[ IMAGE ] John Doe
+[HIGH RISK]
+"Known scammer / chip runner"
+
+This is for FAST recognition like a real casino.
+
+---
+
+6. FLAG SEVERITY = RP PRIORITY
+
+---
+
+Levels:
+
+LOW → informational
+MED → watch
+HIGH → problem player
+
+UI:
+
+* LOW = gray
+* MED = yellow
+* HIGH = red
+
+---
+
+7. BAN SYSTEM (RP FRIENDLY)
+
+---
+
+Replace hour-only bans with:
+
+* durationType: hours / days / weeks
+* durationValue
+
+Display:
+
+"Banned for 3 days"
+"Banned for 2 weeks"
+
+---
+
+8. SECURITY DASHBOARD (RP STYLE)
+
+---
+
+Replace “logs” with:
+
+SECTION 1: "⚠️ Active Watchlist"
+
+* All flagged players currently online
+* Show:
+
+  * Image
+  * Name
+  * Current location
+  * Flag reason
+
+SECTION 2: "Live Floor Feed"
+
+* Clean feed of meaningful events ONLY
+* No spam
+
+SECTION 3: "Recent Activity"
+
+* Last 10–20 important actions
+
+---
+
+9. LOCATION TRACKING (FIX REQUIRED)
+
+---
+
+Fix current bug:
+
+All users stuck in "Lobby"
+
+REQUIREMENT:
+
+* On every page change, emit:
+  update_user_location(userId, pageKey)
+
+Page keys:
+
+* lobby
+* blackjack
+* roulette
+* slots
+* poker
+* plinko
+* crash
+
+---
+
+10. TONE & UX (VERY IMPORTANT)
+
+---
+
+This system should feel like:
+
+* A casino pit boss screen
+* Clean
+* Minimal
+* Important info only
+
+NOT:
+
+* Developer logs
+* Spam notifications
+* Overloaded data
+
+---
+
+FINAL RESULT:
+
+Security should:
+
+* Instantly know when a flagged player shows up
+* See where they are on the site
+* Get alerted ONLY when something matters
+* Recognize players visually (profile images)
+* Feel like they are running a real casino floor
+
+Do NOT over-engineer or spam alerts.
+Focus on clarity, importance, and RP immersion.

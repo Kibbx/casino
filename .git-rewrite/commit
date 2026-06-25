@@ -1,0 +1,15 @@
+tree 86607bfed0495b359506ec98108a0e94c999263c
+parent 278c701f98cc8df7d955f4f0fddacc93d997df4f
+author rhatttv <55952987-rhatttv@users.noreply.replit.com> 1773828416 +0000
+committer rhatttv <55952987-rhatttv@users.noreply.replit.com> 1773828416 +0000
+
+Update login panel heading and description for staff access
+
+Change the "Banker" heading to "Staff" and update the description on the home page's login panel in `artifacts/casino/src/pages/home.tsx`.
+
+Replit-Commit-Author: Agent
+Replit-Commit-Session-Id: 0894f714-e325-47af-9695-5bc0e2769c93
+Replit-Commit-Checkpoint-Type: full_checkpoint
+Replit-Commit-Event-Id: ec899758-a9eb-4c4e-86ee-e06abd9b63f2
+Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/e1250804-cad0-425f-b9c2-f785138905b5/0894f714-e325-47af-9695-5bc0e2769c93/Pb1UfTL
+Replit-Helium-Checkpoint-Created: true

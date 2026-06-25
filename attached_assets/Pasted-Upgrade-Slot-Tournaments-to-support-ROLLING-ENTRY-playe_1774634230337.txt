@@ -1,0 +1,191 @@
+Upgrade Slot Tournaments to support ROLLING ENTRY (players can join at any time until the tournament ends).
+
+GOAL:
+Allow players to enter slot tournaments at any time during the active window, instead of requiring all players to join before start.
+
+---
+
+1. TOURNAMENT STATE FLOW (UPDATED)
+
+---
+
+Slot tournaments now have:
+
+status:
+
+* "active" (immediately upon creation)
+* "ended"
+
+REMOVE:
+
+* Waiting/registration-only phase for slots
+
+IMPORTANT:
+
+* Tournament starts immediately when created
+* Players can join anytime while status = "active"
+
+---
+
+2. CREATE TOURNAMENT (SLOTS)
+
+---
+
+When creating a slot tournament:
+
+SET:
+
+* status = "active"
+
+ADD:
+
+* duration (required)
+  e.g. 10 min / 30 min / 1 hour
+
+* endTime = createdAt + duration
+
+---
+
+3. ENTRY RULES
+
+---
+
+Players can join IF:
+
+* currentTime < endTime
+* player has enough chips for buy-in
+
+On join:
+
+* Deduct buy-in
+* Initialize:
+  tournamentChips
+  score = 0
+  biggestSpin = 0
+
+---
+
+4. FAIRNESS HANDLING (IMPORTANT)
+
+---
+
+Each player gets:
+
+* FULL starting tournamentChips regardless of join time
+
+BUT:
+
+* Less time to use them if joining late
+
+This creates:
+
+* Early join = more time advantage
+* Late join = high-risk, fast play
+
+---
+
+5. TOURNAMENT END
+
+---
+
+When:
+currentTime >= endTime
+
+* Tournament status = "ended"
+* Lock all spins
+* Determine winner by highest score
+
+---
+
+6. UI CHANGES (CRITICAL)
+
+---
+
+On tournament card + page show:
+
+⏳ Time Remaining: 12:34
+
+* Always visible countdown
+
+---
+
+7. JOIN UX
+
+---
+
+Display:
+
+* "Join Now" button (while active)
+* Show:
+
+  * Prize pool
+  * Current top score
+  * Players entered
+
+---
+
+8. LEADERBOARD (LIVE)
+
+---
+
+* Update continuously
+* Players see:
+
+  * Current leader
+  * Their rank
+  * Score gap
+
+---
+
+9. ANTI-ABUSE / EDGE CASES
+
+---
+
+* Prevent joining after endTime
+* Lock player actions instantly at endTime
+* Do NOT allow re-entry unless explicitly enabled
+
+---
+
+10. OPTIONAL (HIGHLY RECOMMENDED)
+
+---
+
+Add:
+
+"Late Entry Warning"
+
+If joining with <30% time left:
+→ Show warning:
+"⚠️ Limited time remaining — high risk entry"
+
+---
+
+11. KEEP CORE SYSTEM
+
+---
+
+* Tournament chips system (chips go down only)
+* Score system (winnings only)
+* Variable betting
+* Biggest spin tracking
+
+---
+
+12. DO NOT BREAK
+
+---
+
+* Poker tournaments (still scheduled)
+* Slot logic
+* Economy system
+
+---
+
+## RESULT:
+
+* No waiting for players
+* Constant tournament availability
+* More participation
+* Better player retention
+* Natural urgency via countdown timer

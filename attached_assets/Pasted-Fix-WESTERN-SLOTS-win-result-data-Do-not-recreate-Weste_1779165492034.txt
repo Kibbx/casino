@@ -1,0 +1,458 @@
+Fix WESTERN SLOTS win result data.
+
+Do not recreate Western Slots.
+Do not replace symbols.
+Do not redesign the game.
+Do not touch unrelated games.
+Do not touch Roman Slots.
+Do not change the wallet unless credited win and displayed win are mismatched.
+
+CURRENT PROBLEM:
+Western Slots win information is completely wrong.
+
+The win popup is showing random line numbers and random symbols that do not match what actually hit on the reels.
+
+This means the displayed win info is not being generated from the real win evaluator result.
+
+The fix is NOT just a visual change.
+
+The fix is:
+1. The win evaluator must calculate real wins.
+2. The evaluator must return structured winning-line data.
+3. The popup must use that structured data directly.
+4. The symbol animations/highlights must use the same structured data.
+5. The credited payout must use the same structured data.
+
+There must be ONE source of truth for wins.
+
+DO NOT:
+- Do not generate random line text.
+- Do not guess symbols for the popup.
+- Do not rebuild popup rows from reel coordinates separately.
+- Do not use stale win data from the previous spin.
+- Do not parse debug strings.
+- Do not show line numbers that were not actually evaluated as winners.
+- Do not show symbols that were not actually part of the winning streak.
+- Do not animate symbols unless they are part of a real win.
+
+ONE SOURCE OF TRUTH REQUIREMENT:
+
+Create or fix a function like:
+
+evaluateWesternSlotWins(grid, paylines, paytable, totalBet)
+
+This function must return:
+
+{
+  totalWin,
+  lineWins: [],
+  scatterWin,
+  scatterCount,
+  freeSpinsAwarded
+}
+
+Each lineWin object must include:
+
+{
+  lineNumber,
+  payline,
+  symbol,
+  matchCount,
+  usedWild,
+  paytableValue,
+  betPerLine,
+  payout,
+  positions
+}
+
+Example:
+
+{
+  lineNumber: 5,
+  payline: [2,1,0,1,2],
+  symbol: "Spades",
+  matchCount: 3,
+  usedWild: true,
+  paytableValue: 10,
+  betPerLine: 2500,
+  payout: 25000,
+  positions: [
+    { reel: 0, row: 2, symbol: "Spades" },
+    { reel: 1, row: 1, symbol: "Spades" },
+    { reel: 2, row: 0, symbol: "Wild" }
+  ]
+}
+
+The popup, win animation, line highlighting, and balance credit must all use this exact returned object.
+
+Do not make separate calculations for:
+- popup
+- animation
+- crediting
+- highlighting
+
+That is how the information becomes random/wrong.
+
+GRID DATA REQUIREMENT:
+
+Make sure the evaluator reads the actual final stopped reel grid.
+
+Do not read:
+- spinning animation state
+- previous spin grid
+- placeholder symbol array
+- shuffled display-only symbols
+- asset image names that do not match symbol names
+- DOM position order if the actual game state already has grid data
+
+The evaluator should use the actual final result grid in this format or equivalent:
+
+grid[reelIndex][rowIndex]
+
+Where:
+- reelIndex 0 to 4
+- rowIndex 0 to 2
+
+Rows:
+0 = top
+1 = middle
+2 = bottom
+
+Example:
+
+grid[0][2] = bottom symbol on reel 1
+grid[1][1] = middle symbol on reel 2
+grid[2][0] = top symbol on reel 3
+
+PAYLINE EVALUATION:
+
+For each payline:
+1. Get the symbol from each reel using grid[reel][payline[reel]].
+2. Evaluate from reel 1 left-to-right.
+3. Determine the paying symbol.
+4. Count consecutive matches.
+5. Stop immediately when the streak breaks.
+6. Pay only if matchCount is 3, 4, or 5.
+7. Add exactly one lineWin object for that line.
+
+Do not add a lineWin if the line does not actually win.
+
+Do not add fake line data for losing paylines.
+
+Example payline lookup:
+
+payline = [2,1,0,1,2]
+
+positions checked:
+reel 0 row 2
+reel 1 row 1
+reel 2 row 0
+reel 3 row 1
+reel 4 row 2
+
+If those symbols are:
+
+Spades, Spades, Wild, Diamonds, Bag
+
+Then the real result is:
+
+Line X:
+3x Spades
+usedWild = true
+positions = first 3 positions only
+payout = betPerLine × Spades[3]
+
+The positions array must only include the symbols that counted.
+
+Do not include reel 4 or reel 5 if the win stopped at reel 3.
+
+WIN LOGIC RULES:
+
+Valid wins:
+- Must start from reel 1.
+- Must run left to right.
+- Must be consecutive.
+- Must be matching symbol, with Wild substitution allowed.
+- Must be 3, 4, or 5 of a kind.
+- Scatter is excluded from normal line wins.
+
+Invalid wins:
+- Mixed symbols do not pay.
+- Gaps do not pay.
+- Right-to-left does not pay.
+- Symbols on reels 1, 3, and 5 do not pay if reel 2 breaks the chain.
+- Random symbols on the same line do not pay.
+- Scatter does not count as a normal line symbol.
+
+WILD LOGIC:
+
+Wild substitutes for:
+- Bag
+- Crosses
+- Diamonds
+- Flask
+- Gun
+- Hat
+- Hearts
+- Spades
+
+Wild does not substitute for Scatter.
+
+If the line starts with Wild:
+- Look ahead to the first non-Wild, non-Scatter symbol in the consecutive streak.
+- Use that symbol as the paying symbol.
+- If all matched symbols are Wilds, pay Wild.
+
+Examples:
+
+Wild, Spades, Spades, Bag, Bag
+= 3x Spades if the first 3 can be counted.
+
+Wild, Wild, Gun, Hat, Bag
+= 3x Gun.
+
+Wild, Wild, Wild, Bag, Bag
+= 3x Wild OR best valid payout, depending on existing game rule.
+Prefer paying Wild if the first 3 are all Wilds.
+
+Wild, Scatter, Wild
+= no normal line win because Scatter breaks the line.
+
+SCATTER LOGIC:
+
+Scatter must be counted separately from line wins.
+
+Scatter pays anywhere on the whole 5x3 grid.
+
+Scatter result should be separate:
+
+{
+  scatterCount,
+  scatterWin,
+  freeSpinsAwarded
+}
+
+Do not show Scatter as a random payline.
+
+Do not let Wild substitute for Scatter.
+
+FINAL WESTERN PAYTABLE:
+
+Use this exact final Western paytable:
+
+Bag:
+3 = 5
+4 = 20
+5 = 60
+
+Crosses:
+3 = 5
+4 = 25
+5 = 80
+
+Diamonds:
+3 = 10
+4 = 30
+5 = 100
+
+Hearts:
+3 = 10
+4 = 35
+5 = 120
+
+Spades:
+3 = 10
+4 = 40
+5 = 150
+
+Flask:
+3 = 15
+4 = 60
+5 = 200
+
+Hat:
+3 = 20
+4 = 80
+5 = 300
+
+Gun:
+3 = 30
+4 = 125
+5 = 750
+
+Wild:
+3 = 100
+4 = 500
+5 = 2000
+
+Scatter:
+3 = 2x TOTAL BET + 8 free spins
+4 = 10x TOTAL BET + 12 free spins
+5 = 50x TOTAL BET + 18 free spins
+
+BETTING MATH:
+
+totalBet = full spin cost
+lines = 20
+betPerLine = totalBet / 20
+
+Normal line payout:
+lineWin = betPerLine × paytableValue
+
+Scatter payout:
+scatterWin = totalBet × scatterMultiplier
+
+Do not multiply line wins by 20.
+Do not treat totalBet as betPerLine.
+Do not use random or stale bet values in popup rows.
+
+POPUP REQUIREMENT:
+
+The win popup must render only from lineWins returned by evaluateWesternSlotWins.
+
+For each lineWin, show:
+
+Line {lineNumber}: {matchCount}x {symbol} — {paytableValue}x — {payout}
+
+Subtext:
+Bet/Line {betPerLine}
+Wild helped: Yes/No
+
+Example:
+Line 5: 3x Spades — 10x — 25,000
+Bet/Line 2,500 · Wild helped
+
+Do not show raw coordinates to players.
+Do not show random symbols.
+Do not show symbols not in the positions array.
+Do not show losing paylines.
+
+ANIMATION / HIGHLIGHT REQUIREMENT:
+
+Winning symbol animation must use lineWin.positions.
+
+For a 3-symbol win:
+Animate only those 3 tiles.
+
+For a 4-symbol win:
+Animate only those 4 tiles.
+
+For a 5-symbol win:
+Animate all 5 tiles.
+
+If multiple lines win:
+Cycle through lineWins and highlight one line at a time.
+
+The active popup row must match the active highlighted line.
+
+Example:
+If popup is highlighting:
+Line 5: 3x Spades
+
+Then the reel must highlight the exact positions from Line 5 only.
+
+Do not animate random matching symbols elsewhere on the grid.
+
+STALE STATE CHECK:
+
+Make sure win display resets every spin.
+
+Before evaluating/displaying a new spin:
+- Clear previous winningLines
+- Clear previous highlighted tiles
+- Clear previous active line index
+- Clear previous popup rows
+- Clear previous debug text
+
+After the new grid stops:
+- Evaluate wins from the final grid
+- Save the returned structured win result
+- Credit payout
+- Render popup from that result
+- Animate/highlight from that result
+
+Do not leave previous spin wins on screen.
+Do not merge previous lineWins into the next spin.
+
+DEBUGGING REQUIREMENT:
+
+Add temporary console logs in development only:
+
+console.log("WESTERN FINAL GRID", grid)
+console.log("WESTERN LINE WINS", lineWins)
+console.log("WESTERN TOTAL WIN", totalWin)
+
+For each line win log:
+- lineNumber
+- payline
+- actual symbols read from grid
+- paying symbol
+- matchCount
+- paytableValue
+- payout
+- positions
+
+This will prove the popup is using the actual evaluated win data.
+
+TEST CASES:
+
+Test 1:
+Line symbols:
+Bag, Gun, Spades, Diamonds, Bag
+Expected:
+No lineWin object.
+No popup row.
+No animation.
+Payout 0.
+
+Test 2:
+Line symbols:
+Spades, Spades, Wild, Diamonds, Bag
+Expected:
+lineWin:
+symbol = Spades
+matchCount = 3
+usedWild = true
+paytableValue = 10
+positions = first 3 reels only
+
+With totalBet 50,000:
+betPerLine = 2,500
+payout = 25,000
+
+Popup:
+Line X: 3x Spades — 10x — 25,000
+
+Test 3:
+Line symbols:
+Hearts, Hearts, Hearts, Spades, Bag
+Expected:
+3x Hearts
+paytableValue = 10
+payout = betPerLine × 10
+
+Test 4:
+Line symbols:
+Gun, Gun, Gun, Gun, Bag
+Expected:
+4x Gun
+paytableValue = 125
+payout = betPerLine × 125
+
+Test 5:
+Scatter count = 3 anywhere on grid
+Expected:
+scatterWin = totalBet × 2
+freeSpinsAwarded = 8
+Scatter shown separately from lineWins
+
+FINAL RESPONSE AFTER FIXING:
+
+Tell me:
+1. Which Western Slots files were changed.
+2. Where evaluateWesternSlotWins or equivalent logic is located.
+3. Confirm there is one source of truth for win data.
+4. Confirm popup rows are rendered directly from structured lineWins.
+5. Confirm symbol animations/highlights use lineWin.positions.
+6. Confirm stale previous-spin win data is cleared before every spin.
+7. Confirm random/wrong symbols no longer appear in the popup.

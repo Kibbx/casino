@@ -1,0 +1,148 @@
+Replit is wrong: it is possible to have 20 unique connected paylines on a 5x3 slot.
+
+Fix Western Slots paylines using this exact connected-only list.
+
+Do not argue that 20 unique connected paylines are impossible.
+Do not generate paylines dynamically.
+Do not remove paylines.
+Do not use old disconnected paylines.
+Do not touch unrelated games.
+
+A valid connected payline:
+- has exactly 5 row numbers
+- each number is 0, 1, or 2
+- 0 = top
+- 1 = middle
+- 2 = bottom
+- adjacent movement cannot be greater than 1 row
+- no direct 0-to-2 jump
+- no direct 2-to-0 jump
+- each array must be unique
+
+Use this exact 20-line set:
+
+const WESTERN_PAYLINES = [
+  [1,1,1,1,1], // 1 middle straight
+  [0,0,0,0,0], // 2 top straight
+  [2,2,2,2,2], // 3 bottom straight
+
+  [0,1,2,1,0], // 4 V
+  [2,1,0,1,2], // 5 inverted V
+
+  [0,0,1,2,2], // 6 connected slope down
+  [2,2,1,0,0], // 7 connected slope up
+
+  [1,0,0,0,1], // 8 middle-top-middle
+  [1,2,2,2,1], // 9 middle-bottom-middle
+
+  [0,1,1,1,0], // 10 top-middle-top
+  [2,1,1,1,2], // 11 bottom-middle-bottom
+
+  [1,0,1,2,1], // 12 zigzag down
+  [1,2,1,0,1], // 13 zigzag up
+
+  [0,1,0,1,0], // 14 top wave
+  [2,1,2,1,2], // 15 bottom wave
+
+  [0,1,2,2,1], // 16 connected drop then rise
+  [2,1,0,0,1], // 17 connected rise then drop
+
+  [1,1,0,1,1], // 18 middle with top bump
+  [1,1,2,1,1], // 19 middle with bottom dip
+
+  [1,0,1,1,2]  // 20 connected custom line
+];
+
+These are 20 unique paylines.
+
+Proof:
+1. No line is duplicated.
+2. Every line has exactly 5 entries.
+3. Every entry is 0, 1, or 2.
+4. No line has adjacent movement greater than 1.
+5. There are no direct 0-to-2 or 2-to-0 jumps.
+
+Add this validation function:
+
+function validateWesternPaylines(paylines) {
+  if (!Array.isArray(paylines)) {
+    throw new Error("WESTERN_PAYLINES must be an array");
+  }
+
+  if (paylines.length !== 20) {
+    throw new Error(`Western Slots must have exactly 20 paylines. Found ${paylines.length}`);
+  }
+
+  const seen = new Set();
+
+  paylines.forEach((line, index) => {
+    const lineNumber = index + 1;
+
+    if (!Array.isArray(line) || line.length !== 5) {
+      throw new Error(`Western payline ${lineNumber} must have exactly 5 row entries`);
+    }
+
+    line.forEach((row) => {
+      if (![0, 1, 2].includes(row)) {
+        throw new Error(`Western payline ${lineNumber} has invalid row ${row}`);
+      }
+    });
+
+    for (let i = 1; i < line.length; i++) {
+      const diff = Math.abs(line[i] - line[i - 1]);
+
+      if (diff > 1) {
+        throw new Error(
+          `Western payline ${lineNumber} is disconnected: ${line.join(",")}`
+        );
+      }
+    }
+
+    const key = line.join(",");
+
+    if (seen.has(key)) {
+      throw new Error(`Duplicate Western payline found: ${key}`);
+    }
+
+    seen.add(key);
+  });
+
+  console.log("Western paylines valid:", paylines.length, "unique connected lines");
+}
+
+validateWesternPaylines(WESTERN_PAYLINES);
+
+If this validation passes, do not claim 20 connected paylines are impossible.
+
+IMPORTANT:
+Remove these old disconnected lines completely:
+
+[0,2,0,2,0]
+[2,0,2,0,2]
+[0,2,2,2,0]
+
+Do not use them in:
+- payout logic
+- payline help screen
+- win popup
+- animation
+- line highlight logic
+
+Western Slots must evaluate paylines by reading exactly one symbol per reel:
+
+const lineSymbols = payline.map((row, reel) => finalGrid[reel][row]);
+
+Do not search the board.
+Do not count symbols anywhere.
+Do not dynamically guess paylines.
+Do not use old payline arrays from another slot.
+Do not use disconnected paylines.
+
+FINAL RESPONSE:
+Tell me:
+1. Where WESTERN_PAYLINES is defined.
+2. Confirm there are exactly 20 paylines.
+3. Confirm all 20 are unique.
+4. Confirm no adjacent row jump is greater than 1.
+5. Confirm old disconnected lines were removed.
+6. Confirm payout, popup, and animation all use this exact list.

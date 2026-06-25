@@ -1,0 +1,270 @@
+Build a complete **8-Ball Pool system** for a web-based casino platform (Back Alley Bets style). The system must support SOLO play, MULTIPLAYER, and PLAYER vs PLAYER WAGER MATCHES using chips. Focus on smooth gameplay, server-side validation, and anti-exploit protection.
+
+========================
+CORE MODES
+==========
+
+1. SOLO MODE
+
+* Player can:
+
+  * Play against AI (Easy / Medium / Hard)
+  * OR free-play (no opponent)
+* No wagers
+* No rewards
+* Used for practice only
+
+2. PvP MATCHMAKING (NO WAGER)
+
+* Queue system
+* Match players by:
+
+  * ELO rating (basic system)
+  * OR fallback to random if queue is low
+* Track:
+
+  * wins
+  * losses
+  * win rate
+
+3. WAGER MATCHES (PRIMARY MODE)
+
+* Players can:
+
+  * Create a table with a wager amount
+  * Join an existing table
+
+FLOW:
+
+* Player creates table:
+
+  * sets bet amount (ex: 10,000 chips)
+  * optional: private code or public
+* Opponent joins
+* BOTH players’ chips are LOCKED server-side
+* Game starts
+* Winner receives:
+
+  * full pot minus house rake
+
+HOUSE SETTINGS:
+
+* Default rake: 5%
+* Adjustable via admin panel
+
+========================
+GAME RULES (8-BALL)
+===================
+
+* Standard 8-ball rules:
+
+  * Break shot starts match
+  * First valid pocket determines solids or stripes
+  * Must hit your group first
+  * 8-ball must be hit last to win
+  * Scratch = opponent gets ball-in-hand
+* Server must validate ALL rules and outcomes
+
+========================
+GAMEPLAY SYSTEM
+===============
+
+* 2D top-down pool table
+* Physics required:
+
+  * Ball collision
+  * Friction / slowdown
+  * Pocket detection
+
+CONTROLS:
+
+* Aim with mouse drag
+* Power bar for shot strength
+* Optional spin system (can be added later)
+
+IMPORTANT:
+
+* Client ONLY sends:
+
+  * shot angle
+  * shot power
+* Server calculates:
+
+  * movement
+  * collisions
+  * results
+
+========================
+MULTIPLAYER SYSTEM
+==================
+
+* Use WebSockets (Socket.IO)
+
+SYNC:
+
+* Ball positions
+* Turn state
+* Shot execution
+
+RULES:
+
+* Only ONE player can shoot at a time
+* Enforce turn ownership server-side
+
+DISCONNECT HANDLING:
+
+* If player disconnects:
+
+  * start 30-second timer
+  * if not returned → FORFEIT
+  * opponent wins pot
+
+========================
+ANTI-CHEAT
+==========
+
+* ALL physics runs server-side
+* Validate:
+
+  * turn ownership
+  * shot timing
+* Reject:
+
+  * invalid shot spam
+  * impossible angles
+* Rate limit shot inputs
+
+========================
+TABLE SYSTEM
+============
+
+CREATE TABLE:
+
+* bet amount
+* public or private
+* optional join code
+
+TABLE LIST UI:
+
+* show:
+
+  * table name
+  * bet amount
+  * player count (1/2 or 2/2)
+  * public/private
+
+FILTERS:
+
+* low stakes
+* mid stakes
+* high stakes
+
+========================
+CHIP SYSTEM INTEGRATION
+=======================
+
+* Use existing casino chip balance
+
+ON MATCH START:
+
+* lock both players’ chips
+
+ON MATCH END:
+
+* winner receives:
+  pot - rake
+
+ON DISCONNECT:
+
+* forfeiting player loses wager
+
+========================
+STATS SYSTEM
+============
+
+Track per player:
+
+* total matches
+* wins
+* losses
+* win rate %
+* total wagered
+* total profit/loss
+* win streak
+
+========================
+ADMIN PANEL
+===========
+
+Add controls for Owner / Banker:
+
+* Set rake %
+* View:
+
+  * total wagers
+  * total payouts
+  * house profit from pool
+* Force end matches
+* Ban players from pool system
+
+========================
+UI DESIGN
+=========
+
+* Match existing casino theme (dark, gold accents)
+* Show:
+
+  * player avatars
+  * turn indicator
+  * solids vs stripes
+  * wager amount (if applicable)
+
+TABLE VIEW:
+
+* clean GTA-style layout
+* top-down table centered
+* minimal clutter
+
+========================
+TECH STACK
+==========
+
+Frontend:
+
+* React
+* HTML5 Canvas OR Phaser.js (for physics rendering)
+
+Backend:
+
+* Node.js
+* Express
+* Socket.IO
+
+Database:
+
+* store matches
+* player stats
+* wagers
+
+========================
+OPTIONAL FEATURES (IF POSSIBLE)
+===============================
+
+* ranked ladder system
+* tournaments (brackets)
+* spectator mode
+* cue skins / cosmetics
+
+========================
+FINAL REQUIREMENT
+=================
+
+System must:
+
+* feel responsive
+* be multiplayer-ready
+* prevent exploits
+* support real chip wagering
+* integrate cleanly into existing casino site
+
+Focus on FUNCTIONALITY first, then visuals.

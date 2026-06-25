@@ -1,0 +1,81 @@
+We need to update the STABLES page sorting only.
+
+-------------------------------------
+GOAL
+-------------------------------------
+
+Ensure that horses owned by the current player ALWAYS appear at the top of the stables list.
+
+This must override ALL other sorting.
+
+-------------------------------------
+DEFINITION
+-------------------------------------
+
+Owned horse:
+horse.ownerId === currentUserId
+
+-------------------------------------
+SORT ORDER (STRICT)
+-------------------------------------
+
+1. Owned horses first (absolute priority)
+2. Then sort by rarity (highest → lowest)
+   Legendary > Epic > Rare > Uncommon > Common
+3. Keep existing order for anything else (do not overcomplicate)
+
+-------------------------------------
+IMPLEMENTATION (FRONTEND OR DATA LAYER)
+-------------------------------------
+
+Use a single sort function for the stables list:
+
+Example (JavaScript):
+
+horses.sort((a, b) => {
+  // 1. Owned priority
+  const aOwned = a.ownerId === currentUserId ? 1 : 0;
+  const bOwned = b.ownerId === currentUserId ? 1 : 0;
+
+  if (aOwned !== bOwned) {
+    return bOwned - aOwned; // owned first
+  }
+
+  // 2. Rarity sort
+  const rarityOrder = {
+    Legendary: 5,
+    Epic: 4,
+    Rare: 3,
+    Uncommon: 2,
+    Common: 1
+  };
+
+  return (rarityOrder[b.rarity] || 0) - (rarityOrder[a.rarity] || 0);
+});
+
+-------------------------------------
+UI RULES
+-------------------------------------
+
+- DO NOT change layout
+- DO NOT expose avgStat
+- DO NOT change stats display
+- ONLY affect ordering
+
+-------------------------------------
+IMPORTANT
+-------------------------------------
+
+- Owned horses must ALWAYS stay on top after refresh
+- Even a Common owned horse must appear above all non-owned horses
+- This should only apply to the stables page
+
+-------------------------------------
+END RESULT
+-------------------------------------
+
+Top of stables:
+→ Player-owned horses
+
+Below:
+→ All other horses sorted by rarity

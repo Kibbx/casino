@@ -1,0 +1,184 @@
+You are modifying an existing Node.js + Express + WebSocket casino project.
+
+🚨 CRITICAL OBJECTIVE:
+Completely REMOVE the current GTA-style horse racing system:
+
+* NO fixed odds
+* NO multipliers
+* NO house-paid winnings
+* NO preset payouts
+
+Replace it with a TRUE parimutuel (pool-based) system.
+
+---
+
+🔥 STEP 1 — HARD DELETE OLD SYSTEM
+
+Find and REMOVE all logic related to:
+
+* payout = bet * multiplier
+* any "odds" stored as fixed values
+* predefined odds tables
+* static odds per horse
+* any function that calculates winnings BEFORE the race
+* any logic where the HOUSE pays winnings directly
+
+Search for keywords and REMOVE:
+
+* multiplier
+* fixedOdds
+* payoutMultiplier
+* calculatePayoutBeforeRace
+* oddsTable
+* setOdds()
+
+If these exist in:
+
+* horse routes
+* game services
+* websocket handlers
+
+DELETE or refactor them.
+
+---
+
+🔥 STEP 2 — REMOVE ODDS STORAGE
+
+The system must NOT store odds in the database.
+
+REMOVE:
+
+* horse.odds
+* race.odds
+* any persisted odds fields
+
+Odds must be:
+✅ calculated live
+❌ never saved
+
+---
+
+🔥 STEP 3 — REPLACE WITH POOL SYSTEM
+
+Add:
+
+race.totalPool = 0
+race.bets = []
+
+horsePools = {}
+
+When a bet is placed:
+
+* Add to race.bets
+* Increase race.totalPool
+* Increase horsePools[horseId]
+
+---
+
+🔥 STEP 4 — LIVE ODDS (DISPLAY ONLY)
+
+Create a function:
+
+odds[horseId] = totalPool / (horsePool || 1)
+
+IMPORTANT:
+
+* These are VISUAL ONLY
+* DO NOT use them for payouts directly
+
+Send via WebSocket:
+
+* liveOddsUpdate
+* totalPoolUpdate
+
+---
+
+🔥 STEP 5 — RACE OUTCOME (UNCHANGED CORE IDEA)
+
+Each horse has stats:
+
+* speed
+* stamina
+* acceleration
+* luck
+
+Compute:
+
+baseScore =
+speed * 0.35 +
+stamina * 0.30 +
+acceleration * 0.20 +
+luck * 0.15
+
+variance = random between -0.15 and +0.20
+
+finalScore = baseScore * (1 + variance)
+
+Winner = highest finalScore
+
+---
+
+🔥 STEP 6 — NEW PAYOUT SYSTEM (ONLY SYSTEM ALLOWED)
+
+totalPool = race.totalPool
+
+houseCut = totalPool * 0.05
+ownerCut = totalPool * 0.10
+payoutPool = totalPool - houseCut - ownerCut
+
+winningBets = bets where horseId === winner
+
+totalWinningPool = sum(winningBets.amount)
+
+For each winning bet:
+share = bet.amount / totalWinningPool
+payout = payoutPool * share
+
+creditPlayer(playerId, payout)
+
+creditOwner(winnerHorseId, ownerCut)
+
+House keeps houseCut
+
+---
+
+🔥 STEP 7 — VALIDATION (VERY IMPORTANT)
+
+Ensure:
+
+* There is ZERO remaining code using multipliers
+* No function returns payout before race ends
+* No odds are stored or reused
+* All winnings come ONLY from payoutPool
+
+---
+
+🔥 STEP 8 — UI UPDATE
+
+Frontend must:
+
+REMOVE:
+
+* fixed odds display
+* multiplier display
+
+REPLACE WITH:
+
+* live odds (dynamic)
+* total pool
+* estimated return (based on live odds)
+
+---
+
+🔥 FINAL RESULT:
+
+✔ No fixed odds anywhere
+✔ No multipliers anywhere
+✔ No house-funded payouts
+✔ Fully pool-based system
+✔ Live odds only (not stored)
+✔ House always profits (5%)
+✔ Owner earns 10% on win
+
+Do NOT leave any legacy logic behind.
+If any multiplier or fixed odds code remains, the system is considered broken.

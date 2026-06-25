@@ -1,0 +1,365 @@
+Fix WESTERN SLOTS ONLY.
+
+Do not recreate Western Slots.
+Do not replace symbols.
+Do not redesign the UI.
+Do not touch Roman Slots.
+Do not touch unrelated games.
+Do not change the casino wallet system unless Western Slots is crediting/debiting wrong.
+Do not change paylines unless they are broken.
+Do not change the slot art/assets.
+
+The previous mistake was copying Roman Slots payout order directly into Western Slots.
+
+That is wrong.
+
+Western Slots has its own symbol value order.
+
+WESTERN SYMBOLS TO KEEP EXACTLY:
+
+- Bag
+- Crosses
+- Diamonds
+- Flask
+- Gun
+- Hat
+- Hearts
+- Spades
+- Scatter
+- Wild
+
+Do not rename them.
+Do not add new symbols.
+Do not remove symbols.
+Do not replace any artwork.
+
+CORRECT WESTERN SYMBOL VALUE ORDER:
+
+LOW / FILLER SYMBOLS:
+1. Bag
+2. Crosses
+3. Diamonds
+4. Hearts
+5. Spades
+
+MID SYMBOLS:
+6. Flask
+7. Hat
+
+HIGH NORMAL SYMBOL:
+8. Gun
+
+JACKPOT SYMBOL:
+9. Wild
+
+SPECIAL SYMBOL:
+10. Scatter
+
+IMPORTANT:
+Spades and Hearts are low-end card suit symbols.
+Spades and Hearts are NOT jackpot symbols.
+Spades and Hearts should NOT pay like Roman high symbols.
+Gun is the highest normal symbol.
+Wild is the jackpot/top symbol.
+Scatter pays anywhere.
+
+NEW WESTERN PAYTABLE:
+
+Bag:
+3 = 5x bet
+4 = 20x bet
+5 = 60x bet
+
+Crosses:
+3 = 5x bet
+4 = 25x bet
+5 = 80x bet
+
+Diamonds:
+3 = 10x bet
+4 = 30x bet
+5 = 100x bet
+
+Hearts:
+3 = 10x bet
+4 = 35x bet
+5 = 120x bet
+
+Spades:
+3 = 10x bet
+4 = 40x bet
+5 = 150x bet
+
+Flask:
+3 = 15x bet
+4 = 60x bet
+5 = 200x bet
+
+Hat:
+3 = 20x bet
+4 = 80x bet
+5 = 300x bet
+
+Gun:
+3 = 30x bet
+4 = 125x bet
+5 = 750x bet
+
+Wild:
+3 = 100x bet
+4 = 500x bet
+5 = 2000x bet
+
+Scatter:
+3 = 2x TOTAL BET + 8 free spins
+4 = 10x TOTAL BET + 12 free spins
+5 = 50x TOTAL BET + 18 free spins
+
+PAYTABLE RULES:
+
+- Update the backend payout logic.
+- Update the visible paytable UI.
+- The UI and backend must match exactly.
+- Remove all old references to Spades paying 50 / 200 / 1000.
+- Remove all old references to Hearts being a high-value jackpot symbol.
+- Do not copy Roman Slots symbol order.
+- Do not make any normal symbol close to Wild payout.
+- Wild must clearly remain the jackpot symbol.
+
+VISIBLE PAYTABLE MUST SHOW EXACTLY:
+
+Bag: 5 / 20 / 60
+Crosses: 5 / 25 / 80
+Diamonds: 10 / 30 / 100
+Hearts: 10 / 35 / 120
+Spades: 10 / 40 / 150
+Flask: 15 / 60 / 200
+Hat: 20 / 80 / 300
+Gun: 30 / 125 / 750
+Wild: 100 / 500 / 2000
+Scatter: 2x bet / 10x bet / 50x bet
+
+BETTING MATH:
+
+Western Slots has 20 paylines.
+
+The player enters TOTAL BET.
+
+TOTAL BET is the full spin cost.
+
+betPerLine = totalBet / 20
+
+Normal line payout:
+
+lineWin = betPerLine × paytableValue
+
+Scatter payout:
+
+scatterWin = totalBet × scatterMultiplier
+
+Examples with totalBet = 50,000:
+
+20 lines
+betPerLine = 2,500
+
+Bag 5 of a kind:
+2,500 × 60 = 150,000
+
+Spades 5 of a kind:
+2,500 × 150 = 375,000
+
+Gun 5 of a kind:
+2,500 × 750 = 1,875,000
+
+Wild 5 of a kind:
+2,500 × 2000 = 5,000,000
+
+3 Scatters:
+50,000 × 2 = 100,000
+plus 8 free spins if free spins are enabled
+
+Do not treat TOTAL BET as bet per line.
+Do not multiply line wins by 20 again.
+Do not deduct totalBet × 20.
+Do not double-pay the same line.
+
+WIN DETECTION RULES:
+
+Western Slots must only pay real slot wins.
+
+Valid normal wins:
+- Must start from reel 1.
+- Must run left to right.
+- Must be consecutive.
+- Must be matching symbols, with Wild substitution allowed.
+- Must be 3, 4, or 5 of a kind.
+- Stop counting as soon as the streak breaks.
+- Only pay the highest valid match per line.
+- Only pay once per line.
+
+Invalid wins:
+- Mixed symbols do not pay.
+- Gaps do not pay.
+- Right-to-left does not pay.
+- Random symbols on the same line do not pay.
+- Non-adjacent matches do not pay.
+- Two of a kind does not pay.
+
+Example invalid line:
+
+Bag → Gun → Spades → Diamonds
+
+This is NOT a win.
+
+Example valid line:
+
+Spades → Spades → Spades → Diamonds → Bag
+
+This pays 3 Spades.
+
+Example valid line:
+
+Spades → Spades → Spades → Spades → Diamonds
+
+This pays 4 Spades.
+
+WILD RULES:
+
+- Wild substitutes for Bag, Crosses, Diamonds, Flask, Gun, Hat, Hearts, and Spades.
+- Wild does not substitute for Scatter.
+- If a line starts with Wild, use the best valid symbol match from the next non-Wild symbol in the streak.
+- If the entire streak is Wilds, pay Wild.
+- Do not create duplicate payouts from Wilds.
+- Only one payout per line.
+
+SCATTER RULES:
+
+- Scatter pays anywhere on the 5x3 grid.
+- Scatter does not need to be on a payline.
+- Scatter payout uses TOTAL BET, not betPerLine.
+- Scatter does not count as a normal line symbol.
+- Wild does not substitute for Scatter.
+- If free spins are enabled:
+  - 3 Scatters = 8 free spins
+  - 4 Scatters = 12 free spins
+  - 5 Scatters = 18 free spins
+- Free spins must not charge another bet.
+- Free spins must use the original triggering totalBet and betPerLine.
+
+PAYLINE RULES:
+
+Western Slots should use exactly 20 paylines.
+
+Rows:
+0 = top
+1 = middle
+2 = bottom
+
+Use these 20 paylines if the current Western paylines are missing, wrong, or inconsistent:
+
+1.  [1,1,1,1,1]
+2.  [0,0,0,0,0]
+3.  [2,2,2,2,2]
+4.  [0,1,2,1,0]
+5.  [2,1,0,1,2]
+6.  [0,0,1,2,2]
+7.  [2,2,1,0,0]
+8.  [1,0,0,0,1]
+9.  [1,2,2,2,1]
+10. [0,1,1,1,0]
+11. [2,1,1,1,2]
+12. [1,0,1,2,1]
+13. [1,2,1,0,1]
+14. [0,1,0,1,0]
+15. [2,1,2,1,2]
+16. [0,2,0,2,0]
+17. [2,0,2,0,2]
+18. [1,1,0,1,1]
+19. [1,1,2,1,1]
+20. [0,2,2,2,0]
+
+WIN POPUP / UI FIX:
+
+The win popup must only list real winning lines.
+
+Do not show fake winning lines.
+
+Do not show lines with mixed symbols as wins.
+
+The popup must show:
+- line number
+- symbol paid
+- match count
+- paytable value
+- betPerLine
+- line win amount
+
+Example:
+Line 10: 4x Spades — 40x bet — 2,500 × 40 = 100,000
+
+The displayed win amount must exactly match the credited amount.
+
+TEST CASES:
+
+1. Total bet = 50,000
+   Lines = 20
+   betPerLine = 2,500
+
+2. Bag 5 of a kind:
+   Expected payout = 2,500 × 60 = 150,000
+
+3. Hearts 5 of a kind:
+   Expected payout = 2,500 × 120 = 300,000
+
+4. Spades 5 of a kind:
+   Expected payout = 2,500 × 150 = 375,000
+
+5. Gun 5 of a kind:
+   Expected payout = 2,500 × 750 = 1,875,000
+
+6. Wild 5 of a kind:
+   Expected payout = 2,500 × 2000 = 5,000,000
+
+7. Mixed line:
+   Bag → Gun → Spades → Diamonds
+   Expected payout = 0
+
+8. Scatter:
+   3 Scatters with totalBet 50,000
+   Expected payout = 50,000 × 2 = 100,000
+   plus 8 free spins if enabled
+
+9. Final win must not be multiplied by 20.
+
+10. Spin cost must be exactly totalBet.
+
+DO NOT:
+
+- Do not recreate Western Slots.
+- Do not change Western art.
+- Do not rename symbols.
+- Do not add Roman symbols.
+- Do not copy Roman Slots symbol order.
+- Do not make Spades high-value.
+- Do not make Hearts high-value.
+- Do not make Gun lower than Spades or Hearts.
+- Do not make any normal symbol close to Wild.
+- Do not change unrelated games.
+- Do not change the full casino layout.
+- Do not only update the UI and forget backend logic.
+- Do not only update backend logic and forget the UI.
+- Do not let old paytable values remain anywhere.
+
+FINAL RESPONSE AFTER FIXING:
+
+Tell me:
+1. Which Western Slots files were changed.
+2. Where the Western paytable is defined.
+3. Where the visible paytable UI is defined.
+4. Where totalBet and betPerLine are calculated.
+5. Where win detection was fixed.
+6. Confirm Bag, Crosses, Diamonds, Hearts, and Spades are low-end symbols.
+7. Confirm Flask and Hat are mid symbols.
+8. Confirm Gun is the highest normal symbol.
+9. Confirm Wild is the jackpot symbol.
+10. Confirm UI payouts and backend payouts match exactly.

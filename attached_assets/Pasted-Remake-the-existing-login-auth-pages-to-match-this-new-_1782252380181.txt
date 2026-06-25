@@ -1,0 +1,76 @@
+Remake the existing login/auth pages to match this new reference design exactly.
+
+Keep the same app functionality/routes, but replace the current UI with the attached “BIG HOUSE” dark neon interface.
+
+1. Home selection screen
+2. Player Login
+3. New Player Registration
+4. Staff Access
+
+Visual style:
+- Full-screen black/near-black background.
+- Very subtle oversized dark circular/abstract shapes in the background.
+- Centered content.
+- Futuristic squared techno font similar to Orbitron/Eurostile. Use Google Fonts if needed.
+- Main palette:
+  - Background: #030202 / #070505
+  - Panel: #0b0a0a
+  - Border: rgba(255,255,255,0.10)
+  - Orange/red accent: #f13a0b
+  - Purple accent: #5b22a8
+  - Yellow accent: #e0b500
+  - Muted text: #6f6f6f
+  - White text: #f6f2ef
+
+Home screen:
+- Top center small text: “EST. LOS SANTOS” in orange with thin horizontal lines left/right.
+- Large title: “BIG HOUSE”, white, wide letter spacing, glowing shadow.
+- Three large horizontal cards stacked vertically, each about 480px wide and 120px tall.
+- Cards have rounded corners, dark fill, thin border, subtle hover glow.
+- Card 1: orange icon box, title “PLAYER LOGIN”, subtitle “SIGN IN WITH YOUR STATE ID AND PIN.”, arrow on right.
+- Card 2: yellow icon box, title “NEW PLAYER”, subtitle “REGISTER AND GET IN THE GAME.”, arrow on right.
+- Card 3: purple icon box, title “STAFF ACCESS”, subtitle “AUTHORISED PERSONNEL ONLY.”, arrow on right.
+
+Player Login screen:
+- Center card about 420px wide.
+- Top: small “EST. LOS SANTOS”, title “BIG HOUSE”, small orange underline.
+- Subtitle: “Enter your State ID and PIN to continue”.
+- Inputs:
+  - STATE ID with small blue icon, placeholder “Your State ID number”
+  - PIN with lock icon, placeholder “Enter your PIN”
+- Orange full-width button: “SIGN IN”
+- Footer links:
+  - “No account yet? Register here”
+  - “← BACK TO HOME”
+
+Registration screen:
+- Same center card, slightly taller.
+- Title area same as login, subtitle “Create your account”.
+- Fields:
+  - FULL NAME full width
+  - STATE ID and PHONE side-by-side
+  - PIN and CONFIRM PIN side-by-side
+  - REFERRAL CODE (OPTIONAL) full width
+- Orange full-width button: “CREATE ACCOUNT”
+- Footer:
+  - “Already have an account? Sign in”
+  - “← BACK TO HOME”
+
+Staff Access screen:
+- Center card about 420px wide.
+- Purple shield icon circle at top.
+- Title “STAFF ACCESS”.
+- Subtitle “Restricted — authorised personnel only”.
+- Inputs:
+  - USERNAME
+  - PASSWORD
+- Purple full-width button: “ENTER”
+- Footer: “← BACK”
+
+Implementation:
+- Use React + Vite.
+- Use CSS modules or plain CSS.
+- Use lucide-react icons for user, user-plus, shield, lock, id-card, phone, arrow-right.
+- Make the layout pixel-close to screenshots: centered cards, large margins, rounded 16–18px panels, dim borders, neon glow, letter spacing, uppercase labels.
+- All buttons and links should navigate between screens without page reload.
+- Make it responsive: on mobile, cards shrink to 90vw and side-by-side registration fields stack.

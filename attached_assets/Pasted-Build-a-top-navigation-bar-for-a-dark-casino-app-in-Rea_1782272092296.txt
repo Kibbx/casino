@@ -1,0 +1,52 @@
+Build a top navigation bar for a dark casino app in React + Tailwind CSS. Match every detail below precisely.
+
+Container
+
+Height: 52px, full viewport width, z-index: 20, position: relative
+Background: rgba(5, 3, 3, 0.97)
+Bottom border: 1px solid rgba(232, 64, 10, 0.1)
+backdrop-filter: blur(16px)
+Display: flex, align-items: center
+box-sizing: border-box, overflow: visible
+LEFT ZONE — padding-left: 12px, flex row, gap: 8px, align-items: center, shrink: 0
+
+Hamburger button — Lucide <Menu size={17} />, icon color rgba(255,255,255,0.48). On click, toggles a collapsed boolean in state. Style the button: no background, no border, padding: 6px, border-radius: 6px, hover background rgba(255,255,255,0.06).
+
+Divider — width: 1px, height: 20px, background: rgba(255,255,255,0.09)
+
+Brand name — Font: Rajdhani, font-weight: 900, letter-spacing: 0.15em, text-transform: uppercase, font-size: 15px, white-space: nowrap. Render as: <span style="color: rgba(255,255,255,0.9)">Big House </span><span style="color: #e8400a; text-shadow: 0 0 14px rgba(232,64,10,0.75)">Casino</span>. When in "marketplace" mode swap "Casino" for "Market" with color #f5c518 and glow 0 0 14px rgba(245,197,24,0.65).
+
+Divider — same as above
+
+Volume control — flex row, gap: 6px, align-items: center, overflow: visible:
+
+Mute toggle button: renders Lucide <Volume2 size={14} /> (color rgba(255,255,255,0.5)) when unmuted, <VolumeX size={14} /> (color rgba(255,255,255,0.3)) when muted. On click, toggles muted state.
+Range slider: type="range" min=0 max=100, value is muted ? 0 : volume. On change, sets volume and clears mute. Style: width 72px, height 3px, border-radius: 2px, thumb is a 10px circle in white. The track left of the thumb fills with rgba(232,64,10,0.85), right of thumb is rgba(255,255,255,0.12). Use a CSS custom property --vol-pct to drive the fill via background: linear-gradient(to right, rgba(232,64,10,0.85) 0% var(--vol-pct), rgba(255,255,255,0.12) var(--vol-pct) 100%).
+Divider — same as above
+
+Casino / Market toggle pill — two-button switcher side by side, no gap between them, shared container with border-radius: 8px, border: 1px solid rgba(255,255,255,0.09), background: rgba(255,255,255,0.04), overflow: hidden. Each button: text 11px, font-weight: 700, letter-spacing: 0.06em, uppercase, padding: 4px 12px. Active tab: background: rgba(232,64,10,0.85), color: #fff, text-shadow: 0 0 8px rgba(232,64,10,0.6). Inactive tab: color: rgba(255,255,255,0.45), no background.
+
+CENTER ZONE — absolutely positioned, left: 50%, transform: translateX(-50%), width: 320px
+
+Search bar: flex row, gap: 8px, align-items: center, background: rgba(255,255,255,0.05), border: 1px solid rgba(255,255,255,0.08), border-radius: 20px, padding: 0 14px, height: 32px
+Left: Lucide <Search size={13} />, color rgba(255,255,255,0.3)
+Input: no border, no background, font-size: 12px, color: rgba(255,255,255,0.7), placeholder "Search games, events, players…" in rgba(255,255,255,0.25), flex: 1, outline: none
+RIGHT ZONE — margin-left: auto, padding-right: 16px, flex row, gap: 10px, align-items: center, shrink: 0
+
+Tier badge — flex column, align-items: flex-end, gap: 2px:
+
+Top line: <Star size={11} color="#f5c518" /> + text "SILVER II" — font-size: 11px, font-weight: 800, color: rgba(255,255,255,0.85), letter-spacing: 0.06em
+Progress bar: width: 80px, height: 3px, border-radius: 2px, track rgba(255,255,255,0.1), fill linear-gradient(to right, #f5c518, #e8400a) at 68% width. Below bar: text "68% TO GOLD", font-size: 8px, color: rgba(255,255,255,0.3), letter-spacing: 0.08em
+Divider — width: 1px, height: 20px, background: rgba(255,255,255,0.09)
+
+Chips counter — flex row, gap: 5px, align-items: center, background: rgba(255,255,255,0.05), border: 1px solid rgba(255,255,255,0.08), border-radius: 10px, padding: 4px 10px:
+
+Lucide <Coins size={13} color="#f5c518" />
+Text: chip count (e.g. "1,327"), font-size: 12px, font-weight: 800, color: rgba(255,255,255,0.88)
+Divider — same as above
+
+User block — flex row, gap: 8px, align-items: center, cursor pointer:
+
+Avatar circle: width: 30px, height: 30px, border-radius: 50%, background: linear-gradient(135deg, #e8400a, #c43209), box-shadow: 0 0 10px rgba(232,64,10,0.4), centered initial letter in white, font-size: 13px, font-weight: 900
+Text column: name "Jonah Hydell" — font-size: 12px, font-weight: 700, color: rgba(255,255,255,0.85); rank "MEMBER" below — font-size: 9px, color: rgba(255,255,255,0.35), letter-spacing: 0.1em, text-transform: uppercase
+Logout button — Lucide <LogOut size={15} />, color rgba(255,255,255,0.3), hover color rgba(239,68,68,0.7). Same ghost button style as hamburger.

@@ -1,0 +1,222 @@
+Redesign the existing baccarat UI into a **realistic top-down casino table layout**. The current UI uses large rectangular panels — REMOVE that entirely and replace it with a **felt-based table design**.
+
+---
+
+# 🎯 CORE GOAL
+
+Make the baccarat game feel like:
+
+* A real casino table
+* Players sitting around it
+* Chips placed physically on the table
+* NOT a UI with buttons and boxes
+
+---
+
+# 🧱 MAIN LAYOUT (FULLSCREEN TABLE)
+
+## Replace entire layout with:
+
+* A **centered baccarat table**
+* Slight **semi-circle / curved shape**
+* Dealer at the top
+* Player seats around the bottom
+
+---
+
+# 🟩 TABLE DESIGN
+
+## Table Container
+
+* Shape: rounded / oval / semi-circle
+* Background: dark green or navy felt texture
+* Add subtle grain/noise texture
+* Outer edge: dark wood or black with gold trim
+
+## Table Markings (ON FELT)
+
+Draw directly on the table:
+
+* LEFT: "PLAYER" zone (blue outline)
+* CENTER: "TIE" zone (small, gold outline)
+* RIGHT: "BANKER" zone (red outline)
+
+Each zone:
+
+* Rounded rectangle or oval
+* Thin gold border
+* Soft glow on hover
+
+---
+
+# 🪙 CHIP SYSTEM (IMPORTANT CHANGE)
+
+## REMOVE:
+
+* Betting buttons like “Bet Player / Banker”
+
+## REPLACE WITH:
+
+* Clicking directly on table zones places bets
+
+## Behavior:
+
+* When player clicks a zone:
+
+  * Selected chip value is placed visually on that spot
+  * Chip stacks (multiple chips visible)
+  * Chips animate from bottom → table
+
+## Chip UI (bottom of screen):
+
+* Chip selector:
+  [100] [500] [1k] [5k] [10k]
+* Selected chip is highlighted
+
+---
+
+# 👥 PLAYER SEATS (ADD THIS)
+
+Add 6 seats around table:
+
+Each seat includes:
+
+* Avatar circle
+* Player name
+* Current bet amount
+* Small glow if active
+
+Layout:
+
+* 1 seat bottom center (YOU)
+* 2 left
+* 2 right
+* 1 top-left/top-right
+
+---
+
+# 🃏 CARD AREA (CENTER TOP)
+
+## Move cards to:
+
+* Center-top of table (near dealer)
+
+## Layout:
+
+* Player cards on left
+* Banker cards on right
+
+## Animation:
+
+* Cards slide from dealer
+* Flip animation
+* Slight rotation for realism
+
+## Show totals:
+
+* Small number near cards (e.g., 7 vs 5)
+
+---
+
+# 📊 HISTORY PANEL (RIGHT SIDE)
+
+Keep history but improve:
+
+* Small circles:
+
+  * Blue = Player
+  * Red = Banker
+  * Gold = Tie
+
+* Grid layout (wrap rows)
+
+* Title: “History”
+
+---
+
+# 🎮 CONTROLS (BOTTOM MINIMAL)
+
+Keep only:
+
+* Chip selection row
+* “Clear Bet” button
+
+Remove:
+
+* Large betting panels
+* Redundant UI boxes
+
+---
+
+# 🔥 VISUAL EFFECTS
+
+## Hover Effects
+
+* Player zone → blue glow
+* Banker zone → red glow
+* Tie zone → gold glow
+
+## Win Effects
+
+* Winning zone pulses
+* Chips animate to winners
+
+## Sounds (if supported)
+
+* Chip placement click
+* Card flip
+* Win chime
+
+---
+
+# 🎨 COLOR SYSTEM
+
+* Background: #0B0B0B
+* Table felt: #0F3D2E or dark navy
+* Gold: #C9A646
+* Player: blue glow (#3A7BFF)
+* Banker: red glow (#D64545)
+* Tie: gold glow
+
+---
+
+# 🧠 UX RULES
+
+* No clutter
+* No large panels
+* Everything happens ON the table
+* Player focus = center of screen
+* Betting = intuitive (click table, not buttons)
+
+---
+
+# ⚠️ REMOVE FROM CURRENT UI
+
+* Big blue/red rectangles
+* Separate betting sections
+* Bottom-heavy layout
+* Empty dark space
+
+---
+
+# 🚀 FINAL RESULT
+
+The result should feel like:
+
+* GTA casino table
+* Players gathered around
+* Chips physically placed
+* Smooth, immersive gameplay
+
+Return:
+
+* Updated React component structure
+* CSS / Tailwind styling for table + zones
+* Component breakdown:
+
+  * Table
+  * Seats
+  * Chips
+  * Cards
+  * History
+* Example layout code

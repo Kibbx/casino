@@ -1,0 +1,174 @@
+You are fixing a horse racing system where the same horse is still winning every race.
+
+The previous balancing attempt failed.
+
+Your goal is to ENSURE:
+
+* No horse dominates every race
+* The best horse wins ~20–30% max
+* Outcomes are not deterministic
+
+---
+
+## CRITICAL FIXES (MANDATORY)
+
+1. NORMALIZE ALL HORSES BEFORE RACE
+
+Before the race starts:
+
+Find the average stats of the 6 horses in the race.
+
+For each horse:
+
+normalizedStat = stat / averageStatOfRace
+
+This ensures:
+
+* Horses are compared RELATIVE to each race
+* No horse has overwhelming advantage
+
+---
+
+2. HARD CAP STAT ADVANTAGE
+
+Clamp stat influence:
+
+statEffect = Math.pow(normalizedStat, 0.6)
+
+Then:
+
+statEffect = clamp(statEffect, 0.85, 1.15)
+
+This means:
+
+* Stats can only give ±15% advantage MAX
+
+---
+
+3. INCREASE VARIANCE SIGNIFICANTLY
+
+Replace old variance with:
+
+variance = randomBetween(-0.15, +0.15)
+
+Optional (with luck):
+
+variance += (luckStat / 100) * randomBetween(0, 0.05)
+
+---
+
+4. MAKE EVENTS DECIDE RACES (NOT STATS)
+
+Increase event power.
+
+Event effects should be STRONGER:
+
+* clean_stride → +8%
+* stumble → -10%
+* second_wind → +15% (final phase)
+* lucky_surge → +5% to +20% random spike
+
+Event chance:
+
+eventChance = 10% + (luckStat * 0.08%)
+
+Events MUST trigger during race loop, not once.
+
+---
+
+5. CONVERT RACE INTO TICK SIMULATION (VERY IMPORTANT)
+
+DO NOT calculate winner in one formula.
+
+Simulate race over time:
+
+Example:
+
+for (tick = 0 → raceDuration):
+update each horse position
+apply:
+- stat influence (small)
+- variance (per tick small noise)
+- active events
+- pack compression
+
+Winner = highest position at end
+
+---
+
+6. ADD STRONG PACK COMPRESSION
+
+If horse is leading:
+
+apply drag:
+
+leaderPenalty = 0.02 → 0.05 (2–5%)
+
+If horse is behind:
+
+apply boost:
+
+catchupBoost = 0.02 → 0.05
+
+This keeps races tight and prevents runaway winners.
+
+---
+
+7. ADD ANTI-STREAK SYSTEM
+
+If a horse has won recently:
+
+recentWins = wins in last N races
+
+penalty:
+
+streakPenalty = recentWins * 0.05
+
+Apply directly:
+
+finalPerformance -= streakPenalty
+
+This is REQUIRED to stop repeat winners.
+
+---
+
+8. REDUCE STAT IMPORTANCE FURTHER
+
+Final rule:
+
+Stats should only contribute ~15–20% of total outcome.
+
+If needed, reduce again.
+
+---
+
+9. DEBUG + VALIDATION
+
+After implementation:
+
+Log:
+
+* Horse stats
+* Race variance
+* Events triggered
+* Winner
+
+Run 50+ races and confirm:
+
+* No single horse wins more than ~30%
+
+---
+
+10. NON-NEGOTIABLE RULE
+
+If the same horse still wins repeatedly:
+
+* INCREASE variance
+* INCREASE event strength
+* REDUCE stat weight further
+
+DO NOT revert to deterministic behavior.
+
+---
+
+END OF TASK

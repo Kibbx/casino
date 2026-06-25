@@ -1,0 +1,20 @@
+packages:
+  "framer-motion": "Smooth animations for cards and casino chips"
+  "zustand": "Global state management for player session and banker auth"
+  "clsx": "Utility for constructing className strings conditionally"
+  "tailwind-merge": "Utility to merge tailwind classes safely"
+
+images:
+  - path: "artifacts/casino/public/images/hero-bg.png"
+    description: "Dark luxury casino background with blurred roulette and poker tables in deep emerald greens and rich golds"
+    aspect_ratio: "16:9"
+  - path: "artifacts/casino/public/images/felt-texture.png"
+    description: "Seamless dark green high-end casino felt texture with subtle noise"
+    aspect_ratio: "1:1"
+  - path: "artifacts/casino/public/images/chip-gold.png"
+    description: "A premium 3D golden casino chip with intricate diamond details on transparent background"
+    aspect_ratio: "1:1"
+
+notes:
+  - Hooks are imported directly from @workspace/api-client-react as per implementation notes.
+  - Banker endpoints require a Bearer token passed via request headers in the generated hooks.

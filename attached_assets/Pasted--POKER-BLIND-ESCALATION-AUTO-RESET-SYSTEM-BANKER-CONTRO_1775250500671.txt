@@ -1,0 +1,221 @@
+**POKER BLIND ESCALATION + AUTO RESET SYSTEM (BANKER CONTROLLED)**
+
+Build a dynamic blind system for poker tables with the following behavior:
+
+---
+
+## 🎯 GOAL
+
+* Blinds increase over time while a table is active
+* If player count drops below 2 → blinds reset
+* Bankers can fully control blind levels and timing
+
+---
+
+## 🧠 CORE RULES
+
+### Table Activity
+
+* Table is **ACTIVE** when ≥ 2 seated players
+* Table is **INACTIVE** when < 2 players
+
+---
+
+### Blind Progression
+
+* Each table uses a configurable `blindLevels` array:
+
+Example:
+[
+{ small: 100, big: 200, duration: 600 },
+{ small: 200, big: 400, duration: 600 },
+{ small: 400, big: 800, duration: 600 }
+]
+
+* While ACTIVE:
+
+  * Increase `elapsedTime`
+  * When `elapsedTime >= duration`:
+
+    * Move to next level
+    * Reset `elapsedTime`
+    * Update blinds
+
+* If max level reached:
+
+  * Stay at last level (no looping)
+
+---
+
+### RESET LOGIC (IMPORTANT)
+
+* If player count drops below 2:
+
+  * Start `inactiveTime`
+  * If `inactiveTime >= resetDelay` (default 30 seconds):
+
+    * Reset to level 0
+    * Reset timers
+    * Apply base blinds
+
+* If players return to 2+ before resetDelay:
+
+  * Cancel reset
+
+* Only reset ONCE per inactive event (use `wasActive` flag)
+
+---
+
+## ⚙️ REQUIRED TABLE STATE
+
+Each table must track:
+
+* levelIndex
+* elapsedTime
+* inactiveTime
+* resetDelay
+* isActive
+* wasActive
+* blindLevels
+
+---
+
+## 🔁 UPDATE LOOP
+
+function updateTable(table, deltaTime) {
+const playerCount = table.seatedPlayers.length;
+
+if (playerCount >= 2) {
+table.isActive = true;
+table.inactiveTime = 0;
+
+```
+table.elapsedTime += deltaTime;
+
+const currentLevel = table.blindLevels[table.levelIndex];
+
+if (table.elapsedTime >= currentLevel.duration) {
+  if (table.levelIndex < table.blindLevels.length - 1) {
+    table.levelIndex++;
+    table.elapsedTime = 0;
+    applyBlinds(table);
+  }
+}
+```
+
+} else {
+table.isActive = false;
+table.inactiveTime += deltaTime;
+
+```
+if (table.inactiveTime >= table.resetDelay && table.wasActive) {
+  resetBlinds(table);
+}
+```
+
+}
+
+table.wasActive = table.isActive;
+}
+
+---
+
+## 🔄 FUNCTIONS
+
+function applyBlinds(table) {
+const level = table.blindLevels[table.levelIndex];
+table.smallBlind = level.small;
+table.bigBlind = level.big;
+broadcastTableUpdate(table);
+}
+
+function resetBlinds(table) {
+table.levelIndex = 0;
+table.elapsedTime = 0;
+table.inactiveTime = 0;
+
+const base = table.blindLevels[0];
+table.smallBlind = base.small;
+table.bigBlind = base.big;
+
+broadcastTableUpdate(table);
+}
+
+---
+
+## 🏦 BANKER CONTROLS (ADMIN PANEL)
+
+Add a Poker Table Settings section:
+
+Editable per table:
+
+* Toggle: Enable Blind Escalation
+* Reset Delay (seconds)
+* Blind Levels (list)
+
+Each blind level includes:
+
+* Small Blind
+* Big Blind
+* Duration (seconds)
+
+Features:
+
+* Add / remove levels
+* Reorder levels
+* Save per table or global default
+
+---
+
+## 🔌 API
+
+GET /api/poker/blind-config/:tableId
+POST /api/poker/blind-config/:tableId
+
+Payload:
+{
+"resetDelay": 30,
+"blindLevels": [...]
+}
+
+---
+
+## 🔄 SOCKET EVENTS
+
+Emit:
+
+* table:blindsUpdated
+* table:levelUp
+* table:reset
+
+Payload example:
+{
+tableId,
+smallBlind,
+bigBlind,
+levelIndex,
+timeToNextLevel
+}
+
+---
+
+## 🖥️ UI REQUIREMENTS
+
+On poker table:
+
+* Show current blinds
+* Show countdown to next level
+* Show indicator when blinds increase
+
+---
+
+## ✅ FINAL BEHAVIOR
+
+* Blinds increase only when table is active
+* Table dropping below 2 players triggers reset after delay
+* New players always start at base blinds
+* Bankers control everything
+
+---
+
+Implement cleanly and ensure no duplicate resets or timer bugs.

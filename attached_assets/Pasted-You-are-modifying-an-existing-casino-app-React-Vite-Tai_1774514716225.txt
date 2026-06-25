@@ -1,0 +1,336 @@
+You are modifying an existing casino app (React + Vite + Tailwind frontend, Node.js + Express + TypeScript backend, PostgreSQL + Drizzle ORM, WebSockets already implemented).
+
+DO NOT break existing poker or previously implemented horse systems.
+
+GOAL:
+Convert Horse Racing into a STAFF-CONTROLLED EVENT SYSTEM and extend existing features.
+
+---
+
+## CORE CHANGE (IMPORTANT)
+
+REMOVE automatic race loops.
+
+Horse races must ONLY run when scheduled by staff.
+
+NO setInterval race loop.
+
+---
+
+## RACE STATE SYSTEM
+
+Use a finite state system:
+
+type RaceStatus =
+| "idle"
+| "scheduled"
+| "betting"
+| "running"
+| "finished";
+
+Store globally:
+
+currentRace = {
+id: string,
+status: RaceStatus,
+startTime: number | null,
+horses: Horse[],
+bets: Record<string, Bet[]>,
+totalBets: number
+}
+
+---
+
+## ADMIN CONTROLS (TABLES → HORSE RACING SUB TAB)
+
+Add controls:
+
+1. Schedule Race
+
+POST /api/admin/race/schedule
+
+Body:
+{
+startTime: timestamp (future time)
+}
+
+* Sets status = "scheduled"
+* Generates 6 horses for the race immediately
+* Broadcast via WebSocket
+
+---
+
+2. Open Betting
+
+POST /api/admin/race/open-betting
+
+* Sets status = "betting"
+
+---
+
+3. Start Race
+
+POST /api/admin/race/start
+
+* Sets status = "running"
+* Picks winner (weighted system)
+* Emits race_start
+
+---
+
+4. Finish Race
+
+POST /api/admin/race/finish
+
+* Pays out bets
+* Pays owner cuts
+* Sets status = "finished"
+
+---
+
+5. Cancel Event
+
+POST /api/admin/race/cancel
+
+* Refund all bets
+* Reset to idle
+
+---
+
+6. Reset
+
+POST /api/admin/race/reset
+
+* Clears race
+* status = "idle"
+
+---
+
+## COUNTDOWN SYSTEM
+
+Frontend receives:
+
+startTime
+
+Compute:
+
+timeRemaining = startTime - Date.now()
+
+Update every second.
+
+---
+
+## BETTING RULES
+
+Players can only bet when:
+
+status === "betting"
+
+Block all bets otherwise.
+
+---
+
+## RACE GENERATION (UNCHANGED CORE)
+
+* Select 6 unique horses from 100
+* Ensure variety:
+
+  * 1 low odds (1–5)
+  * 1 mid odds (6–15)
+  * 1 high odds (16–30)
+
+---
+
+## WINNER SELECTION
+
+Use weighted selection:
+
+weight = 1 / (odds + 1)
+(normalized)
+
+---
+
+## OWNER SYSTEM (KEEP)
+
+Each horse has:
+
+* ownerId
+* ownerCut (1%–6%)
+* totalEarnings
+
+---
+
+OWNER PAYOUT RULES
+
+When a horse wins:
+
+1. totalPayout = sum of payouts for that horse
+
+2. ownerCut = totalPayout * ownerCut%
+
+3. CONDITIONS:
+
+* If owner bet on their own horse → NO payout
+* If totalPayout < 5000 → NO payout
+* Cap at 25,000
+
+4. Update:
+
+* player balance
+* horse.totalEarnings
+
+---
+
+## VARIANT SYSTEM (KEEP)
+
+Each horse has:
+
+variantId (1–100)
+
+Frontend: <img src="/assets/horses/{variantId}.png" />
+
+---
+
+## WEBSOCKET EVENTS (UPDATED)
+
+Emit:
+
+race_scheduled:
+
+* startTime
+* horses
+
+race_betting_open
+
+race_start:
+
+* horses
+* raceId
+
+race_finish:
+
+* winnerId
+* payouts
+
+race_cancelled
+
+---
+
+## FRONTEND (HORSE RACING TAB)
+
+Inside Tables → Horse Racing:
+
+---
+
+SECTION 1 — EVENT CONTROL
+
+* Schedule Race (datetime picker or minutes input)
+* Open Betting
+* Start Race
+* Finish Race
+* Cancel Event
+
+---
+
+SECTION 2 — STATUS
+
+Display:
+
+Status: Scheduled / Betting / Running / Finished
+Next Race Countdown
+
+---
+
+SECTION 3 — HORSE TABLE
+
+Columns:
+
+* Horse Name
+* Odds
+* Owner
+* Bets
+* Exposure
+
+---
+
+SECTION 4 — RISK
+
+Display:
+
+Exposure: X / Safe Limit
+Status: SAFE / HIGH
+
+---
+
+SECTION 5 — HORSE EDITOR (KEEP)
+
+Editable:
+
+* name
+* odds
+
+---
+
+## PLAYER UI CHANGES
+
+Add banner:
+
+🐎 NEXT RACE IN 02:14
+
+or
+
+💰 BETTING OPEN
+
+---
+
+Disable betting UI unless:
+
+status === "betting"
+
+---
+
+## RACE ANIMATION (KEEP GTA STYLE)
+
+* 6 lanes
+* horizontal movement
+* 4–6 second animation
+* slight random speed variation
+* override finish so winner is first
+
+---
+
+## ANNOUNCEMENTS (OPTIONAL BUT RECOMMENDED)
+
+On schedule:
+
+"🐎 HORSE RACE STARTING IN X MINUTES"
+
+On betting open:
+
+"💰 BETTING IS NOW OPEN"
+
+---
+
+## RULES / CONSTRAINTS
+
+* NO automatic races
+* ALL races controlled by staff
+* DO NOT modify poker system
+* DO NOT break existing APIs
+* Keep UI clean and minimal
+* Use Tailwind cards + tables
+* Keep animations lightweight
+
+---
+
+## FINAL RESULT
+
+Horse racing becomes:
+
+* Event-based (staff controlled)
+* Countdown-driven
+* High engagement system
+* Fully integrated into Tables sub-tab
+* Includes ownership, payouts, variants, and animation
+
+Only output working code and required files.

@@ -1,0 +1,139 @@
+Build a web-based Progressive Slots game for a GTA RP casino called "Back Alley Bets".
+
+CORE GAME:
+- 5 reels × 3 rows
+- 20 paylines
+- Bet sizes: 1k, 5k, 10k, 25k chips (configurable)
+- Spin + Auto-spin
+- Smooth reel animations (GTA-style, dark, gold/black theme)
+
+PROGRESSIVE JACKPOTS:
+Create 3 global shared jackpots:
+- Mini (frequent small hit)
+- Major (medium hit)
+- Grand (rare main jackpot)
+
+JACKPOT CONTRIBUTION (per spin):
+- 2% of bet → Mini
+- 1% → Major
+- 0.5% → Grand
+- Remaining goes to payouts + house edge
+
+Jackpots must:
+- Be shared across all players
+- Persist in backend
+- Update live in real-time
+
+JACKPOT LOGIC (IMPORTANT):
+Use a “must-hit range” system, NOT pure random.
+
+Each jackpot has:
+- Min value (starting point)
+- Max value (must-hit cap)
+
+Example:
+- Grand: min 2,000,000 / max 5,000,000
+
+On each spin:
+- Calculate increasing hit chance as jackpot grows
+- If RNG passes threshold AND jackpot ≥ min → jackpot hits
+- Reset jackpot to min after win
+
+Optional:
+- Jackpot can trigger randomly OR require 3 scatter symbols
+
+SYMBOLS:
+- Low: cards, chips, dice
+- Mid: cash stacks, gold bars
+- High: Back Alley Bets logo
+- Special:
+  - Wild (substitutes symbols)
+  - Scatter (bonus trigger)
+
+PAYOUT SYSTEM (NO MULTIPLIERS / NO STACKERS):
+- Use fixed payouts based on symbol combinations ONLY
+- No x2/x5/x10 multipliers anywhere
+- No stacking or boosting mechanics
+- Keep it clean and predictable
+
+Example payout structure:
+- Low symbols: 1.2x – 2.5x bet
+- Mid symbols: 3x – 8x bet
+- High symbols: 10x – 25x bet
+- Full line premium: up to 50x bet (rare)
+
+RTP target:
+- 92%–95% (configurable)
+
+WIN FEEL:
+- Frequent small wins (close to bet amount)
+- Occasional medium hits
+- Rare large hits
+- Jackpot = main big win, not multipliers
+
+BONUS FEATURES (SIMPLIFIED):
+
+Free Spins:
+- Trigger: 3+ scatters
+- 8–12 spins
+- SAME base payouts (no multipliers)
+- Slightly improved symbol odds during free spins
+
+Optional Bonus:
+- "Pick a Prize" mini-game instead of multiplier wheel
+- Rewards:
+  - Flat cash prizes
+  - Jackpot chance
+- No scaling multipliers
+
+RNG:
+- Server-side RNG only
+- Each spin independent
+- Track:
+  - Total wagers
+  - Total payouts
+  - Jackpot contributions
+
+ADMIN PANEL:
+
+Jackpots:
+- Set starting values
+- Adjust contribution %
+- Set min/max caps
+- Reset jackpots
+
+BALANCE CONTROLS:
+- Adjust symbol weights
+- Adjust payout values
+- Toggle volatility (controls hit frequency, NOT multipliers)
+
+ANALYTICS:
+- Total spins
+- Total wagered
+- Total paid out
+- Profit/loss
+- Jackpot win history
+
+UI STYLE:
+- GTA 5 / NoPixel inspired
+- Dark theme (black, wood, gold accents)
+- Underground casino feel (clean but gritty)
+
+ANIMATIONS:
+- Reel spin blur
+- Winning line highlight
+- Jackpot counter ticking upward live
+- Big win glow (not over-the-top arcade)
+
+BALANCE RULES (VERY IMPORTANT):
+- Avoid dead spins >65–70%
+- Ensure steady small wins to keep players engaged
+- Do NOT rely on multipliers for excitement
+- Jackpot is the main high-end reward
+- House must recover jackpot payouts over time
+
+FINAL REQUIREMENTS:
+- Fully configurable backend system
+- Shared multiplayer jackpot system
+- Feels fair and grounded (not arcade or fake)
+- Built for long-term player retention in RP economy

@@ -1,0 +1,163 @@
+Refactor the Casino UI to REMOVE "Tournaments" from the header and integrate it into the "House Games" section as a LIVE, dynamic card.
+
+GOAL:
+Clean up the header and make tournaments feel like an active, core game feature by displaying real-time data directly on the main page.
+
+---
+
+1. REMOVE FROM HEADER
+
+---
+
+* Remove the "Tournaments" tab/button from the top navigation bar
+* Do NOT break routing — /tournaments must still exist and function
+* Clean up any unused header-related tournament UI code
+
+---
+
+2. ADD TO HOUSE GAMES (NEW CARD)
+
+---
+
+In the "HOUSE GAMES" grid (Blackjack, Slots, Roulette, etc.), add a new card:
+
+Card:
+
+* Title: TOURNAMENTS
+* Icon: trophy or bracket icon
+* Subtitle: "Compete across all games"
+* Color: gold / amber gradient (distinct from other games)
+
+---
+
+3. MAKE THE CARD LIVE (REAL-TIME DATA)
+
+---
+
+The card must display live tournament data:
+
+## UI inside card:
+
+🏆 TOURNAMENTS
+Compete across all games
+
+🔥 {activeCount} Active Now
+💰 Prize Pool: {totalPrizePool}
+👑 Top Prize: {topPrize}
+------------------------
+
+If NO active tournaments:
+
+* Show:
+  "No Active Tournaments"
+  "Check back soon"
+
+---
+
+4. DATA SOURCE
+
+---
+
+Use existing tournament system.
+
+If needed, create:
+GET /api/tournaments/summary
+
+Return:
+{
+activeCount: number,
+totalPrizePool: number,
+topPrize: number
+}
+
+Compute:
+
+* activeCount = tournaments with status "registering" or "active"
+* totalPrizePool = sum of all active tournament prize pools
+* topPrize = highest single tournament prize
+
+---
+
+5. REAL-TIME UPDATES
+
+---
+
+* Refresh every 5–10 seconds OR use WebSocket if available
+* Do NOT spam API
+* Load card instantly, then hydrate data (no blocking UI)
+
+---
+
+6. VISUAL FEEDBACK
+
+---
+
+* If activeCount > 0:
+
+  * Add subtle glow or pulse effect to the card
+* Use colors:
+
+  * Green for active count
+  * Gold for prize values
+
+Optional:
+
+* Add hover animation to increase clickability
+
+---
+
+7. CLICK BEHAVIOR
+
+---
+
+* Clicking the card routes to /tournaments
+* Do NOT create a new page
+
+---
+
+8. FUTURE-PROOF TOURNAMENT PAGE
+
+---
+
+Update /tournaments page to support multiple game types:
+
+Add filters/tabs:
+
+* Poker
+* Blackjack
+* Slots
+* Mixed
+
+Each tournament should show:
+
+* Game type (icon)
+* Buy-in
+* Players (current/max)
+* Prize pool
+* Status (Registering / Active / Finished)
+
+---
+
+9. CONSISTENCY
+
+---
+
+* Match existing card sizes, spacing, hover effects
+* Do NOT break grid responsiveness
+* Keep "Private" badge logic unchanged
+
+---
+
+RESULT:
+
+* Header becomes cleaner (Casino | Staff | Deposit | Profile)
+* Tournaments become visible and engaging
+* Live data increases clicks and participation
+
+---
+
+## DO NOT:
+
+* Do not remove tournament backend logic
+* Do not break APIs or WebSocket systems
+* Do not redesign the entire page — only refactor placement + upgrade the card
