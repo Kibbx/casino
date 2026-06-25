@@ -106,17 +106,6 @@ export function PokerPage() {
 
       {/* Live Tables section */}
       <div style={{ marginBottom: 28 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>
-            Live Tables
-          </span>
-          {!loading && !error && (
-            <span style={{ fontSize: 11, padding: "1px 8px", borderRadius: 99, background: tables.length > 0 ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.06)", color: tables.length > 0 ? "#4ade80" : "rgba(255,255,255,0.3)", border: `1px solid ${tables.length > 0 ? "rgba(34,197,94,0.25)" : "rgba(255,255,255,0.08)"}` }}>
-              {tables.length} open
-            </span>
-          )}
-        </div>
-
         {loading && (
           <div style={{ display: "flex", gap: 12 }}>
             {[0, 1, 2].map((i) => (
