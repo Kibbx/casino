@@ -87,7 +87,7 @@ const navGroups: NavGroup[] = [
   {
     section: "Events",
     items: [
-      { id: "tournaments",   label: "Tournaments",  icon: Trophy, route: "/tournaments-old" },
+      { id: "tournaments",   label: "Tournaments",  icon: Trophy },
       { id: "horse-racing", label: "Horse Racing", icon: Flag,  route: "/horse-racing"   },
       { id: "lottery",      label: "Lottery",      icon: Zap,   route: "/lottery"        },
       { id: "bingo",        label: "Bingo",         icon: Gift,  route: "/bingo"          },
