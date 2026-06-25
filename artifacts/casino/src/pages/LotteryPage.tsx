@@ -45,22 +45,10 @@ interface CardData {
 
 const staticCards: CardData[] = [
   {
-    id: 1, name: "Daily Draw", schedule: "Every day at 8:00 PM",
-    ticketPrice: "$5", jackpot: "$10,000", ticketsSold: 1240, maxTickets: 2000,
-    prizes: ["$10,000", "$2,000", "$500", "$100 ×10"],
-    neonColor: "#22c55e", timeLeft: "3h 42m",
-  },
-  {
     id: 2, name: "Weekly Mega Draw", schedule: "Every Friday at 10:00 PM",
     ticketPrice: "$20", jackpot: "$75,000", ticketsSold: 2847, maxTickets: 5000,
     prizes: ["$75,000", "$15,000", "$5,000", "$1,000 ×5"],
     neonColor: "#f5c518", timeLeft: "2d 14h", featured: true, live: true,
-  },
-  {
-    id: 3, name: "Monthly Jackpot", schedule: "Last day of the month",
-    ticketPrice: "$50", jackpot: "$500,000", ticketsSold: 4122, maxTickets: 10000,
-    prizes: ["$500,000", "$100,000", "$25,000", "$5,000 ×10"],
-    neonColor: "#a855f7", timeLeft: "11d 8h",
   },
 ];
 
