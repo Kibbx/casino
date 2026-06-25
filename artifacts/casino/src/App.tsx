@@ -113,7 +113,7 @@ function Router() {
       <Route path="/roulette" component={Roulette} />
       <Route path="/baccarat" component={Baccarat} />
       <Route path="/horse-racing" component={HorseRacing} />
-      <Route path="/tournaments-page" component={TournamentsListPage} />
+      <Route path="/tournaments" component={TournamentsListPage} />
       <Route path="/tournament/:id" component={TournamentPage} />
       <Route path="/slots-tournament/:id" component={SlotsTournamentPage} />
       <Route path="/mines" component={MinesPage} />

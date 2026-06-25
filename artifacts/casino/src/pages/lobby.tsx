@@ -78,7 +78,7 @@ const navGroups: NavGroup[] = [
     section: "Casino",
     items: [
       { id: "table-games", label: "Table Games", icon: CircleDot, route: "/tablegames"    },
-      { id: "tournaments", label: "Tournaments", icon: Trophy,    route: "/tournaments-page" },
+      { id: "mini-games",  label: "Mini Games",  icon: Gamepad2,  route: "/minigames" },
       { id: "slots",       label: "Slots",       icon: Layers,    route: "/slots" },
       { id: "poker",       label: "Poker",       icon: Spade,     route: "/poker-tables" },
       { id: "sportsbook",  label: "Sportsbook",  icon: Activity,  route: "/sportsbook"  },
@@ -87,6 +87,7 @@ const navGroups: NavGroup[] = [
   {
     section: "Events",
     items: [
+      { id: "tournaments",   label: "Tournaments",  icon: Trophy },
       { id: "horse-racing", label: "Horse Racing", icon: Flag,  route: "/horse-racing"   },
       { id: "lottery",      label: "Lottery",      icon: Zap,   route: "/lottery"        },
       { id: "bingo",        label: "Bingo",         icon: Gift,  route: "/bingo"          },
@@ -352,7 +353,7 @@ export function Lobby() {
       "/lobby":         "home",
       "/tablegames":    "table-games",
       "/sportsbook":    "sportsbook",
-      "/tournaments-page": "tournaments",
+      "/minigames":     "mini-games",
       "/poker-tables":  "poker",
       "/slots":         "slots",
       "/horse-racing":  "horse-racing",
