@@ -49,7 +49,7 @@ function tableToGame(table: PokerTable): CatalogGame {
   return {
     id: String(table.id),
     name: table.name,
-    description: `${themeLabel} · Blinds ${fmtChips(table.smallBlind)}/${fmtChips(table.bigBlind)} · ${seated}/${total} seated`,
+    description: `${themeLabel} · Blinds ${fmtChips(table.smallBlind)}/${fmtChips(table.bigBlind)}`,
     gradient: cfg.gradient,
     neonClass: cfg.neonClass,
     neonColor: cfg.neonColor,
