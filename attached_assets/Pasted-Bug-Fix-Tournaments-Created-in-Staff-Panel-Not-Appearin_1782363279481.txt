@@ -1,0 +1,63 @@
+Bug Fix: Tournaments Created in Staff Panel Not Appearing on /tournaments Page
+
+Investigate and fix an issue where tournaments created from the Staff/Admin panel are not displaying on the public /tournaments page.
+
+Current Behavior
+Staff can successfully create tournaments from the Staff dashboard.
+Tournament data appears to save without errors.
+
+The public /tournaments page always shows:
+
+"Tournaments Coming Soon"
+"No tournaments are open right now. Check back later."
+
+Newly created tournaments never appear.
+Required Investigation
+Trace the complete tournament flow:
+Staff tournament creation form
+API endpoint handling creation
+Database insert/update logic
+Tournament retrieval API
+/tournaments frontend page
+Verify:
+Tournament records are actually being saved in the database.
+The same database/table/collection is being used by both Staff and Public pages.
+Field names match between create and fetch operations.
+Tournament status filtering is correct.
+Date filtering is not excluding active tournaments.
+Published/visible flags are handled correctly.
+API responses contain created tournaments.
+Check for common issues such as:
+status === "active" while created tournaments are saved as "upcoming" or "draft"
+isPublished, isVisible, or enabled flags defaulting to false
+Frontend querying wrong endpoint
+Frontend filtering out tournaments unintentionally
+Date/timezone comparisons marking tournaments as expired
+Database schema mismatch
+Missing query invalidation/cache refresh after creation
+Required Fix
+Ensure every tournament created from Staff appears on /tournaments when it should be publicly visible.
+If tournaments support statuses, display:
+Upcoming tournaments
+Active tournaments
+Registration Open tournaments
+Keep Draft tournaments hidden from the public page.
+Add Debug Logging
+
+Add temporary logs for:
+
+Tournament creation payload
+Database save result
+Tournament fetch query
+Tournament fetch response
+Frontend tournament data received
+Deliverables
+Root cause explanation.
+Exact files modified.
+Code changes made.
+Confirmation that:
+Creating a tournament in Staff
+Refreshing /tournaments
+Tournament appears immediately
+
+Also review the attached screenshot showing /tournaments stuck on "Tournaments Coming Soon" despite tournaments existing in the admin area and fix any related UI state logic.
