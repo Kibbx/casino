@@ -355,6 +355,7 @@ export function Lobby() {
       "/sportsbook":    "sportsbook",
       "/minigames":     "mini-games",
       "/tournaments":   "tournaments",
+      "/lottery":       "lottery",
       "/poker-tables":  "poker",
       "/slots":         "slots",
       "/horse-racing":  "horse-racing",
