@@ -35,9 +35,6 @@ function LotteryCard({ d }: { d: typeof draws[0] }) {
         border: `1px solid ${d.neonColor}33`,
         boxShadow: hov ? `0 0 24px ${d.neonColor}22` : "none",
         transition: "box-shadow 0.2s",
-        width: 320,
-        minWidth: 300,
-        flexShrink: 0,
       }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -119,11 +116,18 @@ function LotteryCard({ d }: { d: typeof draws[0] }) {
 export function LotteryPage() {
   return (
     <PageWrapper title="Lottery" breadcrumb="Events / Lottery" accentColor="#f5c518">
-      <CardGrid minItemWidth={300} maxItemWidth={360} gap={24}>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        gap: 24,
+        maxWidth: 1080,
+        margin: "0 auto",
+        width: "100%",
+      }}>
         {draws.map((d) => (
           <LotteryCard key={d.id} d={d} />
         ))}
-      </CardGrid>
+      </div>
     </PageWrapper>
   );
 }
