@@ -1,0 +1,90 @@
+Update the **Tournaments** sidebar navigation and page implementation to match the attached design reference.
+
+Requirements:
+
+Use the attached screenshot as the visual and functional reference for the **Tournaments** feature.
+
+Create or update a dedicated route:
+
+`/tournaments`
+
+Ensure the sidebar contains a navigation item labeled:
+
+**Tournaments**
+
+When clicked, the sidebar item must navigate directly to:
+
+`/tournaments`
+
+Page Requirements:
+
+Build the Tournaments page to visually match the attached reference image, including:
+
+* Tournaments page title/header
+* Tournament card grid layout
+* Registration buttons
+* Buy-in information
+* Prize pool information
+* Start times
+* Duration information
+* Registration progress indicators
+* Tournament status badges (Open, Featured, Late Registration, etc.)
+* Dark casino-themed styling
+* Responsive desktop and mobile layouts
+
+Sidebar Requirements:
+
+* Add **Tournaments** under the Events section
+* Preserve existing sidebar styling
+* Preserve active-state highlighting
+* Preserve icons
+* Preserve responsive behavior
+* Preserve navigation hierarchy
+* Preserve permission/access-control logic
+
+Routing Requirements:
+
+* Route all tournament navigation to `/tournaments`
+* Ensure active navigation state correctly highlights Tournaments when the page is open
+* Prevent broken links and invalid routes
+* Ensure no router errors occur
+
+Search and Update:
+
+Search the codebase for:
+
+`/tournaments`
+
+`/tournaments`
+
+`Tournaments`
+
+`tournament`
+
+Update any stale or inconsistent references so all tournament-related navigation points to `/tournaments`.
+
+Verification:
+
+* Clicking **Tournaments** opens `/tournaments`
+* The page matches the attached tournament design reference
+* No 404 pages appear
+* No router errors occur
+* All other sidebar navigation items continue working normally
+* Responsive layouts function correctly
+* No TypeScript errors are introduced
+* No ESLint errors are introduced
+
+Provide a report showing:
+
+* Files modified
+* Routes added or updated
+* Components created or updated
+* New route assigned: `/tournaments`
+* Any remaining tournament-related references requiring cleanup
+
+Important:
+
+* Use the attached screenshot as the source of truth for layout and styling.
+* Maintain consistency with the existing casino application design system.
+* Do not remove the Tournaments navigation item unless it is completely unused.
+* All tournament functionality and navigation should be centralized through `/tournaments`.
