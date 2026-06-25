@@ -87,7 +87,7 @@ const navGroups: NavGroup[] = [
   {
     section: "Events",
     items: [
-      { id: "tournaments",   label: "Tournaments",  icon: Trophy },
+      { id: "tournaments",   label: "Tournaments",  icon: Trophy, route: "/tournaments" },
       { id: "horse-racing", label: "Horse Racing", icon: Flag,  route: "/horse-racing"   },
       { id: "lottery",      label: "Lottery",      icon: Zap,   route: "/lottery"        },
       { id: "bingo",        label: "Bingo",         icon: Gift,  route: "/bingo"          },
@@ -354,7 +354,7 @@ export function Lobby() {
       "/tablegames":    "table-games",
       "/sportsbook":    "sportsbook",
       "/minigames":     "mini-games",
-      "/tournaments-old": "tournaments",
+      "/tournaments":   "tournaments",
       "/poker-tables":  "poker",
       "/slots":         "slots",
       "/horse-racing":  "horse-racing",
