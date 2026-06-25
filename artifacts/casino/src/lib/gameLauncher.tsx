@@ -44,7 +44,7 @@ export const GAMES: Record<string, GameDef> = {
   mobtower:   { label: "Mob Tower",     cat: "MINI GAMES",  img: `${IMGS}images/card-mob-tower.png`,         route: "/mob-tower",      key: "mobtower",    apiPath: "mob-tower", neon: "neon-pink",  direct: true },
   horse:      { label: "Horse Racing",  cat: "LIVE EVENTS", img: `${IMGS}images/card-horseracing.webp`,      route: "/horse-racing",   key: "horseRacing", apiPath: "horse",     neon: "neon-orange" },
   poker:      { label: "Poker",         cat: "TABLE GAMES", img: `${IMGS}images/card-poker.webp`,            route: "/poker",          key: "poker",       apiPath: "poker",     neon: "neon-red",   direct: true },
-  tournaments:{ label: "Tournaments",   cat: "EVENTS",      img: `${IMGS}images/card-tournaments.webp`,      route: "/tournaments",    key: "tournaments", apiPath: "tournaments", neon: "neon-yellow", direct: true },
+  tournaments:{ label: "Tournaments",   cat: "EVENTS",      img: `${IMGS}images/card-tournaments.webp`,      route: "/tournaments-old", key: "tournaments", apiPath: "tournaments", neon: "neon-yellow", direct: true },
   bingo:      { label: "Bingo",         cat: "EVENTS",      img: "",                                          route: "/bingo",          key: "bingo",       apiPath: "bingo",     neon: "neon-purple", direct: true },
   lottery:    { label: "Lottery",       cat: "EVENTS",      img: "",                                          route: "/lottery",        key: "lottery",     apiPath: "lottery",   neon: "neon-green",  direct: true },
 };

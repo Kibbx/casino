@@ -103,7 +103,7 @@ export default function SlotsTournamentPage() {
         <div style={{ fontFamily: "Oswald,sans-serif", fontSize: 22, color: "#f87171", letterSpacing: "0.08em" }}>
           {error ?? "Tournament not found"}
         </div>
-        <button onClick={() => navigate("/tournaments")} style={{ background: "rgba(139,37,0,0.4)", border: "1px solid rgba(200,80,40,0.5)",
+        <button onClick={() => navigate("/tournaments-old")} style={{ background: "rgba(139,37,0,0.4)", border: "1px solid rgba(200,80,40,0.5)",
           borderRadius: 8, color: "#FFD060", fontFamily: "Oswald,sans-serif", fontSize: 15, fontWeight: 700,
           letterSpacing: "0.1em", textTransform: "uppercase", padding: "10px 28px", cursor: "pointer" }}>
           ← Back
