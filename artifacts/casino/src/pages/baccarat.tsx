@@ -355,7 +355,7 @@ export default function BaccaratPage() {
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.06)", background: "#0f1923" }}>
-        <button onClick={() => setLocation("/lobby")}
+        <button onClick={() => setLocation("/tablegames")}
           style={{ display: "flex", alignItems: "center", gap: 4, color: "rgba(255,255,255,0.4)", background: "none", border: "none", cursor: "pointer", fontSize: 13, padding: "4px 0" }}
           onMouseEnter={e => e.currentTarget.style.color = "#fff"} onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>
           <ChevronLeft style={{ width: 16, height: 16 }} /> Table Games

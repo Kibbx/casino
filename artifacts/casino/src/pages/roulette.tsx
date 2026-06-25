@@ -1111,7 +1111,7 @@ export default function Roulette() {
         padding: "10px 20px", borderBottom: "1px solid #3b0a17",
         background: "#0a0507", position: "sticky", top: 0, zIndex: 20,
       }}>
-        <button onClick={() => setLocation("/lobby")} style={{
+        <button onClick={() => setLocation("/tablegames")} style={{
           display: "flex", alignItems: "center", gap: 4,
           color: "#6b2d3e", fontSize: 13, background: "none", border: "none", cursor: "pointer",
         }}>

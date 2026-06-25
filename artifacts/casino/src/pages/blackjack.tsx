@@ -991,7 +991,7 @@ export default function BlackjackPage() {
 
       {/* ── Header ── */}
       <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 54, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 14px", zIndex: 20, background: "linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%)" }}>
-        <button onClick={() => { setSelectedTableId(null); setSelectedTableInfo(null); setTable(null); setBetStack([]); }}
+        <button onClick={() => setLocation("/tablegames")}
           style={{ display: "flex", alignItems: "center", gap: 5, color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", cursor: "pointer", fontSize: 12, padding: "5px 11px", borderRadius: 8 }}
           onMouseEnter={e => e.currentTarget.style.color = "rgba(255,255,255,0.85)"}
           onMouseLeave={e => e.currentTarget.style.color = "rgba(255,255,255,0.4)"}>

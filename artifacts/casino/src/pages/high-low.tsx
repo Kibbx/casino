@@ -228,7 +228,7 @@ export default function HighLow() {
 
       {/* HEADER — fixed height */}
       <div style={{ width:"100%", maxWidth:520, padding:"14px 18px 0", display:"flex", alignItems:"center", justifyContent:"space-between", position:"relative", zIndex:1, flexShrink:0 }}>
-        <button onClick={() => setLocation("/lobby")} style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, padding:"6px 12px", color:"rgba(255,255,255,0.55)", fontSize:13, cursor:"pointer", letterSpacing:"0.04em" }}>
+        <button onClick={() => setLocation("/tablegames")} style={{ display:"flex", alignItems:"center", gap:5, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:8, padding:"6px 12px", color:"rgba(255,255,255,0.55)", fontSize:13, cursor:"pointer", letterSpacing:"0.04em" }}>
           <ChevronLeft size={14} /> TABLE GAMES
         </button>
         <div style={{ textAlign:"center" }}>
