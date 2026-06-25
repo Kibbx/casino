@@ -796,7 +796,7 @@ export default function WesternSlots() {
         borderBottom:"1px solid rgba(200,160,40,0.25)",
         display:"flex",alignItems:"center",justifyContent:"space-between",
         padding:"0 20px",zIndex:50}}>
-        <button onClick={()=>navigate("/slots-hub")} style={{
+        <button onClick={()=>navigate("/slots")} style={{
           background:"none",border:"none",cursor:"pointer",
           fontFamily:"Oswald,sans-serif",fontSize:13,letterSpacing:"0.06em",
           textTransform:"uppercase",color:"rgba(200,160,40,0.6)",padding:"4px 8px",

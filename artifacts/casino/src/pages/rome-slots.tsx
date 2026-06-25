@@ -646,7 +646,7 @@ export default function RomeSlots() {
       }}>
         {/* Back button */}
         <button
-          onClick={() => navigate("/slots-hub")}
+          onClick={() => navigate("/slots")}
           style={{
             background: "none", border: "none", cursor: "pointer",
             display: "flex", alignItems: "center", gap: 6,
