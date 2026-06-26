@@ -224,7 +224,7 @@ function YourTickets({
 }) {
   const [ticketsOpen, setTicketsOpen] = useState(true);
 
-  const totalSpent = tickets.reduce((s, t) => s + (t.ticket_cost || 0), 0);
+  const totalSpent = tickets.reduce((s, t) => s + (Number(t.ticket_cost) || 0), 0);
   const totalEntries = tickets.length;
 
   function statusBadge(t: LotteryTicket) {
