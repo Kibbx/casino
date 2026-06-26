@@ -79,6 +79,8 @@ export function ProfilePage() {
   const [error,     setError]     = useState<string | null>(null);
   const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
   const [rakeback,     setRakeback]     = useState<RakebackStatus | null>(null);
+  const [rbClaiming,   setRbClaiming]   = useState(false);
+  const [rbClaimMsg,   setRbClaimMsg]   = useState<{ ok: boolean; text: string } | null>(null);
   const [showSecurity, setShowSecurity] = useState(false);
   const [curPin,       setCurPin]       = useState("");
   const [newPin,       setNewPin]       = useState("");
@@ -109,6 +111,38 @@ export function ProfilePage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (player) setAvatarUrl(player.avatarUrl ?? null); }, [player]);
+
+  async function handleClaimRakeback() {
+    if (!sessionToken) return;
+    setRbClaiming(true); setRbClaimMsg(null);
+    try {
+      const res = await fetch(`${BASE}/api/rakeback/claim`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as any).error ?? "Claim failed");
+      setRbClaimMsg({ ok: true, text: `+${fmt(body.claimed ?? 0)} chips claimed!` });
+      const rbRes = await fetch(`${BASE}/api/rakeback/status`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (rbRes.ok) setRakeback(await rbRes.json());
+      setTimeout(() => setRbClaimMsg(null), 4000);
+    } catch (e: any) {
+      setRbClaimMsg({ ok: false, text: e.message ?? "Claim failed" });
+    } finally {
+      setRbClaiming(false);
+    }
+  }
+
+  function fmtCooldown(nextClaimAt: string | null) {
+    if (!nextClaimAt) return "";
+    const ms = new Date(nextClaimAt).getTime() - Date.now();
+    if (ms <= 0) return "";
+    const h = Math.floor(ms / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  }
 
   async function handleChangePin() {
     if (!curPin || !newPin) { setPinMsg({ ok: false, text: "Fill in all fields." }); return; }
@@ -311,14 +345,14 @@ export function ProfilePage() {
           {/* Rakeback card */}
           {(() => {
             const rb = rakeback;
-            const claimable = rb?.claimable ?? 0;
-            const wagered   = rb?.wageredReal ?? 0;
-            const wonBack   = rb?.wonReal ?? 0;
-            const netLoss   = Math.max(0, wagered - wonBack);
+            const claimable  = rb?.claimable ?? 0;
+            const wagered    = rb?.wageredReal ?? 0;
+            const wonBack    = rb?.wonReal ?? 0;
+            const onCooldown = rb?.onCooldown ?? false;
+            const cdLabel    = fmtCooldown(rb?.nextClaimAt ?? null);
             const rows: [string, string][] = [
-              ["Wagered",      fmt(wagered)  + " chips"],
-              ["Won Back",     fmt(wonBack)  + " chips"],
-              ["Net Loss",     fmt(netLoss)  + " chips"],
+              ["Wagered",      fmt(wagered) + " chips"],
+              ["Won Back",     fmt(wonBack) + " chips"],
               ["Last Claimed", fmtDateTime(rb?.lastClaimed ?? null)],
             ];
             return (
@@ -346,7 +380,8 @@ export function ProfilePage() {
                 <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
                   claimable now · 3% back
                 </p>
-                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
                   {rows.map(([k, v]) => (
                     <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
                       <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{k}</span>
@@ -354,6 +389,36 @@ export function ProfilePage() {
                     </div>
                   ))}
                 </div>
+
+                {rbClaimMsg && (
+                  <p style={{ fontSize: 10, marginTop: 6, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
+                    {rbClaimMsg.text}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleClaimRakeback}
+                  disabled={rbClaiming || onCooldown || claimable === 0}
+                  style={{
+                    marginTop: 10, padding: "7px 0", borderRadius: 7,
+                    background: (onCooldown || claimable === 0)
+                      ? "rgba(255,255,255,0.04)"
+                      : "rgba(34,197,94,0.15)",
+                    border: `1px solid ${(onCooldown || claimable === 0) ? "rgba(255,255,255,0.08)" : "rgba(34,197,94,0.35)"}`,
+                    color: (onCooldown || claimable === 0) ? "rgba(255,255,255,0.25)" : "#22c55e",
+                    fontWeight: 700, fontSize: 10,
+                    letterSpacing: "0.08em", textTransform: "uppercase",
+                    cursor: (rbClaiming || onCooldown || claimable === 0) ? "not-allowed" : "pointer",
+                    fontFamily: "Rajdhani, sans-serif",
+                    width: "100%",
+                  }}
+                >
+                  {rbClaiming
+                    ? "Claiming…"
+                    : onCooldown && cdLabel
+                    ? `Cooldown · ${cdLabel}`
+                    : "Collect Rakeback"}
+                </button>
               </div>
             );
           })()}
