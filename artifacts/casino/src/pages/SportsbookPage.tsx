@@ -969,6 +969,10 @@ function BetSlip({
   const parlayWagerNum  = parseFloat(parlayWager) || 0;
   const parlayPayout    = parlayWagerNum > 0 ? parlayWagerNum * combinedDecimal : 0;
 
+  /* Same-game conflict — block parlaying both sides of one event */
+  const hasSameGame = entries.length >= 2 &&
+    new Set(entries.map(e => e.eventId)).size < entries.length;
+
   /* Popular bet rows */
   const STATIC_POPULAR = [
     { key: "dodgers", label: "Dodgers ML", league: "MLB", odds: -130, ev: null as SbEvent | null, side: "home" as const },
@@ -1161,16 +1165,18 @@ function BetSlip({
                 </div>
 
                 {/* Validation / place error */}
-                {(placeError || (chipsKnown && parlayWagerNum > 0 && chips !== undefined && parlayWagerNum > chips)) && (
+                {(hasSameGame || placeError || (chipsKnown && parlayWagerNum > 0 && chips !== undefined && parlayWagerNum > chips)) && (
                   <p className="text-[9px] font-bold" style={{ color: "#ef4444" }}>
-                    {placeError ?? "Insufficient chips"}
+                    {hasSameGame
+                      ? "Can't parlay both sides of the same game"
+                      : placeError ?? "Insufficient chips"}
                   </p>
                 )}
 
                 {/* CTA block */}
                 {(() => {
                   const insufficient = chipsKnown && chips !== undefined && parlayWagerNum > chips;
-                  const canPlace = parlayWagerNum > 0 && !insufficient && !placing;
+                  const canPlace = parlayWagerNum > 0 && !insufficient && !hasSameGame && !placing;
                   return (
                     <button onClick={() => onPlace(parlayWager)}
                       disabled={!canPlace}
@@ -1188,6 +1194,8 @@ function BetSlip({
                         style={{ color: canPlace ? "#fff" : "#8B8E98" }}>
                         {placing
                           ? "Placing…"
+                          : hasSameGame
+                          ? "Invalid Parlay"
                           : insufficient
                           ? "Insufficient Chips"
                           : parlayWagerNum > 0
