@@ -1121,9 +1121,9 @@ function BetSlip({
               <div className="px-3 pt-3 pb-3 flex flex-col gap-2">
                 {/* Quick-add row */}
                 <div className="flex gap-1.5">
-                  <QuickBtn label="+$1"  onClick={() => addToParlay(1)}  />
-                  <QuickBtn label="+$5"  onClick={() => addToParlay(5)}  />
-                  <QuickBtn label="+$20" onClick={() => addToParlay(20)} />
+                  <QuickBtn label="+$100"  onClick={() => addToParlay(100)}  />
+                  <QuickBtn label="+$500"  onClick={() => addToParlay(500)}  />
+                  <QuickBtn label="+$1k"   onClick={() => addToParlay(1000)} />
                   {/* Custom input */}
                   <div className="flex-1 flex items-center px-2 rounded-md"
                     style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
@@ -1199,9 +1199,9 @@ function BetSlip({
                 {/* Wager controls */}
                 <div className="px-2.5 py-2 flex flex-col gap-1.5">
                   <div className="flex gap-1">
-                    <QuickBtn label="+$1"  onClick={() => addToSingle(e, 1)}  />
-                    <QuickBtn label="+$5"  onClick={() => addToSingle(e, 5)}  />
-                    <QuickBtn label="+$20" onClick={() => addToSingle(e, 20)} />
+                    <QuickBtn label="+$100"  onClick={() => addToSingle(e, 100)}  />
+                    <QuickBtn label="+$500"  onClick={() => addToSingle(e, 500)}  />
+                    <QuickBtn label="+$1k"   onClick={() => addToSingle(e, 1000)} />
                     <div className="flex-1 flex items-center px-2 rounded-md"
                       style={{ background: "#111217", border: "1px solid #2A2B32" }}>
                       <span className="text-[10px] font-black" style={{ color: "#8B8E98" }}>$</span>
