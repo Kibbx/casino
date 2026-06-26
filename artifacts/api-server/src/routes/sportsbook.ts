@@ -1,4 +1,7 @@
 import { Router } from "express";
+import { db } from "@workspace/db";
+import { sql } from "drizzle-orm";
+import { requireSportbetsOrAbove } from "../middleware/auth.js";
 
 const router = Router();
 
@@ -71,6 +74,47 @@ const SPORT_KEY_TO_LEAGUE: Record<string, string> = {
 
 for (const [sport, keys] of Object.entries(SPORT_TO_KEYS)) {
   for (const key of keys) SPORT_KEY_TO_SPORT[key] = sport;
+}
+
+/* ── Manual events helpers ──────────────────────────────────────────────── */
+
+async function getManualEvents(): Promise<SbEvent[]> {
+  try {
+    const rows = await db.execute(sql`
+      SELECT id, sport, sport_key, league, home_team, away_team,
+             home_odds, away_odds, commence_time, live, event_name
+      FROM manual_sportsbook_events
+      WHERE active = true
+      ORDER BY commence_time ASC
+    `);
+    return (rows.rows as any[]).map(r => ({
+      id: `manual-${r.id}`,
+      sportKey: String(r.sport_key),
+      sport: String(r.sport),
+      league: String(r.league),
+      homeTeam: String(r.home_team),
+      awayTeam: String(r.away_team),
+      commenceTime: new Date(r.commence_time as string).toISOString(),
+      live: Boolean(r.live),
+      bestHomeOdds: Number(r.home_odds),
+      bestAwayOdds: Number(r.away_odds),
+      bestHomeBook: "manual",
+      bestAwayBook: "manual",
+      eventName: r.event_name ? String(r.event_name) : undefined,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function filterManualForSport(events: SbEvent[], sport: string): SbEvent[] {
+  if (sport === "all") return events;
+  if (sport === "Live") return events.filter(e => e.live);
+  return events.filter(e => e.sport === sport);
+}
+
+function clearAllCache() {
+  cache.clear();
 }
 
 /* ── Fetch from the-odds-api.com ────────────────────────────────────────── */
@@ -198,6 +242,9 @@ router.get("/odds", async (req, res) => {
 
   const apiKey = process.env.ODDS_API_KEY;
 
+  const manualAll = await getManualEvents();
+  const manual    = filterManualForSport(manualAll, sport);
+
   if (!apiKey) {
     const all      = makeMockEvents();
     const filtered = sport === "all"
@@ -205,9 +252,10 @@ router.get("/odds", async (req, res) => {
       : sport === "Live"
         ? all.filter(e => e.live)
         : all.filter(e => e.sport === sport);
+    const merged    = [...manual, ...filtered];
     const fetchedAt = new Date().toISOString();
-    cache.set(cacheKey, { events: filtered, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
-    return res.json({ events: filtered, cached: false, fetchedAt });
+    cache.set(cacheKey, { events: merged, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
+    return res.json({ events: merged, cached: false, fetchedAt });
   }
 
   try {
@@ -217,14 +265,15 @@ router.get("/odds", async (req, res) => {
         : (SPORT_TO_KEYS[sport] ?? []);
 
     if (sportKeys.length === 0) {
-      return res.json({ events: [], cached: false, fetchedAt: new Date().toISOString() });
+      return res.json({ events: manual, cached: false, fetchedAt: new Date().toISOString() });
     }
 
-    const events    = await fetchFromOddsApi(sportKeys);
-    const filtered  = sport === "Live" ? events.filter(e => e.live) : events;
+    const apiEvents = await fetchFromOddsApi(sportKeys);
+    const filtered  = sport === "Live" ? apiEvents.filter(e => e.live) : apiEvents;
+    const merged    = [...manual, ...filtered];
     const fetchedAt = new Date().toISOString();
-    cache.set(cacheKey, { events: filtered, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
-    return res.json({ events: filtered, cached: false, fetchedAt });
+    cache.set(cacheKey, { events: merged, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
+    return res.json({ events: merged, cached: false, fetchedAt });
   } catch (err) {
     const msg = (err as Error).message;
     if (msg === "QUOTA")       return res.status(429).json({ error: "Odds API quota exceeded. Try again later." });
@@ -293,6 +342,107 @@ router.post("/refresh", async (req, res) => {
     const msg = (err as Error).message;
     if (msg === "QUOTA") return res.status(429).json({ error: "Odds API quota exceeded." });
     return res.status(503).json({ error: "Could not refresh odds." });
+  }
+});
+
+/* ── Admin: manual game CRUD ────────────────────────────────────────────── */
+
+const SPORT_TO_DEFAULT_KEY: Record<string, string> = {
+  "NFL":                "americanfootball_nfl",
+  "NBA":                "basketball_nba",
+  "MLB":                "baseball_mlb",
+  "NHL":                "icehockey_nhl",
+  "UFC":                "mma_mixed_martial_arts",
+  "Soccer":             "soccer_usa_mls",
+  "Boxing":             "boxing_boxing",
+  "Tennis":             "tennis_atp_us_open",
+  "Golf":               "golf_pga_championship_winner",
+  "College Football":   "americanfootball_ncaaf",
+  "College Basketball": "basketball_ncaab",
+};
+
+// GET /sportsbook/admin/events — list manual events
+router.get("/admin/events", requireSportbetsOrAbove, async (_req, res) => {
+  try {
+    const rows = await db.execute(sql`
+      SELECT id, sport, sport_key, league, home_team, away_team,
+             home_odds, away_odds, commence_time, live, event_name, created_by, created_at, active
+      FROM manual_sportsbook_events
+      ORDER BY created_at DESC
+    `);
+    return res.json(rows.rows);
+  } catch (err) {
+    console.error("[manual-events] list error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /sportsbook/admin/events — create a manual game
+router.post("/admin/events", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const { sport, homeTeam, awayTeam, homeOdds, awayOdds, commenceTime, league, live = false, eventName } = req.body as {
+      sport: string; homeTeam: string; awayTeam: string;
+      homeOdds: number; awayOdds: number; commenceTime: string;
+      league?: string; live?: boolean; eventName?: string;
+    };
+    const session = (req as any).bankerSession;
+
+    if (!sport || !homeTeam || !awayTeam || !commenceTime) {
+      return res.status(400).json({ error: "sport, homeTeam, awayTeam, and commenceTime are required" });
+    }
+    const sportKey   = SPORT_TO_DEFAULT_KEY[sport] ?? sport.toLowerCase().replace(/ /g, "_");
+    const leagueVal  = (league?.trim()) || sport;
+    const commenceTs = new Date(commenceTime);
+    if (isNaN(commenceTs.getTime())) return res.status(400).json({ error: "Invalid commenceTime" });
+
+    const result = await db.execute(sql`
+      INSERT INTO manual_sportsbook_events
+        (sport, sport_key, league, home_team, away_team, home_odds, away_odds, commence_time, live, event_name, created_by)
+      VALUES
+        (${sport}, ${sportKey}, ${leagueVal}, ${homeTeam.trim()}, ${awayTeam.trim()},
+         ${Number(homeOdds) || -110}, ${Number(awayOdds) || -110},
+         ${commenceTs.toISOString()}, ${live}, ${eventName?.trim() || null}, ${session.username})
+      RETURNING id
+    `);
+    clearAllCache();
+    return res.json({ success: true, id: (result.rows[0] as any).id });
+  } catch (err) {
+    console.error("[manual-events] create error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /sportsbook/admin/events/:id — toggle live / update odds
+router.patch("/admin/events/:id", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { live, homeOdds, awayOdds, active } = req.body as { live?: boolean; homeOdds?: number; awayOdds?: number; active?: boolean };
+    await db.execute(sql`
+      UPDATE manual_sportsbook_events SET
+        live       = COALESCE(${live ?? null}, live),
+        home_odds  = COALESCE(${homeOdds != null ? Number(homeOdds) : null}, home_odds),
+        away_odds  = COALESCE(${awayOdds != null ? Number(awayOdds) : null}, away_odds),
+        active     = COALESCE(${active ?? null}, active)
+      WHERE id = ${id}
+    `);
+    clearAllCache();
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[manual-events] patch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /sportsbook/admin/events/:id — remove manual game
+router.delete("/admin/events/:id", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    await db.execute(sql`DELETE FROM manual_sportsbook_events WHERE id = ${id}`);
+    clearAllCache();
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[manual-events] delete error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 

@@ -2062,6 +2062,124 @@ function BlackjackHandHistory({ bjTables }: { bjTables: any[] }) {
         </button>
       </div>
 
+      {/* Create Game panel */}
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", overflow: "hidden" }}>
+        <button onClick={() => setShowCreateGame(p => !p)}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", background: "transparent", border: "none", cursor: "pointer" }}>
+          <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "13px", color: "#e2e8f0", letterSpacing: "0.06em" }}>
+            ＋ Add Game to Sportsbook
+          </span>
+          <span style={{ fontSize: "11px", color: "#64748b" }}>{showCreateGame ? "▲ Collapse" : "▼ Expand"}</span>
+        </button>
+
+        {showCreateGame && (
+          <div style={{ padding: "0 18px 18px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+            <form onSubmit={handleCreateGame} style={{ display: "flex", flexDirection: "column", gap: "14px", paddingTop: "14px" }}>
+              {/* Sport + League row */}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 150px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Sport</label>
+                  <select value={cgSport} onChange={e => { setCgSport(e.target.value); setCgLeague(SPORT_DEFAULT_LEAGUE[e.target.value] || e.target.value); }}
+                    style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none" }}>
+                    {SPORT_LIST.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: "1 1 120px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>League / Sub-label</label>
+                  <input value={cgLeague} onChange={e => setCgLeague(e.target.value)} placeholder="e.g. EPL, MLS…"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: "1 1 160px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Event Name (UFC/Boxing/Golf)</label>
+                  <input value={cgEvent} onChange={e => setCgEvent(e.target.value)} placeholder="e.g. UFC 312, Wimbledon Final…"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              {/* Home / Away teams */}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <div style={{ flex: "1 1 180px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Home Team</label>
+                  <input value={cgHome} onChange={e => setCgHome(e.target.value)} placeholder="e.g. Kansas City Chiefs"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: "1 1 80px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Home Odds</label>
+                  <input value={cgHomeOdds} onChange={e => setCgHomeOdds(e.target.value)} placeholder="-150"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: "1 1 180px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Away Team</label>
+                  <input value={cgAway} onChange={e => setCgAway(e.target.value)} placeholder="e.g. Philadelphia Eagles"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                </div>
+                <div style={{ flex: "1 1 80px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Away Odds</label>
+                  <input value={cgAwayOdds} onChange={e => setCgAwayOdds(e.target.value)} placeholder="+130"
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                </div>
+              </div>
+
+              {/* Date + Live + Submit */}
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "flex-end" }}>
+                <div style={{ flex: "1 1 200px" }}>
+                  <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Game Date &amp; Time (ET)</label>
+                  <input type="datetime-local" value={cgDate} onChange={e => setCgDate(e.target.value)}
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "7px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box", colorScheme: "dark" }} />
+                </div>
+                <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", paddingBottom: "2px" }}>
+                  <input type="checkbox" checked={cgLive} onChange={e => setCgLive(e.target.checked)}
+                    style={{ width: "16px", height: "16px", accentColor: "#00E676" }} />
+                  <span style={{ fontSize: "12px", fontWeight: 600, color: cgLive ? "#00E676" : "#94a3b8" }}>Mark as LIVE</span>
+                </label>
+                <button type="submit" disabled={cgCreating}
+                  style={{ padding: "8px 20px", background: cgCreating ? "rgba(160,34,58,0.4)" : "#a0223a", border: "none", borderRadius: "9px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: cgCreating ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.05em" }}>
+                  {cgCreating ? "Adding…" : "Add Game"}
+                </button>
+              </div>
+
+              {cgMsg && (
+                <p style={{ fontSize: "11px", fontWeight: 600, color: cgMsg.ok ? "#4ade80" : "#f87171", margin: 0 }}>{cgMsg.text}</p>
+              )}
+            </form>
+
+            {/* Existing manual events list */}
+            {manualEvts.length > 0 && (
+              <div style={{ marginTop: "20px" }}>
+                <p style={{ fontSize: "10px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "8px" }}>
+                  Active Manual Games ({manualEvts.length})
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  {manualEvts.map(ev => (
+                    <div key={ev.id} style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: "9px", padding: "8px 12px" }}>
+                      <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 7px", borderRadius: "12px", background: ev.live ? "rgba(0,230,118,0.15)" : "rgba(255,255,255,0.07)", color: ev.live ? "#00E676" : "#64748b", whiteSpace: "nowrap" }}>
+                        {ev.sport}
+                      </span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: "12px", fontWeight: 700, color: "#e2e8f0", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {ev.home_team} vs {ev.away_team}
+                        </p>
+                        <p style={{ fontSize: "10px", color: "#64748b", margin: 0 }}>
+                          {ev.league} · {ev.home_odds >= 0 ? `+${ev.home_odds}` : ev.home_odds} / {ev.away_odds >= 0 ? `+${ev.away_odds}` : ev.away_odds} · {new Date(ev.commence_time).toLocaleString("en-US", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" })}
+                        </p>
+                      </div>
+                      <button onClick={() => handleToggleLive(ev.id, ev.live)}
+                        style={{ padding: "4px 10px", background: ev.live ? "rgba(0,230,118,0.12)" : "rgba(255,255,255,0.06)", border: `1px solid ${ev.live ? "rgba(0,230,118,0.4)" : "rgba(255,255,255,0.1)"}`, borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: ev.live ? "#00E676" : "#64748b", cursor: "pointer", whiteSpace: "nowrap" }}>
+                        {ev.live ? "● LIVE" : "Go Live"}
+                      </button>
+                      <button onClick={() => handleDeleteGame(ev.id)} disabled={cgDeleting === ev.id}
+                        style={{ padding: "4px 10px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: "#ef4444", cursor: cgDeleting === ev.id ? "not-allowed" : "pointer" }}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Filters */}
       <div className="px-4 py-3 border-b border-zinc-700 flex flex-wrap gap-2 items-center bg-zinc-900">
         <div className="relative flex-1 min-w-[160px]">
@@ -11279,6 +11397,12 @@ type SBEntry = { id: number; eventId: number; optionId: number; playerId: number
 type SBEvent = { id: number; title: string; description: string; league: string; gameDate: string | null; status: string; winnerId: number | null; rakePercent: number; createdBy: string; createdAt: string; settledAt: string | null; options: SBOption[]; entries: SBEntry[]; totalWagered: number };
 type SBPayout = { entryId: number; eventId: number; eventTitle: string; playerName: string; player: SBPlayer | null; betAmount: number; optionLabel: string; odds: string; grossPayout: number; rakeAmount: number; rakePercent: number; payoutAmount: number; enteredAt: string };
 
+type ManualEvent = {
+  id: number; sport: string; sport_key: string; league: string;
+  home_team: string; away_team: string; home_odds: number; away_odds: number;
+  commence_time: string; live: boolean; event_name: string | null; created_by: string;
+};
+
 type BetSlipRecord = {
   id: number; playerId: number; playerUsername: string; type: string;
   wagerAmount: number; potentialPayout: number; actualPayout: number | null;
@@ -11376,6 +11500,87 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
   };
 
   const fmt = (n: number) => n.toLocaleString();
+
+  // ── Create Game state ──────────────────────────────────────────────────
+  const SPORT_LIST = ["NFL","NBA","MLB","NHL","UFC","Soccer","Boxing","Tennis","Golf","College Football","College Basketball"] as const;
+  const SPORT_DEFAULT_LEAGUE: Record<string, string> = {
+    NFL:"NFL", NBA:"NBA", MLB:"MLB", NHL:"NHL", UFC:"UFC",
+    Soccer:"MLS", Boxing:"Boxing", Tennis:"ATP US Open", Golf:"PGA",
+    "College Football":"NCAAF", "College Basketball":"NCAAB",
+  };
+
+  const [showCreateGame, setShowCreateGame] = useState(false);
+  const [cgSport,    setCgSport]    = useState("NFL");
+  const [cgHome,     setCgHome]     = useState("");
+  const [cgAway,     setCgAway]     = useState("");
+  const [cgHomeOdds, setCgHomeOdds] = useState("-110");
+  const [cgAwayOdds, setCgAwayOdds] = useState("-110");
+  const [cgDate,     setCgDate]     = useState("");
+  const [cgLeague,   setCgLeague]   = useState("NFL");
+  const [cgLive,     setCgLive]     = useState(false);
+  const [cgEvent,    setCgEvent]    = useState("");
+  const [cgCreating, setCgCreating] = useState(false);
+  const [cgMsg,      setCgMsg]      = useState<{ text: string; ok: boolean } | null>(null);
+  const [manualEvts, setManualEvts] = useState<ManualEvent[]>([]);
+  const [cgDeleting, setCgDeleting] = useState<number | null>(null);
+
+  async function loadManualEvents() {
+    if (!authToken) return;
+    try {
+      const r = await fetch(`${BASE_URL}/api/sportsbook/admin/events`, { headers: { Authorization: `Bearer ${authToken}` } });
+      const d = await r.json();
+      if (Array.isArray(d)) setManualEvts(d);
+    } catch {}
+  }
+
+  useEffect(() => { if (showCreateGame) loadManualEvents(); }, [showCreateGame, authToken]);
+
+  async function handleCreateGame(e: React.FormEvent) {
+    e.preventDefault();
+    if (!cgHome.trim() || !cgAway.trim() || !cgDate) { setCgMsg({ text: "Home team, away team, and date are required.", ok: false }); return; }
+    setCgCreating(true); setCgMsg(null);
+    try {
+      const r = await fetch(`${BASE_URL}/api/sportsbook/admin/events`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sport: cgSport, homeTeam: cgHome.trim(), awayTeam: cgAway.trim(),
+          homeOdds: parseInt(cgHomeOdds) || -110, awayOdds: parseInt(cgAwayOdds) || -110,
+          commenceTime: new Date(cgDate).toISOString(),
+          league: cgLeague.trim() || SPORT_DEFAULT_LEAGUE[cgSport] || cgSport,
+          live: cgLive, eventName: cgEvent.trim() || undefined,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      setCgMsg({ text: "Game added ✓ — players will see it on next refresh.", ok: true });
+      setCgHome(""); setCgAway(""); setCgHomeOdds("-110"); setCgAwayOdds("-110");
+      setCgDate(""); setCgLive(false); setCgEvent("");
+      loadManualEvents();
+    } catch (err: any) { setCgMsg({ text: err.message || "Failed", ok: false }); }
+    setCgCreating(false);
+  }
+
+  async function handleDeleteGame(id: number) {
+    if (!window.confirm("Remove this game from the sportsbook?")) return;
+    setCgDeleting(id);
+    try {
+      await fetch(`${BASE_URL}/api/sportsbook/admin/events/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${authToken}` } });
+      loadManualEvents();
+    } catch {}
+    setCgDeleting(null);
+  }
+
+  async function handleToggleLive(id: number, current: boolean) {
+    try {
+      await fetch(`${BASE_URL}/api/sportsbook/admin/events/${id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ live: !current }),
+      });
+      loadManualEvents();
+    } catch {}
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "900px", margin: "0 auto" }}>
