@@ -15,6 +15,7 @@ import { eq } from "drizzle-orm";
 import { scheduleAutoStart } from "./lib/game-loop.js";
 import type { Seat } from "./lib/poker-engine.js";
 import { initEscalation, startEscalationLoop, setBlindBroadcastFn, updateSeatedCount } from "./lib/blind-escalation.js";
+import { startBotEngine } from "./lib/bot-engine.js";
 
 async function recoverTables(): Promise<void> {
   const tables = await db.select().from(pokerTablesTable);
@@ -82,4 +83,5 @@ server.listen(port, async () => {
   startSportbetCleanupJob();
   setBlindBroadcastFn(broadcastBlindEvent);
   startEscalationLoop();
+  await startBotEngine();
 });

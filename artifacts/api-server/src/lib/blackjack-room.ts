@@ -519,6 +519,25 @@ export class BlackjackRoom {
     return this.phase;
   }
 
+  /** Returns the current seat state for a bot player (no WebSocket required). */
+  getBotSeatInfo(playerId: number): { isSeated: boolean; hasBet: boolean; isMyTurn: boolean; handValue: number } {
+    const seat = this.seats.find(s => s.playerId === playerId);
+    if (!seat) return { isSeated: false, hasBet: false, isMyTurn: false, handValue: 0 };
+    const activeCards = seat.activeHand === "split" ? (seat.splitCards ?? seat.cards) : seat.cards;
+    return {
+      isSeated: true,
+      hasBet: seat.bet > 0,
+      isMyTurn: this.phase === "PLAYER_TURNS" && this.currentTurnSeat === seat.seatIndex && seat.status === "active",
+      handValue: activeCards.length > 0 ? handValue(activeCards) : 0,
+    };
+  }
+
+  /** Returns the first empty seat index, or null if all seats are occupied. */
+  getFirstEmptySeatIndex(): number | null {
+    const seat = this.seats.find(s => s.playerId === null);
+    return seat ? seat.seatIndex : null;
+  }
+
   getSubscribers(): Array<{ playerId: number; username: string }> {
     const result: Array<{ playerId: number; username: string }> = [];
     for (const sub of this.subs) {
