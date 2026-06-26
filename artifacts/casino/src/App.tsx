@@ -127,6 +127,7 @@ function Router() {
       <Route path="/bingo" component={BingoPage} />
       <Route path="/lottery" component={Lobby} />
       <Route path="/rewards" component={Lobby} />
+      <Route path="/challenges" component={Lobby} />
       <Route path="/leaderboards" component={Lobby} />
       <Route path="/mini-games" component={MiniGamesPage} />
       <Route path="/live-events" component={LiveEventsPage} />
