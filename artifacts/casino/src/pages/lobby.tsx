@@ -40,8 +40,7 @@ import { MktComingSoon }      from "./MktComingSoon";
 import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
-import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
-import { getRecentlyPlayed, addRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
+import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -116,128 +115,6 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-/* ─── Live Activity ───────────────────────────────────────────── */
-interface LiveActivityItem {
-  id: number;
-  gameKey: string;
-  name: string;
-  category: string;
-  players: number;
-  activeBets: string;
-  status: string;
-  activeUser: string;
-  activityLabel: string;
-  route: string;
-  launchKey?: string;
-  tokenId?: string;
-}
-
-// Maps server-reported game strings → LIVE_GAME_POOL gameKey
-const SERVER_GAME_TO_KEY: Record<string, string> = {
-  "blackjack":    "blackjack",
-  "roulette":     "roulette",
-  "baccarat":     "baccarat",
-  "poker":        "poker",
-  "poker-lobby":  "poker",
-  "high-low":     "highlow",
-  "highlow":      "highlow",
-  "slots":        "slots",
-  "fortuna":      "slots",
-  "rome-slots":   "rome_slots",
-  "western-slots":"western_slots",
-  "mines":        "mines",
-  "mob-tower":    "mob_tower",
-  "mobtower":     "mob_tower",
-  "horse-racing": "horse",
-  "bingo":        "bingo",
-  "lottery":      "lottery",
-  "cases":        "cases",
-  "keno":         "keno",
-};
-
-const LIVE_GAME_POOL: Array<{ gameKey: string; route: string; launchKey?: string; tokenId?: string }> = [
-  { gameKey: "blackjack",    route: "/tablegames",    launchKey: "blackjack" },
-  { gameKey: "roulette",     route: "/tablegames",    launchKey: "roulette"  },
-  { gameKey: "baccarat",     route: "/tablegames",    launchKey: "baccarat"  },
-  { gameKey: "poker",        route: "/poker-tables",  launchKey: "poker"     },
-  { gameKey: "highlow",      route: "/tablegames"                            },
-  { gameKey: "slots",        route: "/slots",         tokenId: "slots"       },
-  { gameKey: "rome_slots",   route: "/rome-slots",    tokenId: "slots"       },
-  { gameKey: "western_slots",route: "/western-slots", tokenId: "slots"       },
-  { gameKey: "mines",        route: "/minigames",     tokenId: "mines"       },
-  { gameKey: "mob_tower",    route: "/minigames"                             },
-  { gameKey: "horse",        route: "/horse-racing",  launchKey: "horse"     },
-  { gameKey: "bingo",        route: "/bingo",         launchKey: "bingo"     },
-  { gameKey: "lottery",      route: "/lottery",       launchKey: "lottery"   },
-];
-
-function buildLiveItem(poolEntry: typeof LIVE_GAME_POOL[0], user: string): LiveActivityItem {
-  const d      = GAME_DISPLAY[poolEntry.gameKey] ?? GAME_DISPLAY.blackjack;
-  const cnt    = 2 + Math.floor(Math.random() * 8);
-  const isRace  = poolEntry.gameKey === "horse";
-  const isBingo = poolEntry.gameKey === "bingo";
-  return {
-    id: Date.now() + Math.floor(Math.random() * 9999),
-    gameKey: poolEntry.gameKey,
-    name: d.name,
-    category: d.category,
-    players: cnt,
-    activeBets: "$" + (cnt * (300 + Math.floor(Math.random() * 700))).toLocaleString(),
-    status: isRace ? "Race Live" : isBingo ? "Live Draw" : "Active",
-    activeUser: user,
-    activityLabel: `${user} is playing`,
-    route: poolEntry.route,
-    launchKey: poolEntry.launchKey,
-    tokenId: poolEntry.tokenId,
-  };
-}
-
-function buildInitialLiveActivity(): LiveActivityItem[] {
-  const seeds: Array<{ gameKey: string; user: string }> = [
-    { gameKey: "blackjack",  user: "VegasVince" },
-    { gameKey: "poker",      user: "Rico"       },
-    { gameKey: "roulette",   user: "Maya"       },
-    { gameKey: "mines",      user: "AceHunter"  },
-  ];
-  return seeds.map(({ gameKey, user }) => {
-    const pool = LIVE_GAME_POOL.find(g => g.gameKey === gameKey)!;
-    return buildLiveItem(pool, user);
-  });
-}
-
-function liveCtaFor(name: string, status: string): string {
-  if (status === "Race Live")                                           return "Watch Race";
-  if (status === "Live Draw")                                          return "Join Room";
-  if (name.toLowerCase().includes("lottery"))                          return "Buy Tickets";
-  if (name === "Mines" || name === "Mob Tower")                        return "Play Now";
-  if (name.includes("Slots") || name === "Fortuna" || name === "Deadwood Dollars") return "Spin Now";
-  if (["Blackjack","Roulette","Baccarat","Poker","High Low"].includes(name)) return "Join Table";
-  return "Join Now";
-}
-
-function LiveCard({ game, onPlay }: { game: LiveActivityItem; onPlay: () => void }) {
-  const cfg        = GAME_CFG[game.gameKey] ?? GAME_CFG.blackjack;
-  const isRaceLive = game.status === "Race Live";
-  const isLiveDraw = game.status === "Live Draw";
-  const statusColor = isRaceLive ? "#ef4444"
-                    : isLiveDraw ? "#ec4899"
-                    : "#22c55e";
-  const g: CatalogGame = {
-    id: String(game.id),
-    name: game.name,
-    description: cfg.description,
-    gradient: cfg.gradient,
-    neonClass: cfg.neonClass,
-    neonColor: cfg.neonColor,
-    players: game.activityLabel,
-    betRange: game.activeBets || undefined,
-    actionLabel: liveCtaFor(game.name, game.status),
-    statusLabel: isRaceLive ? "LIVE" : isLiveDraw ? "DRAWING" : "ACTIVE",
-    statusColor,
-  };
-  return <CatalogCard game={g} onClick={onPlay} />;
-}
-
 /* ─── Section header ──────────────────────────────────────────── */
 function SectionHeader({ label, dotColor }: { label: string; dotColor: string }) {
   return (
@@ -278,43 +155,12 @@ export function Lobby() {
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
 
-  // ── Recently Played — persisted to localStorage ───────────────
+  // ── Recently Played + Live Activity — both from localStorage ────
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedEntry[]>(getRecentlyPlayed);
-  const [liveActivity, setLiveActivity] = useState<LiveActivityItem[]>(buildInitialLiveActivity);
 
   useEffect(() => {
     if (activeNav !== "home") return;
     setRecentlyPlayed(getRecentlyPlayed());
-  }, [activeNav]);
-
-  // ── Live Activity — real players from server, polled every 10 s ──
-  useEffect(() => {
-    if (activeNav !== "home") return;
-
-    async function fetchLiveActivity() {
-      try {
-        const r = await fetch(`${BASE}/api/live-activity`);
-        if (!r.ok) return;
-        const data: Array<{ username: string; game: string; status: string }> = await r.json();
-        const seen = new Set<string>();
-        const items: LiveActivityItem[] = [];
-        for (const { username, game } of data) {
-          const gameKey   = SERVER_GAME_TO_KEY[game];
-          if (!gameKey) continue;
-          const poolEntry = LIVE_GAME_POOL.find(g => g.gameKey === gameKey);
-          if (!poolEntry) continue;
-          if (seen.has(gameKey)) continue;
-          seen.add(gameKey);
-          items.push(buildLiveItem(poolEntry, username));
-          if (items.length === 4) break;
-        }
-        if (items.length > 0) setLiveActivity(items);
-      } catch { /* keep previous state */ }
-    }
-
-    fetchLiveActivity();
-    const interval = setInterval(fetchLiveActivity, 10_000);
-    return () => clearInterval(interval);
   }, [activeNav]);
 
 
@@ -622,37 +468,30 @@ export function Lobby() {
                 </div>
                 <div>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
-                  <CardGrid>
-                    {liveActivity.slice(0, 4).map((item) => (
-                      <LiveCard
-                        key={item.id}
-                        game={item}
-                        onPlay={() => {
-                          const cfg = GAME_CFG[item.gameKey] ?? GAME_CFG.blackjack;
-                          addRecentlyPlayed({
-                            id: item.gameKey,
-                            game: {
-                              id: item.gameKey,
-                              name: item.name,
-                              description: cfg.description,
-                              gradient: cfg.gradient,
-                              neonClass: cfg.neonClass,
-                              neonColor: cfg.neonColor,
-                            },
-                            route: item.route,
-                            tokenId: item.tokenId,
-                          });
-                          setRecentlyPlayed(getRecentlyPlayed());
-                          if (item.launchKey) {
-                            const gameDef = GAMES[item.launchKey];
-                            if (gameDef) { enter(gameDef); return; }
-                          }
-                          if (item.tokenId) setAccessToken(item.tokenId, "open");
-                          setLocation(item.route);
-                        }}
-                      />
-                    ))}
-                  </CardGrid>
+                  {recentlyPlayed.length > 0 ? (
+                    <CardGrid>
+                      {recentlyPlayed.map((entry) => (
+                        <CatalogCard
+                          key={entry.id}
+                          game={{ ...entry.game, statusLabel: "ACTIVE", statusColor: "#22c55e" }}
+                          onClick={() => {
+                            if (entry.launchData?.tableId !== undefined) {
+                              setAccessToken("blackjack", "open");
+                              sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: entry.launchData.tableId, password: entry.launchData.password ?? null }));
+                              setLocation("/blackjack");
+                            } else {
+                              if (entry.tokenId) setAccessToken(entry.tokenId, "open");
+                              setLocation(entry.route);
+                            }
+                          }}
+                        />
+                      ))}
+                    </CardGrid>
+                  ) : (
+                    <p className="text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.22)" }}>
+                      No active games yet. Start playing to see your activity here.
+                    </p>
+                  )}
                 </div>
               </div>
             </>
