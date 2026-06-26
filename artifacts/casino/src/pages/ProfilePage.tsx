@@ -180,7 +180,7 @@ export function ProfilePage() {
                   letterSpacing: "0.05em",
                 }}
               >
-                Back Alley Bets Member
+                Member
               </span>
             </div>
           </div>
