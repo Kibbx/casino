@@ -334,40 +334,49 @@ export function ProfilePage() {
 
         </div>
 
-        {/* Stat cards — 2 × 3 */}
-        <div className="flex-1 grid grid-cols-2 gap-3" style={{ minWidth: 0 }}>
+        {/* Stat cards — 3 × 2 uniform grid */}
+        <div
+          className="flex-1"
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gridAutoRows: "1fr",
+            gap: 10,
+            minWidth: 0,
+          }}
+        >
           {stats.map((s) => (
             <div
               key={s.label}
               className="rounded-xl flex flex-col justify-between"
               style={{
                 background: "#0c0a0a",
-                border: `1px solid ${s.color}20`,
-                padding: "18px 20px 14px",
+                border: `1px solid ${s.color}22`,
+                padding: "13px 16px 11px",
               }}
             >
-              <p className="text-[10px] uppercase tracking-widest mb-2"
-                style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.12em" }}>
+              <p className="text-[9px] uppercase tracking-widest"
+                style={{ color: "rgba(255,255,255,0.26)", letterSpacing: "0.13em", marginBottom: 6 }}>
                 {s.label}
               </p>
               <p className="font-black tabular-nums leading-none"
                 style={{
                   fontFamily: "'Orbitron', monospace",
-                  fontSize: "clamp(16px, 2vw, 26px)",
+                  fontSize: "clamp(13px, 1.6vw, 20px)",
                   color: s.color,
-                  textShadow: `0 0 16px ${s.color}55`,
+                  textShadow: `0 0 12px ${s.color}44`,
                 }}>
                 {s.value}
               </p>
               {s.sub && (
-                <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
+                <p style={{ fontSize: 9, marginTop: 4, color: "rgba(255,255,255,0.2)" }}>
                   {s.sub}
                 </p>
               )}
             </div>
           ))}
 
-          {/* Rakeback card */}
+          {/* Rakeback card — same dimensions as stat cards */}
           {(() => {
             const rb = rakeback;
             const claimable  = rb?.claimable ?? 0;
@@ -375,33 +384,32 @@ export function ProfilePage() {
             const cdLabel    = fmtCooldown(rb?.nextClaimAt ?? null);
             return (
               <div
-                className="rounded-xl flex flex-col items-center justify-center"
+                className="rounded-xl flex flex-col justify-between"
                 style={{
                   background: "#0c0a0a",
-                  border: "1px solid rgba(34,197,94,0.2)",
-                  padding: "22px 20px 18px",
-                  textAlign: "center",
+                  border: "1px solid rgba(34,197,94,0.22)",
+                  padding: "13px 16px 11px",
                 }}
               >
-                <p className="text-[10px] uppercase tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.14em", marginBottom: 10 }}>
+                <p className="text-[9px] uppercase tracking-widest"
+                  style={{ color: "rgba(255,255,255,0.26)", letterSpacing: "0.13em", marginBottom: 6 }}>
                   Rakeback
                 </p>
                 <p className="font-black tabular-nums leading-none"
                   style={{
                     fontFamily: "'Orbitron', monospace",
-                    fontSize: "clamp(22px, 2.8vw, 36px)",
+                    fontSize: "clamp(13px, 1.6vw, 20px)",
                     color: "#22c55e",
-                    textShadow: "0 0 22px rgba(34,197,94,0.65)",
+                    textShadow: "0 0 12px rgba(34,197,94,0.44)",
                   }}>
                   {fmt(claimable)}
                 </p>
-                <p style={{ fontSize: 10, marginTop: 6, color: "rgba(255,255,255,0.28)", letterSpacing: "0.04em" }}>
+                <p style={{ fontSize: 9, marginTop: 4, color: "rgba(255,255,255,0.2)" }}>
                   claimable now · 3% back
                 </p>
 
                 {rbClaimMsg && (
-                  <p style={{ fontSize: 10, marginTop: 8, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
+                  <p style={{ fontSize: 9, marginTop: 4, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
                     {rbClaimMsg.text}
                   </p>
                 )}
@@ -410,13 +418,13 @@ export function ProfilePage() {
                   onClick={handleClaimRakeback}
                   disabled={rbClaiming || onCooldown || claimable === 0}
                   style={{
-                    marginTop: 14, padding: "8px 0", borderRadius: 7,
+                    marginTop: 8, padding: "5px 0", borderRadius: 6,
                     background: (onCooldown || claimable === 0)
                       ? "rgba(255,255,255,0.04)"
-                      : "rgba(34,197,94,0.15)",
-                    border: `1px solid ${(onCooldown || claimable === 0) ? "rgba(255,255,255,0.08)" : "rgba(34,197,94,0.35)"}`,
-                    color: (onCooldown || claimable === 0) ? "rgba(255,255,255,0.25)" : "#22c55e",
-                    fontWeight: 700, fontSize: 10,
+                      : "rgba(34,197,94,0.14)",
+                    border: `1px solid ${(onCooldown || claimable === 0) ? "rgba(255,255,255,0.08)" : "rgba(34,197,94,0.32)"}`,
+                    color: (onCooldown || claimable === 0) ? "rgba(255,255,255,0.22)" : "#22c55e",
+                    fontWeight: 700, fontSize: 9,
                     letterSpacing: "0.08em", textTransform: "uppercase",
                     cursor: (rbClaiming || onCooldown || claimable === 0) ? "not-allowed" : "pointer",
                     fontFamily: "Rajdhani, sans-serif",
