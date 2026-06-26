@@ -48,11 +48,10 @@ interface LotteryTicket {
 
 /* ── Left card: Weekly Mega Draw ─────────────────────────────── */
 function WeeklyMegaDraw({
-  draw, settings, now, qty, setQty, onBuy, buying, buyMsg,
+  draw, settings, now, onOpenPicker, pickerOpen,
 }: {
   draw: Draw | null; settings: Settings | null; now: number;
-  qty: number; setQty: (q: number) => void;
-  onBuy: () => void; buying: boolean; buyMsg: { text: string; ok: boolean } | null;
+  onOpenPicker: () => void; pickerOpen: boolean;
 }) {
   const msToDraw = draw ? new Date(draw.drawTime).getTime() - now : 0;
   const msToClose = draw ? new Date(draw.ticketCloseAt).getTime() - now : 0;
@@ -143,52 +142,21 @@ function WeeklyMegaDraw({
           </div>
         </div>
 
-        {/* Buy controls */}
-        <div className="flex gap-3 items-center">
-          <div className="flex items-center rounded-lg overflow-hidden shrink-0"
-            style={{ border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.04)" }}>
-            <button
-              className="w-9 h-10 font-bold text-white text-lg transition-colors hover:bg-white/10"
-              onClick={() => setQty(Math.max(1, qty - 1))}
-            >−</button>
-            <span className="px-4 text-sm font-black text-white tabular-nums">{qty}</span>
-            <button
-              className="w-9 h-10 font-bold text-white text-lg transition-colors hover:bg-white/10"
-              onClick={() => setQty(qty + 1)}
-            >+</button>
-          </div>
-          <button
-            onClick={onBuy}
-            disabled={!salesOpen || buying || !settings}
-            className="flex-1 py-2.5 rounded-lg text-sm font-black uppercase tracking-wider transition-all duration-150"
-            style={{
-              background: salesOpen ? "rgba(245,197,24,0.15)" : "rgba(255,255,255,0.04)",
-              color: salesOpen ? "#f5c518" : "rgba(255,255,255,0.25)",
-              border: `1px solid ${salesOpen ? "rgba(245,197,24,0.4)" : "rgba(255,255,255,0.08)"}`,
-              cursor: salesOpen ? "pointer" : "not-allowed",
-            }}
-          >
-            {buying ? "Buying…" : settings
-              ? `Buy ${qty} Ticket${qty > 1 ? "s" : ""} · ${fmt(settings.ticketCost * qty)} chips`
-              : "Loading…"}
-          </button>
-        </div>
-
-        <AnimatePresence>
-          {buyMsg && (
-            <motion.div
-              initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="px-4 py-2.5 rounded-lg text-xs font-bold text-center"
-              style={{
-                background: buyMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-                border: `1px solid ${buyMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
-                color: buyMsg.ok ? "#22c55e" : "#f87171",
-              }}
-            >
-              {buyMsg.text}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Buy button */}
+        <button
+          onClick={onOpenPicker}
+          disabled={!salesOpen}
+          className="w-full py-3 rounded-xl text-sm font-black uppercase tracking-widest transition-all duration-150"
+          style={{
+            background: pickerOpen ? "rgba(139,92,246,0.2)" : salesOpen ? "rgba(245,197,24,0.12)" : "rgba(255,255,255,0.04)",
+            color: pickerOpen ? "#a78bfa" : salesOpen ? "#f5c518" : "rgba(255,255,255,0.2)",
+            border: `1px solid ${pickerOpen ? "rgba(139,92,246,0.45)" : salesOpen ? "rgba(245,197,24,0.35)" : "rgba(255,255,255,0.08)"}`,
+            cursor: salesOpen ? "pointer" : "not-allowed",
+            boxShadow: pickerOpen ? "0 0 20px rgba(139,92,246,0.15)" : "none",
+          }}
+        >
+          {pickerOpen ? "▲ Close Number Picker" : salesOpen ? "🎟 Select Numbers & Buy" : "Sales Closed"}
+        </button>
       </div>
     </div>
   );
@@ -382,6 +350,206 @@ function YourTickets({
   );
 }
 
+/* ── Number Picker Panel ─────────────────────────────────────── */
+function NumberPickerPanel({
+  settings, salesOpen, onConfirm, onCancel, buying, buyMsg,
+}: {
+  settings: Settings | null; salesOpen: boolean;
+  onConfirm: (numbers: number[]) => void; onCancel: () => void;
+  buying: boolean; buyMsg: { text: string; ok: boolean } | null;
+}) {
+  const required = settings?.numbersPerTicket ?? 4;
+  const min = settings?.numberMin ?? 1;
+  const max = settings?.numberMax ?? 20;
+  const cost = settings?.ticketCost ?? 0;
+  const [mode, setMode] = useState<"own" | "random" | null>(null);
+  const [picked, setPicked] = useState<number[]>([]);
+  const allNums = Array.from({ length: max - min + 1 }, (_, i) => i + min);
+
+  function quickPick() {
+    const pool = [...allNums];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    setPicked(pool.slice(0, required).sort((a, b) => a - b));
+    setMode("random");
+  }
+
+  function toggle(n: number) {
+    setPicked(prev =>
+      prev.includes(n)
+        ? prev.filter(x => x !== n)
+        : prev.length < required ? [...prev, n].sort((a, b) => a - b) : prev
+    );
+  }
+
+  const ready = picked.length === required;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -6 }}
+      transition={{ duration: 0.2 }}
+      style={{
+        background: "linear-gradient(160deg,#0c0a1a 0%,#08060f 100%)",
+        border: "1px solid rgba(139,92,246,0.3)",
+        borderRadius: 16, overflow: "hidden",
+        boxShadow: "0 0 40px rgba(139,92,246,0.08)",
+      }}
+    >
+      {/* Header */}
+      <div style={{
+        background: "rgba(139,92,246,0.08)", borderBottom: "1px solid rgba(139,92,246,0.18)",
+        padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+      }}>
+        <span style={{ fontFamily: "Rajdhani,sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>
+          Choose Your Numbers
+        </span>
+        <button onClick={onCancel} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 0 }}>✕</button>
+      </div>
+
+      <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+        {/* Mode selector — shown until a mode is picked */}
+        {!mode && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {([
+              { key: "own", icon: "🎯", label: "Pick My Own", sub: "Choose your lucky numbers" },
+              { key: "random", icon: "⚡", label: "Quick Pick", sub: "Auto-generate numbers" },
+            ] as const).map(({ key, icon, label, sub }) => (
+              <button
+                key={key}
+                onClick={() => { if (key === "random") { quickPick(); } else { setMode("own"); } }}
+                style={{
+                  background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.22)",
+                  borderRadius: 12, padding: "16px 10px", cursor: "pointer",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                }}
+              >
+                <span style={{ fontSize: 26 }}>{icon}</span>
+                <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>{label}</span>
+                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10 }}>{sub}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Number grid for "pick own" mode */}
+        {mode === "own" && (
+          <>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.15em", margin: 0 }}>
+              Select {required} numbers · {picked.length}/{required} chosen
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
+              {allNums.map(n => {
+                const sel = picked.includes(n);
+                const disabled = !sel && picked.length >= required;
+                return (
+                  <button
+                    key={n}
+                    onClick={() => toggle(n)}
+                    disabled={disabled}
+                    style={{
+                      aspectRatio: "1", borderRadius: "50%",
+                      background: sel ? "rgba(245,197,24,0.18)" : "rgba(255,255,255,0.04)",
+                      border: `1.5px solid ${sel ? "rgba(245,197,24,0.6)" : "rgba(255,255,255,0.1)"}`,
+                      color: sel ? "#f5c518" : disabled ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.65)",
+                      fontWeight: 800, fontSize: 12, cursor: disabled ? "default" : "pointer",
+                      boxShadow: sel ? "0 0 10px rgba(245,197,24,0.2)" : "none",
+                      transition: "all 0.12s",
+                    }}
+                  >{n}</button>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* Selected numbers display */}
+        {mode && (
+          <div>
+            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 10 }}>
+              {mode === "random" ? "Your Quick Pick" : "Your Numbers"}
+            </p>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+              {Array.from({ length: required }).map((_, i) => {
+                const n = picked[i];
+                return (
+                  <div key={i} style={{
+                    width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                    background: n !== undefined ? "rgba(245,197,24,0.15)" : "rgba(255,255,255,0.04)",
+                    border: `2px solid ${n !== undefined ? "rgba(245,197,24,0.55)" : "rgba(255,255,255,0.1)"}`,
+                    color: n !== undefined ? "#f5c518" : "rgba(255,255,255,0.15)",
+                    fontWeight: 900, fontSize: 16,
+                    boxShadow: n !== undefined ? "0 0 16px rgba(245,197,24,0.25)" : "none",
+                    transition: "all 0.15s",
+                  }}>
+                    {n !== undefined ? n : "?"}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Buy message */}
+        <AnimatePresence>
+          {buyMsg && (
+            <motion.div
+              initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              style={{
+                padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, textAlign: "center",
+                background: buyMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
+                border: `1px solid ${buyMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                color: buyMsg.ok ? "#22c55e" : "#f87171",
+              }}
+            >{buyMsg.text}</motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Action buttons */}
+        <div style={{ display: "flex", gap: 8 }}>
+          <button
+            onClick={quickPick}
+            style={{
+              flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 11,
+              background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8",
+              letterSpacing: "0.06em", textTransform: "uppercase",
+            }}
+          >⚡ Quick Pick</button>
+          {mode && (
+            <button
+              onClick={() => { setPicked([]); if (mode === "random") setMode("own"); }}
+              style={{
+                flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 11,
+                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)",
+                letterSpacing: "0.06em", textTransform: "uppercase",
+              }}
+            >Clear</button>
+          )}
+          <button
+            onClick={() => ready && !buying && salesOpen && onConfirm(picked)}
+            disabled={!ready || buying || !salesOpen}
+            style={{
+              flex: 2, padding: "9px 0", borderRadius: 8, fontWeight: 800, fontSize: 11,
+              letterSpacing: "0.08em", textTransform: "uppercase",
+              background: ready && salesOpen ? "rgba(245,197,24,0.15)" : "rgba(255,255,255,0.04)",
+              border: `1px solid ${ready && salesOpen ? "rgba(245,197,24,0.4)" : "rgba(255,255,255,0.08)"}`,
+              color: ready && salesOpen ? "#f5c518" : "rgba(255,255,255,0.2)",
+              cursor: ready && !buying && salesOpen ? "pointer" : "not-allowed",
+              transition: "all 0.15s",
+            }}
+          >
+            {buying ? "Purchasing…" : ready ? `Confirm · ${fmt(cost)} chips` : `Pick ${required - picked.length} more`}
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 /* ── Page ────────────────────────────────────────────────────── */
 export function LotteryPage() {
   const { sessionToken } = useStore();
@@ -390,7 +558,7 @@ export function LotteryPage() {
   const [tickets, setTickets] = useState<LotteryTicket[]>([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [now, setNow] = useState(Date.now());
-  const [qty, setQty] = useState(1);
+  const [showPicker, setShowPicker] = useState(false);
   const [buying, setBuying] = useState(false);
   const [buyMsg, setBuyMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -438,17 +606,20 @@ export function LotteryPage() {
     };
   }, [sessionToken]);
 
-  async function handleBuy() {
+  const salesOpen = draw?.status === "open" && draw ? new Date(draw.ticketCloseAt).getTime() > Date.now() : false;
+
+  async function handleBuy(numbers: number[]) {
     if (!settings || buying) return;
     setBuying(true);
     setBuyMsg(null);
     try {
-      const r = await apiFetch("/lottery/buy", { method: "POST", body: JSON.stringify({ quantity: qty }) });
+      const r = await apiFetch("/lottery/buy", { method: "POST", body: JSON.stringify({ quantity: 1, numbers }) });
       const d = await r.json();
       if (!r.ok) {
         setBuyMsg({ text: d.error || "Purchase failed", ok: false });
       } else {
-        setBuyMsg({ text: `Bought ${d.qty} ticket${d.qty > 1 ? "s" : ""} — ${fmt(d.totalCost)} chips spent`, ok: true });
+        setBuyMsg({ text: `Ticket purchased — ${fmt(d.totalCost)} chips spent`, ok: true });
+        setShowPicker(false);
         await Promise.all([pollDraw(), loadTickets()]);
         setTimeout(() => setBuyMsg(null), 4000);
       }
@@ -472,11 +643,26 @@ export function LotteryPage() {
           alignItems: "start",
         }}
       >
-        <WeeklyMegaDraw
-          draw={draw} settings={settings} now={now}
-          qty={qty} setQty={setQty}
-          onBuy={handleBuy} buying={buying} buyMsg={buyMsg}
-        />
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          <WeeklyMegaDraw
+            draw={draw} settings={settings} now={now}
+            onOpenPicker={() => setShowPicker(o => !o)}
+            pickerOpen={showPicker}
+          />
+          <AnimatePresence>
+            {showPicker && (
+              <NumberPickerPanel
+                key="picker"
+                settings={settings}
+                salesOpen={salesOpen}
+                onConfirm={handleBuy}
+                onCancel={() => setShowPicker(false)}
+                buying={buying}
+                buyMsg={buyMsg}
+              />
+            )}
+          </AnimatePresence>
+        </div>
         <YourTickets tickets={tickets} settings={settings} loading={ticketsLoading} />
       </div>
     </PageWrapper>

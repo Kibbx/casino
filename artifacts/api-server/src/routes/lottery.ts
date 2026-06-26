@@ -321,7 +321,7 @@ router.get("/my-tickets", requirePlayer, async (req, res) => {
 // ─── POST /lottery/buy — purchase tickets ────────────────────────────────────
 router.post("/buy", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
-  const { quantity = 1 } = req.body ?? {};
+  const { quantity = 1, numbers } = req.body ?? {};
   const qty = Math.max(1, Math.min(50, parseInt(quantity)));
 
   const settings = await getSettings();
@@ -353,11 +353,23 @@ router.post("/buy", requirePlayer, async (req, res) => {
     VALUES (${playerId}, ${-totalCost}, 'loss', ${"Lottery tickets x" + qty + " — Draw #" + draw.id})
   `);
 
-  // Create blank draft tickets
+  // Validate numbers if provided (single-ticket purchase with chosen numbers)
+  let ticketNumbers = '[]';
+  let ticketStatus = 'draft';
+  if (qty === 1 && Array.isArray(numbers) && numbers.length === settings.numbersPerTicket) {
+    const allInRange = numbers.every((n: unknown) => Number.isInteger(n) && (n as number) >= settings.numberMin && (n as number) <= settings.numberMax);
+    const allUniq = new Set(numbers).size === numbers.length;
+    if (allInRange && allUniq) {
+      ticketNumbers = JSON.stringify(numbers);
+      ticketStatus = 'submitted';
+    }
+  }
+
+  // Create tickets
   for (let i = 0; i < qty; i++) {
     await db.execute(sql`
       INSERT INTO lottery_tickets (draw_id, player_id, player_username, numbers, status, ticket_cost, purchased_at)
-      VALUES (${draw.id}, ${playerId}, ${player.username}, '[]', 'draft', ${settings.ticketCost}, NOW())
+      VALUES (${draw.id}, ${playerId}, ${player.username}, ${ticketNumbers}, ${ticketStatus}, ${settings.ticketCost}, NOW())
     `);
   }
 
