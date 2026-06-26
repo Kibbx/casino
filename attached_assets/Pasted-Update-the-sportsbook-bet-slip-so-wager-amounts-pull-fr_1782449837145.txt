@@ -1,0 +1,169 @@
+Update the sportsbook/bet slip so wager amounts pull from the user’s real account chip balance instead of using hardcoded or local-only values.
+
+### Goal
+
+Connect the bet slip wager system to the authenticated user’s actual chip balance.
+
+The chip balance should come from the existing account/user data source already used by the top-right chips display.
+
+Example UI balance:
+
+```txt
+CHIPS
+4,996,500
+```
+
+The bet slip should read from that same account balance source.
+
+### Requirements
+
+#### Account Balance Source
+
+* Find where the app currently stores or fetches the user’s chip balance.
+* Reuse that source for the bet slip.
+* Do not create a separate fake balance.
+* Do not hardcode values like `4996500`.
+* Do not keep a separate unsynced balance in the bet slip component.
+
+The bet slip should consume chips from the same account state/context/API/store used by the header wallet display.
+
+Examples of acceptable sources:
+
+```js
+useUser()
+useAuth()
+useAccount()
+useWallet()
+usePlayerBalance()
+account.chips
+user.chips
+wallet.balance
+```
+
+Use whichever already exists in this project.
+
+### Bet Slip Behavior
+
+When the user enters a wager:
+
+* Validate the wager against the real chip balance.
+* If the wager is greater than available chips:
+
+  * Disable the submit/place bet button.
+  * Show an error:
+
+    * `Insufficient chips`
+* If wager is valid:
+
+  * Allow the bet to be placed.
+
+### Placing a Bet
+
+When the user places a bet:
+
+* Subtract the wager amount from the real chip balance.
+* Update the global account/chip state immediately so the header chip display updates too.
+* Persist the change through the existing backend/API/database if one exists.
+* Do not only update local component state.
+
+Use a shared action such as:
+
+```js
+deductChips(wagerAmount)
+updateUserBalance(newBalance)
+placeBet({ selections, wagerAmount, payout })
+```
+
+Adapt to the project’s existing architecture.
+
+### Balance Display In Bet Slip
+
+Inside the bet slip, show available chips near the wager input:
+
+```txt
+Available Chips: 4,996,500
+```
+
+Format chips with commas.
+
+### Validation Rules
+
+* Wager must be greater than `0`.
+* Wager cannot exceed available chips.
+* Wager input should only accept numeric values.
+* Quick-add buttons should not allow the wager to exceed available chips.
+* If a quick-add would exceed balance, cap the wager at the available chip balance.
+* Show clear error messaging when the input is invalid.
+
+### State Requirements
+
+* Use one source of truth for chips.
+* Header chip count and bet slip chip count must always match.
+* After placing a bet, both should update instantly.
+* If the page refreshes, the updated chip balance should remain correct if backend persistence exists.
+
+### Example Flow
+
+Starting chips:
+
+```txt
+4,996,500
+```
+
+User enters wager:
+
+```txt
+500
+```
+
+User places bet.
+
+New balance:
+
+```txt
+4,996,000
+```
+
+Both the top-right `CHIPS` display and the bet slip available chips display should now show:
+
+```txt
+4,996,000
+```
+
+### Error Flow
+
+Starting chips:
+
+```txt
+4,996,500
+```
+
+User enters wager:
+
+```txt
+5,000,000
+```
+
+Expected behavior:
+
+* Place Bet button disabled
+* Error shown:
+
+  * `Insufficient chips`
+* Balance is not changed
+
+### Important
+
+Do not mock this with static state unless no real account source exists.
+
+If no global account/chip state exists yet, create one shared provider/store and connect both:
+
+* Header chip display
+* Bet slip wager validation
+* Bet placement deduction
+
+The shared state should be the only source of truth.
+
+### Deliverable
+
+Modify the sportsbook bet slip and account chip system so all wagers use the authenticated user’s real chip balance, validate against it, deduct from it when placing bets, and keep the header balance synchronized.

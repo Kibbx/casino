@@ -4,6 +4,9 @@ import {
   ReceiptText, Lock, RefreshCw, AlertTriangle, Wifi, WifiOff, Search,
 } from "lucide-react";
 import { PageWrapper } from "./shared";
+import { useStore } from "../store";
+import { usePlayerSocket } from "../lib/usePlayerSocket";
+import { useGetPlayer } from "@workspace/api-client-react";
 
 /* ── Types ───────────────────────────────────────────────────────── */
 interface SbEvent {
@@ -920,6 +923,7 @@ function EventCard({
 /* ── Bet slip ────────────────────────────────────────────────────── */
 function BetSlip({
   entries, popularEvents = [], onRemove, onClear, onPlace, onSelect,
+  chips, placeError, placing = false,
 }: {
   entries: BetSlipEntry[];
   popularEvents?: SbEvent[];
@@ -928,21 +932,35 @@ function BetSlip({
   onClear: () => void;
   onPlace: (wager: string) => void;
   onSelect?: (ev: SbEvent, side: "home" | "away") => void;
+  chips?: number;
+  placeError?: string;
+  placing?: boolean;
 }) {
   const [activeTab,    setActiveTab]    = useState<"parlay" | "singles">("parlay");
   const [parlayWager,  setParlayWager]  = useState("");
   const [singleWagers, setSingleWagers] = useState<Record<string, string>>({});
+
+  /* Reset wager state whenever slip is cleared */
+  useEffect(() => {
+    if (entries.length === 0) {
+      setParlayWager("");
+      setSingleWagers({});
+      setActiveTab("parlay");
+    }
+  }, [entries.length]);
+
+  const avail = chips ?? Infinity;
 
   const getSingleWager = (e: BetSlipEntry) => singleWagers[e.selectionId] ?? "";
   const setSingleWager = (e: BetSlipEntry, val: string) =>
     setSingleWagers(prev => ({ ...prev, [e.selectionId]: val }));
   const addToSingle = (e: BetSlipEntry, amt: number) => {
     const cur = parseFloat(getSingleWager(e)) || 0;
-    setSingleWager(e, String(cur + amt));
+    setSingleWager(e, String(Math.min(cur + amt, avail)));
   };
   const addToParlay = (amt: number) => {
     const cur = parseFloat(parlayWager) || 0;
-    setParlayWager(String(cur + amt));
+    setParlayWager(String(Math.min(cur + amt, avail)));
   };
 
   /* Parlay combined odds (decimal product → display as ×N) */
@@ -1119,6 +1137,12 @@ function BetSlip({
 
               {/* Wager controls */}
               <div className="px-3 pt-3 pb-3 flex flex-col gap-2">
+                {/* Available chips */}
+                {chips !== undefined && (
+                  <p className="text-[9px]" style={{ color: "#8B8E98" }}>
+                    Available: <span className="font-bold" style={{ color: "#00E676" }}>{chips.toLocaleString()}</span> chips
+                  </p>
+                )}
                 {/* Quick-add row */}
                 <div className="flex gap-1.5">
                   <QuickBtn label="+$100"  onClick={() => addToParlay(100)}  />
@@ -1135,24 +1159,48 @@ function BetSlip({
                   </div>
                 </div>
 
+                {/* Validation / place error */}
+                {(placeError || (parlayWagerNum > 0 && chips !== undefined && parlayWagerNum > chips)) && (
+                  <p className="text-[9px] font-bold" style={{ color: "#ef4444" }}>
+                    {placeError ?? "Insufficient chips"}
+                  </p>
+                )}
+
                 {/* CTA block */}
-                <button onClick={() => onPlace(parlayWager)}
-                  className="w-full rounded-xl py-3 flex flex-col items-center transition-opacity active:opacity-80"
-                  style={{ background: parlayWagerNum > 0
-                    ? "linear-gradient(135deg, #FF6A00, #cc5500)"
-                    : "#17181E",
-                    border: parlayWagerNum > 0 ? "none" : "1px solid #2A2B32",
-                    boxShadow: parlayWagerNum > 0 ? "0 0 18px rgba(255,106,0,0.3)" : "none" }}>
-                  <span className="text-[12px] font-black uppercase tracking-widest"
-                    style={{ color: parlayWagerNum > 0 ? "#fff" : "#8B8E98" }}>
-                    {parlayWagerNum > 0 ? "Place Parlay" : "Enter Wager Amount"}
-                  </span>
-                  {parlayWagerNum > 0 && (
-                    <span className="text-[9px] mt-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
-                      ${parlayWager} pays ${parlayPayout.toFixed(2)}
-                    </span>
-                  )}
-                </button>
+                {(() => {
+                  const insufficient = chips !== undefined && parlayWagerNum > chips;
+                  const canPlace = parlayWagerNum > 0 && !insufficient && !placing;
+                  return (
+                    <button onClick={() => onPlace(parlayWager)}
+                      disabled={!canPlace}
+                      className="w-full rounded-xl py-3 flex flex-col items-center transition-opacity active:opacity-80"
+                      style={{
+                        background: canPlace
+                          ? "linear-gradient(135deg, #FF6A00, #cc5500)"
+                          : "#17181E",
+                        border: canPlace ? "none" : "1px solid #2A2B32",
+                        boxShadow: canPlace ? "0 0 18px rgba(255,106,0,0.3)" : "none",
+                        opacity: placing ? 0.6 : 1,
+                        cursor: canPlace ? "pointer" : "not-allowed",
+                      }}>
+                      <span className="text-[12px] font-black uppercase tracking-widest"
+                        style={{ color: canPlace ? "#fff" : "#8B8E98" }}>
+                        {placing
+                          ? "Placing…"
+                          : insufficient
+                          ? "Insufficient Chips"
+                          : parlayWagerNum > 0
+                          ? "Place Parlay"
+                          : "Enter Wager Amount"}
+                      </span>
+                      {canPlace && (
+                        <span className="text-[9px] mt-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+                          ${parlayWager} pays ${parlayPayout.toFixed(2)}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })()}
               </div>
             </>
           )}
@@ -1213,23 +1261,42 @@ function BetSlip({
                   </div>
 
                   {/* Payout / Place row */}
-                  <button onClick={() => onPlace(sw)}
-                    className="w-full rounded-lg py-2 flex flex-col items-center transition-opacity active:opacity-80"
-                    style={{ background: swNum > 0
-                      ? "linear-gradient(135deg, #FF6A00, #cc5500)"
-                      : "#111217",
-                      border: swNum > 0 ? "none" : "1px solid #2A2B32",
-                      boxShadow: swNum > 0 ? "0 0 12px rgba(255,106,0,0.25)" : "none" }}>
-                    <span className="text-[10px] font-black uppercase tracking-wide"
-                      style={{ color: swNum > 0 ? "#fff" : "#8B8E98" }}>
-                      {swNum > 0 ? "Place Bet" : "Enter Wager"}
-                    </span>
-                    {swNum > 0 && (
-                      <span className="text-[8px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-                        ${sw} pays ${payout.toFixed(2)}
-                      </span>
-                    )}
-                  </button>
+                  {(() => {
+                    const insufficient = chips !== undefined && swNum > chips;
+                    const canPlace = swNum > 0 && !insufficient && !placing;
+                    return (
+                      <>
+                        {insufficient && (
+                          <p className="text-[8px] font-bold" style={{ color: "#ef4444" }}>
+                            Insufficient chips
+                          </p>
+                        )}
+                        <button onClick={() => onPlace(sw)}
+                          disabled={!canPlace}
+                          className="w-full rounded-lg py-2 flex flex-col items-center transition-opacity active:opacity-80"
+                          style={{
+                            background: canPlace
+                              ? "linear-gradient(135deg, #FF6A00, #cc5500)"
+                              : "#111217",
+                            border: canPlace ? "none" : "1px solid #2A2B32",
+                            boxShadow: canPlace ? "0 0 12px rgba(255,106,0,0.25)" : "none",
+                            opacity: placing ? 0.6 : 1,
+                            cursor: canPlace ? "pointer" : "not-allowed",
+                          }}>
+                          <span className="text-[10px] font-black uppercase tracking-wide"
+                            style={{ color: canPlace ? "#fff" : "#8B8E98" }}>
+                            {placing ? "Placing…" : insufficient ? "Insufficient Chips" : swNum > 0 ? "Place Bet" : "Enter Wager"}
+                          </span>
+                          {canPlace && (
+                            <span className="text-[8px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                              ${sw} pays ${payout.toFixed(2)}
+                            </span>
+                          )}
+                        </button>
+                      </>
+                    );
+                  })()}
+
                 </div>
               </div>
             );
@@ -1566,7 +1633,47 @@ export function SportsbookPage() {
     setSelected(prev => { const n = new Set(prev); n.delete(selectionId); return n; });
   }
   function clearSlip() { setSlip([]); setSelected(new Set()); }
-  function placeBets(_wager?: string)  { setPlaced(true); clearSlip(); setTimeout(() => setPlaced(false), 3500); }
+
+  /* ── Chip balance ───────────────────────────────────────────────── */
+  const { playerId, sessionToken } = useStore();
+  const { data: currentPlayer }   = useGetPlayer(playerId!, { query: { enabled: !!playerId } });
+  const { chips: liveChips }      = usePlayerSocket(playerId ?? null, sessionToken);
+  const chips = liveChips ?? currentPlayer?.chips ?? 0;
+
+  const [placeError, setPlaceError] = useState<string | null>(null);
+  const [placing,    setPlacing]    = useState(false);
+
+  async function placeBets(wager: string) {
+    const w = Math.floor(parseFloat(wager) || 0);
+    if (!sessionToken || !playerId) { setPlaceError("Not logged in"); return; }
+    if (w <= 0) { setPlaceError("Enter a wager amount"); return; }
+    if (w > chips) { setPlaceError("Insufficient chips"); return; }
+    setPlacing(true);
+    setPlaceError(null);
+    try {
+      const res = await fetch("/api/sportbets/public/live-bet", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`,
+        },
+        body: JSON.stringify({
+          wager: w,
+          betType: "live",
+          picks: slip.map(e => ({ teamName: e.teamName })),
+        }),
+      });
+      const data = await res.json() as { success?: boolean; error?: string };
+      if (!res.ok) { setPlaceError(data.error ?? "Failed to place bet"); return; }
+      setPlaced(true);
+      clearSlip();
+      setTimeout(() => setPlaced(false), 3500);
+    } catch {
+      setPlaceError("Network error — try again");
+    } finally {
+      setPlacing(false);
+    }
+  }
 
   const liveEvents = events.filter(e => e.live);
 
@@ -1845,6 +1952,9 @@ export function SportsbookPage() {
               onClear={clearSlip}
               onPlace={placeBets}
               onSelect={toggleSelection}
+              chips={chips}
+              placeError={placeError}
+              placing={placing}
             />
           </div>
         </div>

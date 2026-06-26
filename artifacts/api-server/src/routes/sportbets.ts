@@ -739,4 +739,42 @@ router.delete("/event-entries/:id", requireSportbetsOrAbove, async (req, res) =>
   return res.json({ success: true });
 });
 
+// ── Live Odds Bet — deducts chips, broadcasts balance update ──────────────────
+router.post("/public/live-bet", requirePlayer, async (req, res) => {
+  const playerId = (req as any).authenticatedPlayerId as number;
+  const { wager, betType, picks } = req.body as {
+    wager: number;
+    betType?: string;
+    picks?: { teamName?: string }[];
+  };
+
+  const w = Math.floor(Number(wager));
+  if (!w || w <= 0) return res.status(400).json({ error: "Wager must be greater than 0" });
+
+  const [player] = await db
+    .select({ id: playersTable.id, username: playersTable.username, chips: playersTable.chips })
+    .from(playersTable)
+    .where(eq(playersTable.id, playerId));
+
+  if (!player) return res.status(404).json({ error: "Player not found" });
+  if (Number(player.chips) < w) return res.status(400).json({ error: "Insufficient chips" });
+
+  const newChips = Number(player.chips) - w;
+  await db.update(playersTable).set({ chips: newChips }).where(eq(playersTable.id, playerId));
+  broadcastPlayerBalance(playerId, newChips);
+
+  const pickDesc = Array.isArray(picks)
+    ? picks.map(p => p.teamName ?? "?").join(", ")
+    : "live odds bet";
+
+  await db.insert(transactionsTable).values({
+    playerId,
+    amount: w,
+    type: "loss",
+    description: `Sports Bet (${betType ?? "live"}): ${pickDesc}`,
+  } as any);
+
+  return res.json({ success: true, newChips });
+});
+
 export default router;
