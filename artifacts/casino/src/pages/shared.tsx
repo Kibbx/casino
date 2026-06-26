@@ -6,15 +6,23 @@ export function PageWrapper({
   title,
   breadcrumb,
   accentColor = "#a855f7",
+  fillHeight = false,
   children,
 }: {
   title: string;
   breadcrumb?: string;
   accentColor?: string;
+  fillHeight?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative" style={{ minHeight: "100%" }}>
+    <div
+      className="relative"
+      style={fillHeight
+        ? { height: "100%", display: "flex", flexDirection: "column" }
+        : { minHeight: "100%" }
+      }
+    >
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div
           className="absolute top-0 left-1/3 w-[700px] h-[350px] rounded-full"
@@ -33,16 +41,25 @@ export function PageWrapper({
           }}
         />
       </div>
-      <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-16">
-        {/* Neon divider page header — mirrors Home's SectionHeader exactly */}
-        <div className="flex items-center w-full mb-8">
+      <div
+        className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8"
+        style={fillHeight
+          ? { flex: 1, minHeight: 0, display: "flex", flexDirection: "column", paddingBottom: 16 }
+          : { paddingBottom: 64 }
+        }
+      >
+        {/* Neon divider page header */}
+        <div className="flex items-center w-full mb-8" style={{ flexShrink: 0 }}>
           <div className="divider-line dl-left" style={{ "--d-c": accentColor } as React.CSSProperties} />
           <span className="divider-dot" style={{ background: accentColor, boxShadow: `0 0 8px 3px ${accentColor}99` }} />
           <h2 className="section-title shrink-0 mx-4">{title}</h2>
           <span className="divider-dot" style={{ background: accentColor, boxShadow: `0 0 8px 3px ${accentColor}99` }} />
           <div className="divider-line dl-right" style={{ "--d-c": accentColor } as React.CSSProperties} />
         </div>
-        {children}
+        {fillHeight
+          ? <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>{children}</div>
+          : children
+        }
       </div>
     </div>
   );

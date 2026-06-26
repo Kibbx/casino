@@ -247,7 +247,8 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
         transform: hov ? "translateY(-3px) scale(1.003)" : "translateY(0) scale(1)",
         transition: "all 0.25s cubic-bezier(0.23, 1, 0.32, 1)",
         display: "flex", flexDirection: "row",
-        height: 210,
+        flex: 1,
+        minHeight: 0,
       }}
     >
       {/* ── Left artwork ────────────────────────────────────────────── */}
@@ -523,8 +524,8 @@ export function TournamentsPage() {
   }, [fetchData]);
 
   return (
-    <PageWrapper title="Tournaments" breadcrumb="Events / Tournaments" accentColor="#f97316">
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <PageWrapper title="Tournaments" breadcrumb="Events / Tournaments" accentColor="#f97316" fillHeight>
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0", gap: 12 }}>
             <div style={{
