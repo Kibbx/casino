@@ -162,7 +162,11 @@ async function processDraw(drawId: number, forcedBy?: { id: number; username: st
       await db.execute(sql`
         UPDATE lottery_tickets SET payout_amount=${payoutPerTicket}, paid_at=NOW() WHERE id=${t.id}
       `);
-      try { broadcastPlayerBalance(t.player_id, -1); } catch {}
+      try {
+        const balRows = await db.execute(sql`SELECT chips FROM players WHERE id=${t.player_id}`);
+        const newBal = Number((balRows.rows as any[])[0]?.chips ?? 0);
+        broadcastPlayerBalance(t.player_id, newBal);
+      } catch {}
     }
     // Reset jackpot rollover (jackpot was won)
     await db.execute(sql`UPDATE lottery_settings SET jackpot_rollover=0`);
@@ -191,7 +195,11 @@ async function processDraw(drawId: number, forcedBy?: { id: number; username: st
       await db.execute(sql`
         UPDATE lottery_tickets SET payout_amount=${payoutPerTicket}, paid_at=NOW() WHERE id=${t.id}
       `);
-      try { broadcastPlayerBalance(t.player_id, -1); } catch {}
+      try {
+        const balRows = await db.execute(sql`SELECT chips FROM players WHERE id=${t.player_id}`);
+        const newBal = Number((balRows.rows as any[])[0]?.chips ?? 0);
+        broadcastPlayerBalance(t.player_id, newBal);
+      } catch {}
     }
   } else {
     consolationRolledIntoJackpot = true;
@@ -370,7 +378,11 @@ router.post("/buy", requirePlayer, async (req, res) => {
     WHERE id=${draw.id}
   `);
 
-  try { broadcastPlayerBalance(playerId, -1); } catch {}
+  try {
+    const balRows = await db.execute(sql`SELECT chips FROM players WHERE id=${playerId}`);
+    const newBal = Number((balRows.rows as any[])[0]?.chips ?? 0);
+    broadcastPlayerBalance(playerId, newBal);
+  } catch {}
   await logAction(draw.id, null, "player", playerId, "tickets_purchased", { qty, totalCost, ticketCost: settings.ticketCost });
 
   return res.json({ ok: true, qty, totalCost });
