@@ -241,70 +241,17 @@ export function ProfilePage() {
           {/* Security — change PIN */}
           <div className="px-5 pb-5">
             <button
-              onClick={() => { setShowSecurity(s => !s); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
+              onClick={() => { setShowSecurity(true); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
               className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
               style={{
-                background: showSecurity ? "rgba(245,197,24,0.12)" : "rgba(232,64,10,0.10)",
-                color: showSecurity ? "#f5c518" : "#e8400a",
-                border: `1px solid ${showSecurity ? "rgba(245,197,24,0.35)" : "rgba(232,64,10,0.40)"}`,
+                background: "rgba(232,64,10,0.10)",
+                color: "#e8400a",
+                border: "1px solid rgba(232,64,10,0.40)",
                 letterSpacing: "0.1em",
               }}
             >
               Security
             </button>
-
-            {showSecurity && (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
-                {(["Current PIN", "New PIN", "Confirm PIN"] as const).map((label, i) => {
-                  const val   = [curPin, newPin, confirmPin][i];
-                  const setFn = [setCurPin, setNewPin, setConfirmPin][i];
-                  return (
-                    <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                      <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)" }}>
-                        {label}
-                      </span>
-                      <input
-                        type="password"
-                        value={val}
-                        onChange={e => setFn(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && handleChangePin()}
-                        placeholder="••••"
-                        style={{
-                          background: "rgba(0,0,0,0.35)",
-                          border: "1px solid rgba(255,255,255,0.09)",
-                          borderRadius: 7, padding: "6px 10px",
-                          color: "#fff", fontSize: 13, outline: "none",
-                          width: "100%", boxSizing: "border-box",
-                        }}
-                      />
-                    </div>
-                  );
-                })}
-
-                {pinMsg && (
-                  <p style={{ fontSize: 11, margin: 0, color: pinMsg.ok ? "#22c55e" : "#ef4444" }}>
-                    {pinMsg.text}
-                  </p>
-                )}
-
-                <button
-                  onClick={handleChangePin}
-                  disabled={pinSaving}
-                  style={{
-                    marginTop: 2, padding: "8px 0", borderRadius: 7,
-                    background: "rgba(245,197,24,0.14)",
-                    border: "1px solid rgba(245,197,24,0.35)",
-                    color: "#f5c518", fontWeight: 700, fontSize: 11,
-                    letterSpacing: "0.08em", textTransform: "uppercase",
-                    cursor: pinSaving ? "not-allowed" : "pointer",
-                    opacity: pinSaving ? 0.7 : 1,
-                    fontFamily: "Rajdhani, sans-serif",
-                  }}
-                >
-                  {pinSaving ? "Saving…" : "Change PIN"}
-                </button>
-              </div>
-            )}
           </div>
 
         </div>
@@ -387,6 +334,99 @@ export function ProfilePage() {
           </div>
         ))}
       </div>
+
+      {/* ── Security / Change PIN modal ─────────────────────────── */}
+      {showSecurity && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.72)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowSecurity(false); setPinMsg(null); } }}
+        >
+          <div style={{
+            background: "#0e0b06",
+            border: "1px solid rgba(245,197,24,0.18)",
+            borderRadius: 18,
+            padding: "22px 24px 24px",
+            width: "100%", maxWidth: 300,
+            boxShadow: "0 0 80px rgba(0,0,0,0.85), 0 0 40px rgba(245,197,24,0.04)",
+            display: "flex", flexDirection: "column", gap: 16,
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{
+                fontFamily: "Rajdhani, sans-serif", fontWeight: 900, fontSize: 13,
+                letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
+              }}>
+                Change PIN
+              </span>
+              <button
+                onClick={() => { setShowSecurity(false); setPinMsg(null); }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 2, lineHeight: 1, fontSize: 18 }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Fields */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {([
+                ["Current PIN", curPin, setCurPin],
+                ["New PIN",     newPin, setNewPin],
+                ["Confirm PIN", confirmPin, setConfirmPin],
+              ] as [string, string, (v: string) => void][]).map(([label, val, setFn]) => (
+                <div key={label} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)" }}>
+                    {label}
+                  </span>
+                  <input
+                    type="password"
+                    value={val}
+                    onChange={e => setFn(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && handleChangePin()}
+                    placeholder="••••"
+                    style={{
+                      background: "rgba(0,0,0,0.4)",
+                      border: "1px solid rgba(255,255,255,0.10)",
+                      borderRadius: 8, padding: "8px 12px",
+                      color: "#fff", fontSize: 14, outline: "none",
+                      width: "100%", boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Message */}
+            {pinMsg && (
+              <p style={{ fontSize: 12, margin: 0, color: pinMsg.ok ? "#22c55e" : "#ef4444", textAlign: "center" }}>
+                {pinMsg.text}
+              </p>
+            )}
+
+            {/* Submit */}
+            <button
+              onClick={handleChangePin}
+              disabled={pinSaving}
+              style={{
+                padding: "10px 0", borderRadius: 8,
+                background: "rgba(245,197,24,0.16)",
+                border: "1px solid rgba(245,197,24,0.38)",
+                color: "#f5c518", fontWeight: 700, fontSize: 12,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                cursor: pinSaving ? "not-allowed" : "pointer",
+                opacity: pinSaving ? 0.7 : 1,
+                fontFamily: "Rajdhani, sans-serif",
+              }}
+            >
+              {pinSaving ? "Saving…" : "Change PIN"}
+            </button>
+          </div>
+        </div>
+      )}
 
     </PageWrapper>
   );
