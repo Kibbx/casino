@@ -584,57 +584,6 @@ function TeamLogo({ name, accent, sport }: { name: string; accent: string; sport
   );
 }
 
-/* ── Mock spread / total (deterministic from event id) ──────────────── */
-function hashId(id: string): number {
-  let h = 0x811c9dc5;
-  for (const c of id) h = (Math.imul(h ^ c.charCodeAt(0), 0x01000193)) >>> 0;
-  return h;
-}
-
-function mockSpread(eventId: string) {
-  const h = hashId(eventId);
-  const lines = [-0.5, -1.5, -2.5, -3.5, -6.5, -7.5, -10.5, -13.5];
-  const awayLine = lines[h % lines.length];
-  const awayOdds = -120 + ((h >> 4) & 0xf) * 2;
-  const homeOdds = -120 + ((h >> 8) & 0xf) * 2;
-  return { awayLine, homeLine: -awayLine, awayOdds, homeOdds };
-}
-
-function mockTotal(sport: string, eventId: string) {
-  const h = hashId(eventId);
-  const table: Record<string, number[]> = {
-    Soccer: [2.5, 3.5], NHL: [5.5, 6.5, 7.5], MLB: [7.5, 8.5, 9.5, 10.5],
-    NFL: [38.5, 41.5, 44.5, 47.5, 51.5, 54.5], NBA: [215.5, 220.5, 224.5, 228.5],
-  };
-  const arr  = table[sport] ?? [44.5];
-  const line = arr[h % arr.length];
-  return { line, overOdds: -115 + ((h >> 3) & 0xf), underOdds: -115 + ((h >> 6) & 0xf) };
-}
-
-/* ── Market tabs ─────────────────────────────────────────────────────── */
-type MarketTab = "ml" | "spr" | "tot";
-function MarketTabs({ active, onChange }: { active: MarketTab; onChange: (m: MarketTab) => void }) {
-  const tabs: { key: MarketTab; label: string }[] = [
-    { key: "ml",  label: "Moneyline" },
-    { key: "spr", label: "Spread"    },
-    { key: "tot", label: "Total"     },
-  ];
-  return (
-    <div className="flex gap-1 px-2.5 pb-1.5">
-      {tabs.map(({ key, label }) => (
-        <button key={key} onClick={() => onChange(key)}
-          className="flex-1 text-[8.5px] font-black uppercase tracking-wide py-1 rounded-md transition-all duration-100"
-          style={{
-            background: active === key ? "rgba(249,115,22,0.18)" : "rgba(255,255,255,0.03)",
-            border:     `1px solid ${active === key ? "rgba(249,115,22,0.45)" : "rgba(255,255,255,0.06)"}`,
-            color:      active === key ? "#f97316" : "rgba(255,255,255,0.28)",
-          }}>
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 /* ── Competition name ────────────────────────────────────────────────── */
 function getCompetitionName(event: SbEvent): string {
@@ -757,35 +706,21 @@ function computeGameStatus(sport: string, commenceTime: string): string {
 function EventCard({
   event, selHome, selAway, onHome, onAway, score,
 }: { event: SbEvent; selHome: boolean; selAway: boolean; onHome: () => void; onAway: () => void; score?: ScoreInfo }) {
-  const [market, setMarket] = useState<MarketTab>("ml");
   const accent    = SPORT_COLORS[event.sport] ?? "#f97316";
   const live      = isLiveNow(event);
   const isCombat  = event.sport === "UFC" || event.sport === "Boxing";
   const shortName = (s: string) => s.split(" ").slice(-1)[0];
-  const spread    = mockSpread(event.id);
-  const total     = mockTotal(event.sport, event.id);
 
   const borderBase  = live ? "rgba(34,197,94,0.24)" : "rgba(255,255,255,0.07)";
   const borderHover = live ? "rgba(34,197,94,0.5)" : `${accent}60`;
   const shadowBase  = live ? "0 0 16px rgba(34,197,94,0.08)" : "none";
   const shadowHover = live ? "0 0 28px rgba(34,197,94,0.18)" : `0 0 18px ${accent}22`;
 
-  type Side = { label: string; odds: number | null; sel: boolean; onClick: () => void; isMock: boolean };
-  const sides: Side[] =
-    market === "ml"
-      ? [
-          { label: shortName(event.awayTeam), odds: event.bestAwayOdds, sel: selAway, onClick: onAway, isMock: false },
-          { label: shortName(event.homeTeam), odds: event.bestHomeOdds, sel: selHome, onClick: onHome, isMock: false },
-        ]
-      : market === "spr"
-      ? [
-          { label: `${shortName(event.awayTeam)} ${spread.awayLine > 0 ? "+" : ""}${spread.awayLine}`, odds: spread.awayOdds, sel: false, onClick: () => {}, isMock: true },
-          { label: `${shortName(event.homeTeam)} ${spread.homeLine > 0 ? "+" : ""}${spread.homeLine}`, odds: spread.homeOdds, sel: false, onClick: () => {}, isMock: true },
-        ]
-      : [
-          { label: `Over ${total.line}`,  odds: total.overOdds,  sel: false, onClick: () => {}, isMock: true },
-          { label: `Under ${total.line}`, odds: total.underOdds, sel: false, onClick: () => {}, isMock: true },
-        ];
+  type Side = { label: string; odds: number | null; sel: boolean; onClick: () => void };
+  const sides: Side[] = [
+    { label: shortName(event.awayTeam), odds: event.bestAwayOdds, sel: selAway, onClick: onAway },
+    { label: shortName(event.homeTeam), odds: event.bestHomeOdds, sel: selHome, onClick: onHome },
+  ];
 
   return (
     <div
@@ -865,12 +800,9 @@ function EventCard({
         </div>
       </div>
 
-      {/* Market tabs */}
-      <MarketTabs active={market} onChange={setMarket} />
-
       {/* Odds buttons */}
       <div className="px-2.5 pb-2.5 flex gap-1.5">
-        {sides.map(({ label, odds, sel, onClick, isMock }, i) =>
+        {sides.map(({ label, odds, sel, onClick }, i) =>
           odds === null ? (
             <div key={i} className="flex-1 flex flex-col items-center justify-center rounded-lg py-2"
               style={{ background: "rgba(255,255,255,0.025)", border: "1px solid rgba(255,255,255,0.05)" }}>
@@ -878,23 +810,20 @@ function EventCard({
               <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.12)" }}>N/A</span>
             </div>
           ) : (
-            <button key={i} onClick={isMock ? () => {} : onClick}
+            <button key={i} onClick={onClick}
               className="flex-1 flex flex-col items-center rounded-lg py-1.5 pb-1 transition-all duration-150"
               style={{
                 background: sel ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.04)",
                 border:     `1px solid ${sel ? "rgba(249,115,22,0.55)" : "rgba(255,255,255,0.08)"}`,
                 boxShadow:  sel ? "0 0 12px rgba(249,115,22,0.25)" : "none",
-                cursor:     isMock ? "default" : "pointer",
-                opacity:    isMock ? 0.68 : 1,
+                cursor:     "pointer",
               }}
               onMouseEnter={e => {
-                if (isMock) return;
                 const el = e.currentTarget;
                 el.style.background = sel ? "rgba(249,115,22,0.22)" : "rgba(255,255,255,0.08)";
                 el.style.border     = `1px solid ${sel ? "rgba(249,115,22,0.7)" : "rgba(255,255,255,0.18)"}`;
               }}
               onMouseLeave={e => {
-                if (isMock) return;
                 const el = e.currentTarget;
                 el.style.background = sel ? "rgba(249,115,22,0.15)" : "rgba(255,255,255,0.04)";
                 el.style.border     = `1px solid ${sel ? "rgba(249,115,22,0.55)" : "rgba(255,255,255,0.08)"}`;
@@ -908,10 +837,7 @@ function EventCard({
                 style={{ color: sel ? "#f97316" : "rgba(255,255,255,0.85)", fontVariantNumeric: "tabular-nums" }}>
                 {fmtOdds(odds)}
               </span>
-              {!isMock
-                ? <SportsbookBadge eventId={event.id} sideIdx={i} />
-                : <span className="text-[7px] mt-0.5 uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.15)" }}>simulated</span>
-              }
+              <SportsbookBadge eventId={event.id} sideIdx={i} />
             </button>
           )
         )}
