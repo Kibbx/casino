@@ -794,7 +794,7 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
           decimalOdds *= odds >= 0 ? (odds / 100) + 1 : (100 / Math.abs(odds)) + 1;
         }
       }
-      const slipType = betType === "parlay" || pickList.length > 1 ? "parlay" : "single";
+      const slipType = String(betType) === "parlay" ? "parlay" : "single";
       const potentialPayout = Math.floor(w * decimalOdds);
       await db.insert(sportBetSlipsTable).values({
         playerId,
