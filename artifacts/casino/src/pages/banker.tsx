@@ -11472,6 +11472,44 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
 
   useEffect(() => { loadSbSettings(); }, [authToken]);
 
+  // ── Auto-Delete Settings state ────────────────────────────────────────────
+  const [sbAutoDelete, setSbAutoDelete] = useState(true);
+  const [sbRetentionMins, setSbRetentionMins] = useState("30");
+  const [sbCleanupSaving, setSbCleanupSaving] = useState(false);
+  const [sbCleanupMsg, setSbCleanupMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  function loadCleanupSettings() {
+    fetch(`${BASE_URL}/api/sportbets/admin/cleanup-settings`, { headers: { Authorization: `Bearer ${authToken}` } })
+      .then(r => r.json())
+      .then(d => {
+        if (d.enabled !== undefined) setSbAutoDelete(d.enabled);
+        if (d.retentionMinutes !== undefined) setSbRetentionMins(String(d.retentionMinutes));
+      })
+      .catch(() => {});
+  }
+
+  async function saveCleanupSettings() {
+    setSbCleanupSaving(true); setSbCleanupMsg(null);
+    try {
+      const r = await fetch(`${BASE_URL}/api/sportbets/admin/cleanup-settings`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: sbAutoDelete, retentionMinutes: parseInt(sbRetentionMins) || 30 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      setSbAutoDelete(d.enabled);
+      setSbRetentionMins(String(d.retentionMinutes));
+      setSbCleanupMsg({ text: "Saved", ok: true });
+    } catch (err: any) {
+      setSbCleanupMsg({ text: err.message || "Failed", ok: false });
+    }
+    setSbCleanupSaving(false);
+    setTimeout(() => setSbCleanupMsg(null), 3000);
+  }
+
+  useEffect(() => { loadCleanupSettings(); }, [authToken]);
+
   // ── Sport Events state ────────────────────────────────────────────────────
   const [sbEvents, setSbEvents] = useState<SBEvent[]>([]);
   const [showEventsPanel, setShowEventsPanel] = useState(false);
@@ -11670,6 +11708,51 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
             <span style={{ fontSize: "11px", fontWeight: 600, color: sbSettingsMsg.ok ? "#4ade80" : "#f87171" }}>{sbSettingsMsg.text}</span>
           )}
         </div>
+      </div>
+
+      {/* Auto-Delete Settled Bets */}
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "16px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+          <span style={{ fontSize: "14px" }}>🗑️</span>
+          <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "13px", color: "#e2e8f0", letterSpacing: "0.06em" }}>Auto-Delete Settled Bets</span>
+        </div>
+        <p style={{ fontSize: "11px", color: "#64748b", marginBottom: "14px", lineHeight: "1.5" }}>
+          Automatically remove fully resolved slips (Won / Lost / Voided / Cashed Out) after the retention period.
+          Financial stats are preserved in the transactions table — only the slip record is deleted.
+        </p>
+        <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Auto Delete</label>
+            <button
+              onClick={() => setSbAutoDelete(v => !v)}
+              style={{
+                padding: "5px 16px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none", fontFamily: "Oswald, sans-serif", letterSpacing: "0.05em",
+                background: sbAutoDelete ? "#166534" : "#3b0707", color: sbAutoDelete ? "#4ade80" : "#f87171",
+              }}>
+              {sbAutoDelete ? "ON" : "OFF"}
+            </button>
+          </div>
+          <div style={{ flex: "0 0 160px" }}>
+            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>
+              Retention (minutes)
+            </label>
+            <input
+              type="number" min="1" max="1440" value={sbRetentionMins}
+              onChange={e => setSbRetentionMins(e.target.value)}
+              style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }}
+            />
+          </div>
+          <button onClick={saveCleanupSettings} disabled={sbCleanupSaving}
+            style={{ padding: "8px 22px", background: sbCleanupSaving ? "rgba(160,34,58,0.4)" : "#a0223a", border: "none", borderRadius: "9px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: sbCleanupSaving ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.05em" }}>
+            {sbCleanupSaving ? "Saving…" : "Save"}
+          </button>
+          {sbCleanupMsg && (
+            <span style={{ fontSize: "11px", fontWeight: 600, color: sbCleanupMsg.ok ? "#4ade80" : "#f87171" }}>{sbCleanupMsg.text}</span>
+          )}
+        </div>
+        <p style={{ fontSize: "10px", color: "#475569", marginTop: "12px" }}>
+          🔒 Pending slips are never deleted. Cleanup runs every 5 minutes. Every deletion is logged to the server console with full audit details.
+        </p>
       </div>
 
       {/* Sport Events */}

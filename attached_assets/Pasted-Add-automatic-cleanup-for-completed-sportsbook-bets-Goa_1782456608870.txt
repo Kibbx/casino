@@ -1,0 +1,81 @@
+Add automatic cleanup for completed sportsbook bets.
+
+Goal:
+Any sportsbook bet that has been fully resolved and paid out should automatically be removed from the sportsbook bet history 30 minutes after settlement.
+
+Requirements:
+
+1. A bet qualifies for deletion when:
+   - Status = Won, Lost, Void, Cancelled, or Paid
+   - Any payout/credit process has already completed
+   - The result is final and no further actions are possible
+
+2. Store a settlement timestamp:
+   - settledAt
+   - paidAt (if not already present)
+   - Record this when the bet is graded
+
+3. Create an automatic cleanup process:
+   - Run every 5 minutes via server cron/job/background task
+   - Find bets where:
+     - status is final
+     - settlement timestamp is older than 30 minutes
+   - Permanently delete those records
+
+4. Safety checks:
+   - Never delete Pending bets
+   - Never delete Open bets
+   - Never delete Active/In-Progress bets
+   - Never delete bets that have not been fully graded
+   - Never delete bets with payout processing errors
+
+5. Statistics preservation:
+   - Before deleting a bet, ensure all wager, payout, profit, and sportsbook statistics have already been recorded in the stats tables.
+   - Historical sportsbook revenue and casino dashboard statistics must remain accurate after deletion.
+
+6. Admin settings:
+   Add a configurable setting:
+   - Auto Delete Settled Bets = ON/OFF
+   - Default: ON
+   - Retention Period: 30 minutes
+   - Allow future adjustment without code changes
+
+7. Audit logging:
+   Log every automatic deletion:
+   - Bet ID
+   - Player ID
+   - Wager amount
+   - Payout amount
+   - Status
+   - Settlement time
+   - Deletion time
+
+8. UI updates:
+   - Deleted bets should disappear from:
+     - Sportsbook slips table
+     - Recent bets list
+     - Open sportsbook history
+   - Dashboard stats should remain unchanged
+
+9. Testing:
+   - Create a test winning bet
+   - Grade and pay it
+   - Verify it remains visible for 30 minutes
+   - Verify automatic deletion occurs after 30 minutes
+   - Verify all sportsbook stats, revenue reports, and casino dashboard totals remain accurate after deletion
+
+Implementation hints:
+Search for:
+- sportsbook bets
+- bet slips
+- settleBet
+- gradeBet
+- payoutBet
+- sportsbook history
+- bet status
+- cron
+- scheduler
+- background jobs
+
+Preferred approach:
+Create a scheduled cleanup service that runs every 5 minutes and deletes settled sportsbook bets older than 30 minutes while preserving all financial/statistical records.

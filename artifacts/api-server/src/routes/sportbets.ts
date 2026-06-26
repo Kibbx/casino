@@ -858,6 +858,34 @@ router.get("/admin/slips", requireSportbetsOrAbove, async (req, res) => {
   }
 });
 
+// GET /sportbets/admin/cleanup-settings — auto-delete config
+router.get("/admin/cleanup-settings", requireSportbetsOrAbove, async (_req, res) => {
+  const enabled           = await getSetting("sbAutoDeleteEnabled", "true");
+  const retentionMinutes  = parseInt(await getSetting("sbAutoDeleteRetentionMinutes", "30"), 10) || 30;
+  return res.json({ enabled: enabled !== "false", retentionMinutes });
+});
+
+// POST /sportbets/admin/cleanup-settings — save auto-delete config
+router.post("/admin/cleanup-settings", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const { enabled, retentionMinutes } = req.body as { enabled?: boolean; retentionMinutes?: number };
+    if (enabled !== undefined) {
+      await setSetting("sbAutoDeleteEnabled", enabled ? "true" : "false");
+    }
+    if (retentionMinutes !== undefined) {
+      const mins = Math.max(1, Math.min(1440, Number(retentionMinutes) || 30));
+      await setSetting("sbAutoDeleteRetentionMinutes", String(mins));
+    }
+    return res.json({
+      enabled: (await getSetting("sbAutoDeleteEnabled", "true")) !== "false",
+      retentionMinutes: parseInt(await getSetting("sbAutoDeleteRetentionMinutes", "30"), 10) || 30,
+    });
+  } catch (err) {
+    console.error("[sportbets] cleanup-settings error:", err);
+    return res.status(500).json({ error: "Failed to save settings" });
+  }
+});
+
 // PATCH /sportbets/admin/slips/:id — settle: won / lost / voided / cashed_out
 router.patch("/admin/slips/:id", requireSportbetsOrAbove, async (req, res) => {
   try {

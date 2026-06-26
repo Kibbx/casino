@@ -9,6 +9,7 @@ import { recordPlayerActivity } from "./lib/player-activity.js";
 import { loadSessionsFromDb } from "./lib/sessions.js";
 import { runMigrations } from "./lib/migrations.js";
 import { startLoanJobs } from "./lib/loan-jobs.js";
+import { startSportbetCleanupJob } from "./lib/sportbet-cleanup.js";
 import { db, pokerTablesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { scheduleAutoStart } from "./lib/game-loop.js";
@@ -78,6 +79,7 @@ server.listen(port, async () => {
   await initBJRooms();
   await initAllBaccaratRooms();
   startLoanJobs();
+  startSportbetCleanupJob();
   setBlindBroadcastFn(broadcastBlindEvent);
   startEscalationLoop();
 });

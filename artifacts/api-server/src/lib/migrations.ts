@@ -1442,6 +1442,14 @@ export async function runMigrations(): Promise<void> {
         ON CONFLICT (username) DO NOTHING
       `,
     },
+    {
+      name: "settings seed: sbAutoDeleteEnabled",
+      sql: `INSERT INTO settings (key, value) VALUES ('sbAutoDeleteEnabled', 'true') ON CONFLICT (key) DO NOTHING`,
+    },
+    {
+      name: "settings seed: sbAutoDeleteRetentionMinutes",
+      sql: `INSERT INTO settings (key, value) VALUES ('sbAutoDeleteRetentionMinutes', '30') ON CONFLICT (key) DO NOTHING`,
+    },
   ];
 
   for (const step of steps) {
