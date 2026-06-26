@@ -40,7 +40,7 @@ import { MktComingSoon }      from "./MktComingSoon";
 import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
-import { GAME_CFG, GAME_DISPLAY, FALLBACK_LIVE as LIVE_DEFAULTS } from "../lib/gamesData";
+import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
 import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
 
 const IMGS = import.meta.env.BASE_URL;
@@ -116,66 +116,90 @@ const navGroups: NavGroup[] = [
   },
 ];
 
-/* ─── Data ────────────────────────────────────────────────────── */
-interface Game {
-  id: number; name: string; category: string; image: string;
-  players: number; maxPlayers: number; activeBets: string; status: string;
+/* ─── Live Activity ───────────────────────────────────────────── */
+interface LiveActivityItem {
+  id: number;
+  gameKey: string;
+  name: string;
+  category: string;
+  players: number;
+  activeBets: string;
+  status: string;
+  activeUser: string;
+  activityLabel: string;
+  route: string;
+  launchKey?: string;
+  tokenId?: string;
 }
 
-const FALLBACK_LIVE = LIVE_DEFAULTS as unknown as Game[];
+const MOCK_USERS = [
+  "Jonah", "Maya", "Ace", "Rico", "Nova",
+  "VegasVince", "LuckyLena", "CardShark_K", "RoyalFlush_R", "AceHunter",
+  "DealBreaker", "SilverStack", "NeonNick",
+];
 
-function parseBets(s: string) { return parseInt(s.replace(/[$,]/g, ""), 10) || 0; }
+const LIVE_GAME_POOL: Array<{ gameKey: string; route: string; launchKey?: string; tokenId?: string }> = [
+  { gameKey: "blackjack",    route: "/tablegames",    launchKey: "blackjack" },
+  { gameKey: "roulette",     route: "/tablegames",    launchKey: "roulette"  },
+  { gameKey: "baccarat",     route: "/tablegames",    launchKey: "baccarat"  },
+  { gameKey: "poker",        route: "/poker-tables",  launchKey: "poker"     },
+  { gameKey: "highlow",      route: "/tablegames"                            },
+  { gameKey: "slots",        route: "/slots",         tokenId: "slots"       },
+  { gameKey: "rome_slots",   route: "/rome-slots",    tokenId: "slots"       },
+  { gameKey: "western_slots",route: "/western-slots", tokenId: "slots"       },
+  { gameKey: "mines",        route: "/minigames",     tokenId: "mines"       },
+  { gameKey: "mob_tower",    route: "/minigames"                             },
+  { gameKey: "horse",        route: "/horse-racing",  launchKey: "horse"     },
+  { gameKey: "bingo",        route: "/bingo",         launchKey: "bingo"     },
+  { gameKey: "lottery",      route: "/lottery",       launchKey: "lottery"   },
+];
 
-function pageToGameKey(page: string): string | null {
-  if (page === "blackjack")                                                    return "blackjack";
-  if (page === "roulette")                                                     return "roulette";
-  if (page === "baccarat")                                                     return "baccarat";
-  if (page === "poker" || page === "poker-lobby")                              return "poker";
-  if (page === "slots" || page === "slots-hub" || page === "rome-slots" || page === "western-slots") return "slots";
-  if (page === "mines" || page === "keno")                                     return "mines";
-  if (page === "mob-tower")                                                    return "mob_tower";
-  if (page === "high-low")                                                     return "highlow";
-  if (page === "horse-racing")                                                 return "horse";
-  if (page === "bingo")                                                        return "bingo";
-  if (page === "lottery")                                                      return "lottery";
-  if (page === "tournaments" || page === "tournament")                         return "tournament";
-  return null;
+function buildLiveItem(poolEntry: typeof LIVE_GAME_POOL[0], user: string): LiveActivityItem {
+  const d      = GAME_DISPLAY[poolEntry.gameKey] ?? GAME_DISPLAY.blackjack;
+  const cnt    = 2 + Math.floor(Math.random() * 8);
+  const isRace  = poolEntry.gameKey === "horse";
+  const isBingo = poolEntry.gameKey === "bingo";
+  return {
+    id: Date.now() + Math.floor(Math.random() * 9999),
+    gameKey: poolEntry.gameKey,
+    name: d.name,
+    category: d.category,
+    players: cnt,
+    activeBets: "$" + (cnt * (300 + Math.floor(Math.random() * 700))).toLocaleString(),
+    status: isRace ? "Race Live" : isBingo ? "Live Draw" : "Active",
+    activeUser: user,
+    activityLabel: `${user} is playing`,
+    route: poolEntry.route,
+    launchKey: poolEntry.launchKey,
+    tokenId: poolEntry.tokenId,
+  };
 }
 
-/* GAME_DISPLAY / cfgKey → wouter route (where clicking a card should navigate) */
-const CFG_KEY_TO_ROUTE: Record<string, string> = {
-  blackjack:     "/tablegames",
-  roulette:      "/tablegames",
-  baccarat:      "/tablegames",
-  highlow:       "/tablegames",
-  poker:         "/poker-tables",
-  slots:         "/slots",
-  rome_slots:    "/slots",
-  western_slots: "/slots",
-  mines:         "/minigames",
-  mob_tower:     "/minigames",
-  fortune:       "/minigames",
-  horse:         "/horse-racing",
-  bingo:         "/bingo",
-  lottery:       "/lottery",
-  tournament:    "/tournaments",
-};
+function buildInitialLiveActivity(): LiveActivityItem[] {
+  const seeds: Array<{ gameKey: string; user: string }> = [
+    { gameKey: "blackjack",  user: "VegasVince" },
+    { gameKey: "poker",      user: "Rico"       },
+    { gameKey: "roulette",   user: "Maya"       },
+    { gameKey: "mines",      user: "AceHunter"  },
+  ];
+  return seeds.map(({ gameKey, user }) => {
+    const pool = LIVE_GAME_POOL.find(g => g.gameKey === gameKey)!;
+    return buildLiveItem(pool, user);
+  });
+}
 
-/* ─── Live Activity Card ──────────────────────────────────────── */
 function liveCtaFor(name: string, status: string): string {
-  if (status === "Race Live")                   return "Watch Race";
-  if (name.toLowerCase().includes("bingo"))     return "Join Room";
-  if (name.toLowerCase().includes("lottery"))   return "Buy Tickets";
-  if (name === "Mines" || name === "Mob Tower") return "Play Now";
-  if (name === "Slots" || name.includes("Slots")) return "Spin Now";
-  if (name === "Keno" || name === "Fortuna")    return "Play Now";
-  if (["Blackjack","Roulette","Baccarat","Poker"].includes(name)) return "Join Table";
+  if (status === "Race Live")                                           return "Watch Race";
+  if (status === "Live Draw")                                          return "Join Room";
+  if (name.toLowerCase().includes("lottery"))                          return "Buy Tickets";
+  if (name === "Mines" || name === "Mob Tower")                        return "Play Now";
+  if (name.includes("Slots") || name === "Fortuna" || name === "Deadwood Dollars") return "Spin Now";
+  if (["Blackjack","Roulette","Baccarat","Poker","High Low"].includes(name)) return "Join Table";
   return "Join Now";
 }
 
-function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
-  const gameKey = Object.keys(GAME_DISPLAY).find(k => GAME_DISPLAY[k]?.name === game.name) ?? "blackjack";
-  const cfg = GAME_CFG[gameKey] ?? GAME_CFG.blackjack;
+function LiveCard({ game, onPlay }: { game: LiveActivityItem; onPlay: () => void }) {
+  const cfg        = GAME_CFG[game.gameKey] ?? GAME_CFG.blackjack;
   const isRaceLive = game.status === "Race Live";
   const isLiveDraw = game.status === "Live Draw";
   const statusColor = isRaceLive ? "#ef4444"
@@ -188,10 +212,10 @@ function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
     gradient: cfg.gradient,
     neonClass: cfg.neonClass,
     neonColor: cfg.neonColor,
-    players: game.players > 0 ? `${game.players} online` : undefined,
+    players: game.activityLabel,
     betRange: game.activeBets || undefined,
     actionLabel: liveCtaFor(game.name, game.status),
-    statusLabel: isRaceLive ? "LIVE" : game.status.toUpperCase(),
+    statusLabel: isRaceLive ? "LIVE" : isLiveDraw ? "DRAWING" : "ACTIVE",
     statusColor,
   };
   return <CatalogCard game={g} onClick={onPlay} />;
@@ -239,63 +263,28 @@ export function Lobby() {
 
   // ── Recently Played — persisted to localStorage ───────────────
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedEntry[]>(getRecentlyPlayed);
-  const [liveActivity, setLiveActivity] = useState<Game[]>(FALLBACK_LIVE);
+  const [liveActivity, setLiveActivity] = useState<LiveActivityItem[]>(buildInitialLiveActivity);
 
   useEffect(() => {
     if (activeNav !== "home") return;
     setRecentlyPlayed(getRecentlyPlayed());
   }, [activeNav]);
 
-  // ── Live Activity — real online players, refreshed every 5 s ──
+  // ── Live Activity — simulated players, rotates every 5 s ──────
   useEffect(() => {
-    if (!sessionToken || activeNav !== "home") return;
-    let mounted = true;
-    function fetchOnline() {
-      fetch(`${BASE}/api/players/online`, {
-        headers: { Authorization: `Bearer ${sessionToken}` },
-      })
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(({ players }: { players: { game: string | null; username: string }[] }) => {
-          if (!mounted) return;
-          const groups: Record<string, number> = {};
-          for (const p of players) {
-            if (!p.game) continue;
-            groups[p.game] = (groups[p.game] ?? 0) + 1;
-          }
-          const entries = Object.entries(groups).sort(([, a], [, b]) => b - a).slice(0, 4);
-          if (entries.length === 0) {
-            setLiveActivity(prev => prev.map(g => ({
-              ...g,
-              players: Math.max(1, g.players + (Math.random() > 0.5 ? 1 : -1)),
-              activeBets: "$" + Math.max(100, parseBets(g.activeBets) + Math.floor((Math.random() - 0.4) * 400)).toLocaleString(),
-            })));
-            return;
-          }
-          const result: Game[] = entries.map(([page, count], i) => {
-            const key = pageToGameKey(page) ?? "blackjack";
-            const d   = GAME_DISPLAY[key] ?? GAME_DISPLAY.blackjack;
-            return {
-              id: i + 1, name: d.name, category: d.category, image: d.image,
-              players: count,
-              maxPlayers: Math.max(count + Math.floor(Math.random() * 3 + 2), 6),
-              activeBets: "$" + (count * Math.floor(Math.random() * 800 + 200)).toLocaleString(),
-              status: page.includes("horse") ? "Race Live" : count >= 4 ? "In Progress" : "Active",
-            };
-          });
-          setLiveActivity(result);
-        })
-        .catch(() => {
-          if (!mounted) return;
-          setLiveActivity(prev => prev.map(g => ({
-            ...g,
-            players: Math.max(1, g.players + (Math.random() > 0.5 ? 1 : -1)),
-          })));
-        });
-    }
-    fetchOnline();
-    const id = setInterval(fetchOnline, 5000);
-    return () => { mounted = false; clearInterval(id); };
-  }, [sessionToken, activeNav]);
+    if (activeNav !== "home") return;
+    const interval = setInterval(() => {
+      const poolEntry = LIVE_GAME_POOL[Math.floor(Math.random() * LIVE_GAME_POOL.length)];
+      const user      = MOCK_USERS[Math.floor(Math.random() * MOCK_USERS.length)];
+      const newItem   = buildLiveItem(poolEntry, user);
+      setLiveActivity(prev =>
+        [newItem, ...prev]
+          .filter((item, idx, arr) => arr.findIndex(x => x.gameKey === item.gameKey) === idx)
+          .slice(0, 4)
+      );
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [activeNav]);
 
 
   useEffect(() => {
@@ -603,13 +592,20 @@ export function Lobby() {
                 <div>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
                   <CardGrid>
-                    {liveActivity.slice(0, 4).map((g) => {
-                      const cfgKey = Object.keys(GAME_DISPLAY).find(k => GAME_DISPLAY[k]?.name === g.name) ?? "";
-                      const route = CFG_KEY_TO_ROUTE[cfgKey] ?? "/tablegames";
-                      return (
-                        <LiveCard key={g.id} game={g} onPlay={() => setLocation(route)} />
-                      );
-                    })}
+                    {liveActivity.slice(0, 4).map((item) => (
+                      <LiveCard
+                        key={item.id}
+                        game={item}
+                        onPlay={() => {
+                          if (item.launchKey) {
+                            enter(item.launchKey);
+                          } else {
+                            if (item.tokenId) setAccessToken(item.tokenId, "open");
+                            setLocation(item.route);
+                          }
+                        }}
+                      />
+                    ))}
                   </CardGrid>
                 </div>
               </div>

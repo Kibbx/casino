@@ -1,0 +1,66 @@
+Now make Live Activity work like Recently Played, but for other online users.
+
+Requirements:
+1. Live Activity should show game cards currently being played by mock online users.
+2. Do not hardcode one Roulette card only.
+3. Create a mock data array like:
+   - liveActivityGames
+   - onlineUsers
+4. Each live activity item should include:
+   - game id
+   - game title
+   - category
+   - description
+   - user/player name
+   - player count
+   - current pot or buy-in
+   - status: Active / Live
+   - action button: Join Table / Watch / Play Now
+   - same accent color/theme as the original game
+5. Show the most recently active games first.
+6. Keep only 4 live activity cards visible.
+7. Cards should reuse the same existing game card component/styling.
+8. Add a small line on each card like:
+   “Jonah is playing”
+   or
+   “3 users online”
+9. Live Activity should update automatically every few seconds by rotating or adding mock user activity.
+10. Do not affect the user’s Recently Played list.
+11. Clicking a Live Activity card action should:
+   - open the same modal as the original game
+   - optionally add that game to Recently Played, because the current user selected it
+12. Keep Live Activity state separate from Recently Played state.
+13. Preserve the neon casino styling and responsive layout.
+14. Do not rebuild the whole app. Only implement dynamic Live Activity.
+
+Implementation hint:
+Use `setInterval` inside `useEffect` to simulate online user activity:
+
+const mockUsers = ["Jonah", "Maya", "Ace", "Rico", "Nova"];
+
+const [liveActivity, setLiveActivity] = useState(initialLiveActivity);
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    const randomGame = games[Math.floor(Math.random() * games.length)];
+    const randomUser = mockUsers[Math.floor(Math.random() * mockUsers.length)];
+
+    setLiveActivity(prev => {
+      const newActivity = {
+        ...randomGame,
+        activityId: `${randomGame.id}-${Date.now()}`,
+        activeUser: randomUser,
+        status: "ACTIVE",
+        activityLabel: `${randomUser} is playing`
+      };
+
+      return [newActivity, ...prev]
+        .filter((item, index, arr) =>
+          arr.findIndex(x => x.id === item.id) === index
+        )
+        .slice(0, 4);
+    });
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
