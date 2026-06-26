@@ -399,7 +399,7 @@ export function LeaderboardsPage() {
         marginTop: 14, fontSize: 10, textAlign: "center",
         color: "rgba(255,255,255,0.18)", letterSpacing: "0.04em",
       }}>
-        LIVE DATA · BOTS EXCLUDED · TREND TRACKS RANK CHANGES BETWEEN VISITS
+        LIVE DATA · TREND TRACKS RANK CHANGES BETWEEN VISITS
       </p>
 
       {/* Spin keyframe */}
