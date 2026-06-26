@@ -41,6 +41,7 @@ import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY, FALLBACK_LIVE as LIVE_DEFAULTS } from "../lib/gamesData";
+import { getTrackedGames } from "../lib/recentGames";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -120,13 +121,23 @@ interface Game {
   id: number; name: string; category: string; image: string;
   players: number; maxPlayers: number; activeBets: string; status: string;
 }
-type RecentGame = Game & { lastPlayed: string; result: string; won: boolean };
+type RecentGame = Game & { lastPlayed: string; result: string; won: boolean; cfgKey?: string };
 
 
-const FALLBACK_RECENT: RecentGame[] = [
-  { id: 101, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/card-blackjack.webp`,  players: 0, maxPlayers: 0, activeBets: "", status: "Completed", lastPlayed: "—", result: "—", won: true  },
-  { id: 102, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/card-roulette.webp`,   players: 0, maxPlayers: 0, activeBets: "", status: "Completed", lastPlayed: "—", result: "—", won: false },
-];
+function buildRecentFromTracked(): RecentGame[] {
+  return getTrackedGames()
+    .filter(t => GAME_DISPLAY[t.key])
+    .slice(0, 6)
+    .map((t, i) => {
+      const d = GAME_DISPLAY[t.key];
+      return {
+        id: 200 + i, name: d.name, category: d.category, image: d.image,
+        players: 0, maxPlayers: 0, activeBets: "", status: "Completed",
+        lastPlayed: timeSince(new Date(t.playedAt).toISOString()),
+        result: "—", won: false, cfgKey: t.key,
+      };
+    });
+}
 
 const FALLBACK_LIVE = LIVE_DEFAULTS as unknown as Game[];
 
@@ -184,8 +195,8 @@ const DEFAULT_CFG = GAME_CFG.blackjack;
 
 /* ─── Recently Played Card ────────────────────────────────────── */
 function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) {
-  const gameKey = NAME_TO_GAME[game.name] ?? "blackjack";
-  const cfg = GAME_CFG[gameKey] ?? DEFAULT_CFG;
+  const cfg = GAME_CFG[game.cfgKey ?? (NAME_TO_GAME[game.name] ?? "blackjack")] ?? DEFAULT_CFG;
+  const hasResult = game.result !== "—";
   const won = game.won;
   const accent = won ? "#4ade80" : "#ef4444";
   const g: CatalogGame = {
@@ -195,13 +206,13 @@ function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) 
     gradient: cfg.gradient,
     neonClass: cfg.neonClass,
     neonColor: cfg.neonColor,
-    badge: won ? "WON" : "LOST",
-    badgeColor: won ? "#166534" : "#7f1d1d",
-    players: game.lastPlayed !== "—" ? `⏱ ${game.lastPlayed}` : undefined,
-    betRange: game.result !== "—" ? `${game.result} chips` : undefined,
+    badge:      hasResult ? (won ? "WON" : "LOST") : undefined,
+    badgeColor: hasResult ? (won ? "#166534" : "#7f1d1d") : undefined,
+    players: `⏱ ${game.lastPlayed}`,
+    betRange: hasResult ? `${game.result} chips` : undefined,
     actionLabel: "Play Again",
-    statusLabel: won ? "WON" : "LOST",
-    statusColor: accent,
+    statusLabel: hasResult ? (won ? "WON" : "LOST") : "PLAYED",
+    statusColor: hasResult ? accent : "#64748b",
   };
   return <CatalogCard game={g} onClick={onPlay} />;
 }
@@ -282,12 +293,19 @@ export function Lobby() {
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
 
-  // ── Recently Played — real transaction history ─────────────────
-  const [recentGames,  setRecentGames]  = useState<RecentGame[]>([]);
+  // ── Recently Played — navigation-tracked + transaction-enriched ─
+  const [recentGames,  setRecentGames]  = useState<RecentGame[]>(buildRecentFromTracked);
   const [liveActivity, setLiveActivity] = useState<Game[]>(FALLBACK_LIVE);
 
   useEffect(() => {
-    if (!sessionToken || !playerId || activeNav !== "home") return;
+    if (activeNav !== "home") return;
+
+    // Always rebuild from navigation history (refreshes relative timestamps)
+    const baseList = buildRecentFromTracked();
+    setRecentGames(baseList);
+    if (!sessionToken || !playerId || baseList.length === 0) return;
+
+    // Enrich with win/loss data from transaction history
     const TX_WAGER = new Set(["loss","fortuna-bet","fortuna-bonus-buy","rome-slots-bet","western-slots-bet","highlow_bet","baccarat","sport_bet"]);
     const TX_WIN   = new Set(["win","tournament_win","fortuna-win","rome-slots-win","western-slots-win"]);
     fetch(`${BASE}/api/players/${playerId}/transactions`, {
@@ -295,29 +313,21 @@ export function Lobby() {
     })
       .then(r => r.ok ? r.json() : Promise.reject())
       .then((txs: any[]) => {
-        const seen: Record<string, { lastAt: string; net: number }> = {};
+        const enrichment: Record<string, { net: number }> = {};
         for (const tx of txs) {
           const key = txToGameKey(tx.type);
           if (!key) continue;
-          if (!seen[key]) seen[key] = { lastAt: tx.createdAt, net: 0 };
-          if (TX_WIN.has(tx.type))   seen[key].net += Number(tx.amount);
-          if (TX_WAGER.has(tx.type)) seen[key].net -= Number(tx.amount);
+          if (!enrichment[key]) enrichment[key] = { net: 0 };
+          if (TX_WIN.has(tx.type))   enrichment[key].net += Number(tx.amount);
+          if (TX_WAGER.has(tx.type)) enrichment[key].net -= Number(tx.amount);
         }
-        const result: RecentGame[] = Object.entries(seen)
-          .sort(([, a], [, b]) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
-          .slice(0, 4)
-          .map(([key, g], i) => {
-            const d = GAME_DISPLAY[key] ?? GAME_DISPLAY.blackjack;
-            const net = Math.round(g.net);
-            return {
-              id: 200 + i, name: d.name, category: d.category, image: d.image,
-              players: 0, maxPlayers: 0, activeBets: "", status: "Completed",
-              lastPlayed: timeSince(g.lastAt),
-              result: (net >= 0 ? "+" : "-") + Math.abs(net).toLocaleString(),
-              won: net >= 0,
-            };
-          });
-        if (result.length > 0) setRecentGames(result);
+        const enriched = baseList.map(g => {
+          const e = g.cfgKey ? enrichment[g.cfgKey] : null;
+          if (!e) return g;
+          const net = Math.round(e.net);
+          return { ...g, result: (net >= 0 ? "+" : "") + net.toLocaleString(), won: net >= 0 };
+        });
+        setRecentGames(enriched);
       })
       .catch(() => {});
   }, [sessionToken, playerId, activeNav]);
@@ -654,12 +664,18 @@ export function Lobby() {
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
                 <div>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
-                  <CardGrid>
-                    {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g) => (
-                      <RecentCard key={g.id} game={g}
-                        onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
-                    ))}
-                  </CardGrid>
+                  {recentGames.length > 0 ? (
+                    <CardGrid>
+                      {recentGames.map((g) => (
+                        <RecentCard key={g.id} game={g}
+                          onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
+                      ))}
+                    </CardGrid>
+                  ) : (
+                    <p className="text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.22)" }}>
+                      Visit a game to see it here.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />

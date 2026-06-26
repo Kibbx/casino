@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { PageWrapper, CatalogCard, CardGrid } from "./shared";
 import { tableGamesData } from "../lib/gamesData";
 import { setAccessToken } from "../lib/gamePasswordGuard";
+import { trackRecentGame } from "../lib/recentGames";
 import { Lock } from "lucide-react";
 
 /* ─── Types ───────────────────────────────────────────────────────────── */
@@ -239,6 +240,7 @@ export function TableGamesPage() {
   }, [fetchTables]);
 
   const joinTable = (table: BJTable, password: string | null) => {
+    trackRecentGame("blackjack", "Blackjack");
     setAccessToken("blackjack", "open");
     sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: table.id, password }));
     setLocation("/blackjack");
@@ -290,6 +292,7 @@ export function TableGamesPage() {
         {/* Static games */}
         {tableGamesData.map((g, i) => (
           <CatalogCard key={g.id} game={g} delay={`${-(openTables.length + i)}s`} onClick={() => {
+            trackRecentGame(g.lobbyKey ?? g.id, g.name);
             if (g.tokenId) setAccessToken(g.tokenId, "open");
             setLocation(g.route);
           }} />
