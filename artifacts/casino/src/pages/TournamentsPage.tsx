@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { PageWrapper } from "./shared";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { Users, Clock, Trophy, Zap, Shield, Star, Gift, ChevronRight } from "lucide-react";
@@ -522,64 +523,8 @@ export function TournamentsPage() {
   }, [fetchData]);
 
   return (
-    <div style={{
-      minHeight: "100%", background: "#060404",
-      padding: "0 0 48px",
-    }}>
-      {/* ── Page header ─────────────────────────────────────────── */}
-      <div style={{ padding: "18px 32px 12px", maxWidth: 1164, margin: "0 auto" }}>
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          style={{ textAlign: "center", marginBottom: 6 }}
-        >
-          {/* Divider with title */}
-          <div style={{ display: "flex", alignItems: "center", gap: 16, justifyContent: "center" }}>
-            <div style={{
-              flex: 1, height: 1,
-              background: "linear-gradient(to right, transparent, rgba(249,115,22,0.6))",
-            }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: "#f97316",
-                boxShadow: "0 0 12px rgba(249,115,22,0.8)",
-                display: "inline-block",
-              }} />
-              <h1 style={{
-                fontSize: "clamp(22px, 3vw, 34px)",
-                fontWeight: 900, letterSpacing: "0.2em",
-                textTransform: "uppercase", color: "#ffffff",
-                margin: 0,
-                textShadow: "0 0 32px rgba(249,115,22,0.4)",
-              }}>
-                TOURNAMENTS
-              </h1>
-              <span style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: "#f97316",
-                boxShadow: "0 0 12px rgba(249,115,22,0.8)",
-                display: "inline-block",
-              }} />
-            </div>
-            <div style={{
-              flex: 1, height: 1,
-              background: "linear-gradient(to left, transparent, rgba(249,115,22,0.6))",
-            }} />
-          </div>
-          <p style={{ marginTop: 8, fontSize: 13, color: "rgba(255,255,255,0.35)", letterSpacing: "0.06em" }}>
-            Compete. Climb. Win big.
-          </p>
-        </motion.div>
-      </div>
-
-      {/* ── Content ─────────────────────────────────────────────── */}
-      <div style={{
-        maxWidth: 1164, margin: "0 auto",
-        padding: "0 32px",
-        display: "flex", flexDirection: "column", gap: 10,
-      }}>
+    <PageWrapper title="Tournaments" breadcrumb="Events / Tournaments" accentColor="#f97316">
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {loading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0", gap: 12 }}>
             <div style={{
@@ -639,11 +584,8 @@ export function TournamentsPage() {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
       `}</style>
-    </div>
+    </PageWrapper>
   );
 }
