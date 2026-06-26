@@ -127,7 +127,7 @@ type RecentGame = Game & { lastPlayed: string; result: string; won: boolean; cfg
 function buildRecentFromTracked(): RecentGame[] {
   return getTrackedGames()
     .filter(t => GAME_DISPLAY[t.key])
-    .slice(0, 6)
+    .slice(0, 4)
     .map((t, i) => {
       const d = GAME_DISPLAY[t.key];
       return {

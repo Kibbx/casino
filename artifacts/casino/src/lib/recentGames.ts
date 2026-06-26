@@ -6,7 +6,7 @@
  */
 
 const STORAGE_KEY = "bh_recent_games";
-const MAX_ENTRIES = 6;
+const MAX_ENTRIES = 4;
 
 export interface TrackedGame {
   /** GAME_DISPLAY key (e.g. "roulette", "mines", "rome_slots") */
