@@ -914,148 +914,178 @@ function EventCard({
 
 /* ── Bet slip ────────────────────────────────────────────────────── */
 function BetSlip({
-  entries, popularEvents = [], onWager, onRemove, onClear, onPlace,
+  entries, popularEvents = [], onRemove, onClear, onPlace, onSelect,
 }: {
   entries: BetSlipEntry[];
   popularEvents?: SbEvent[];
-  onWager: (id: string, side: "home" | "away", val: string) => void;
+  onWager?: (id: string, side: "home" | "away", val: string) => void;
   onRemove: (id: string, side: "home" | "away") => void;
   onClear: () => void;
-  onPlace: () => void;
+  onPlace: (wager: string) => void;
+  onSelect?: (ev: SbEvent, side: "home" | "away") => void;
 }) {
-  const totalWager  = entries.reduce((s, e) => s + (parseFloat(e.wager) || 0), 0);
+  const [wager, setWager] = useState("");
+  const wagerNum   = parseFloat(wager) || 0;
   const totalPayout = entries.reduce((s, e) => {
-    const p = calcPayout(e.wager, e.odds);
+    const p = calcPayout(wager, e.odds);
     return s + (p ? parseFloat(p) : 0);
   }, 0);
 
+  /* Build popular-bet rows from real events; fallback to static stubs */
+  const STATIC_POPULAR = [
+    { key: "dodgers", label: "Dodgers ML", league: "MLB", odds: -130, ev: null as SbEvent | null, side: "home" as const },
+    { key: "celtics", label: "Celtics ML",  league: "NBA", odds: -135, ev: null as SbEvent | null, side: "home" as const },
+  ];
+  const realRows = popularEvents.slice(0, 2).map((ev) => {
+    const isFav = Math.abs(ev.bestHomeOdds ?? 999) <= Math.abs(ev.bestAwayOdds ?? 999);
+    const side: "home" | "away" = isFav ? "home" : "away";
+    const team = isFav ? ev.homeTeam : ev.awayTeam;
+    const odds = (isFav ? ev.bestHomeOdds : ev.bestAwayOdds) ?? 0;
+    return { key: ev.id, label: `${team.split(" ").slice(-1)[0]} ML`, league: ev.league, odds, ev, side };
+  });
+  const popularRows = realRows.length >= 2 ? realRows : STATIC_POPULAR;
+
   return (
-    <div className="flex flex-col rounded-xl overflow-hidden"
-      style={{ background: "rgba(255,255,255,0.026)", border: "1px solid rgba(255,255,255,0.09)" }}>
-      <div className="flex items-center justify-between px-4 py-3"
-        style={{ background: "rgba(249,115,22,0.07)", borderBottom: "1px solid rgba(249,115,22,0.15)" }}>
+    <div style={{ background: "#111217", border: "1px solid #2A2B32", borderRadius: 12, overflow: "hidden" }}>
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-3.5 py-2.5"
+        style={{ background: "#241715", borderBottom: "2px solid #FF6A00" }}>
         <div className="flex items-center gap-2">
-          <ReceiptText size={14} style={{ color: "#f97316" }} />
-          <span className="font-orbitron text-[11px] font-black uppercase tracking-widest text-white">Bet Slip</span>
+          <ReceiptText size={13} style={{ color: "#FF6A00" }} />
+          <span className="font-orbitron text-[11px] font-black uppercase tracking-widest text-white">
+            Bet Slip
+          </span>
           {entries.length > 0 && (
             <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full"
-              style={{ background: "#f97316", color: "#000" }}>{entries.length}</span>
+              style={{ background: "#FF6A00", color: "#000" }}>
+              {entries.length}
+            </span>
           )}
         </div>
         {entries.length > 0 && (
-          <button onClick={onClear} className="flex items-center gap-1 text-[10px]"
-            style={{ color: "rgba(255,255,255,0.35)" }}>
+          <button onClick={onClear}
+            className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold transition-opacity hover:opacity-70"
+            style={{ color: "#8B8E98" }}>
             <Trash2 size={10} />Clear
           </button>
         )}
       </div>
 
+      {/* ── Empty state ── */}
       {entries.length === 0 && (
-        <div className="flex flex-col gap-0">
-          {/* Empty state */}
-          <div className="flex flex-col items-center gap-2 px-5 pt-6 pb-4 text-center">
-            <ReceiptText size={24} style={{ color: "rgba(255,255,255,0.07)" }} />
+        <>
+          <div className="flex flex-col items-center gap-2 px-5 pt-8 pb-5 text-center">
+            <ReceiptText size={30} style={{ color: "rgba(255,255,255,0.055)" }} />
             <p className="text-[12px] font-bold text-white">No selections yet</p>
-            <p className="text-[10px]" style={{ color: "rgba(255,255,255,0.28)" }}>
+            <p className="text-[10px]" style={{ color: "#8B8E98" }}>
               Tap any odds to build your slip.
             </p>
           </div>
-          {/* Popular Bets */}
-          {popularEvents.length > 0 && (
-            <div className="mx-3 mb-4 rounded-lg overflow-hidden"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div className="px-3 py-2 flex items-center gap-1.5"
-                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-                <TrendingUp size={10} style={{ color: "#f97316" }} />
-                <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: "#f97316" }}>
-                  Popular Bets
-                </span>
-              </div>
-              {popularEvents.slice(0, 3).map((ev, i) => {
-                const isFav   = (ev.bestHomeOdds ?? 0) < (ev.bestAwayOdds ?? 0);
-                const favTeam = isFav ? ev.homeTeam : ev.awayTeam;
-                const favOdds = isFav ? ev.bestHomeOdds : ev.bestAwayOdds;
-                const short   = favTeam.split(" ").slice(-1)[0];
-                return (
-                  <div key={ev.id} className="flex items-center justify-between px-3 py-2"
-                    style={{ borderBottom: i < Math.min(popularEvents.length, 3) - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-bold text-white truncate">{short} ML</p>
-                      <p className="text-[8px] truncate" style={{ color: "rgba(255,255,255,0.25)" }}>
-                        {ev.league}
-                      </p>
-                    </div>
-                    {favOdds !== null && (
-                      <span className="text-[10px] font-black shrink-0 ml-2"
-                        style={{ color: favOdds >= 0 ? "#22c55e" : "rgba(255,255,255,0.55)" }}>
-                        {fmtOdds(favOdds)}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+
+          {/* Popular Bets card */}
+          <div className="mx-3 mb-4 overflow-hidden" style={{ background: "#17181E", border: "1px solid #2A2B32", borderRadius: 9 }}>
+            <div className="px-3 py-2 flex items-center gap-1.5" style={{ borderBottom: "1px solid #2A2B32" }}>
+              <TrendingUp size={10} style={{ color: "#FF6A00" }} />
+              <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: "#FF6A00" }}>
+                Popular Bets
+              </span>
             </div>
-          )}
-        </div>
+            {popularRows.map((row, i) => (
+              <button
+                key={row.key}
+                onClick={() => row.ev && onSelect && onSelect(row.ev, row.side)}
+                disabled={!row.ev || !onSelect}
+                className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors"
+                style={{
+                  borderBottom: i < popularRows.length - 1 ? "1px solid #2A2B32" : "none",
+                  cursor: row.ev && onSelect ? "pointer" : "default",
+                }}>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold text-white truncate">{row.label}</p>
+                  <p className="text-[8px] uppercase tracking-wide truncate" style={{ color: "#8B8E98" }}>
+                    {row.league}
+                  </p>
+                </div>
+                <span className="text-[11px] font-black shrink-0 ml-2"
+                  style={{ color: row.odds >= 0 ? "#00E676" : "rgba(255,255,255,0.6)" }}>
+                  {fmtOdds(row.odds)}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
+      {/* ── Selections ── */}
       {entries.length > 0 && (
         <div className="flex flex-col gap-2 p-3">
-          {entries.map(e => {
-            const payout = calcPayout(e.wager, e.odds);
-            return (
-              <div key={`${e.eventId}-${e.side}`} className="rounded-lg p-3 relative"
-                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                <button onClick={() => onRemove(e.eventId, e.side)}
-                  className="absolute top-2 right-2" style={{ color: "rgba(255,255,255,0.25)" }}>
-                  <X size={12} />
-                </button>
-                <p className="text-[11px] font-bold text-white pr-5 leading-snug">{e.teamName}</p>
-                <p className="text-[9px] mt-0.5 uppercase tracking-wide"
-                  style={{ color: "rgba(255,255,255,0.3)" }}>ML · {e.matchup}</p>
-                <div className="flex items-center justify-between mt-1.5">
-                  <span className="text-[14px] font-black"
-                    style={{ color: e.odds >= 0 ? "#22c55e" : "#f97316" }}>{fmtOdds(e.odds)}</span>
-                  <span className="text-[9px]" style={{ color: "rgba(255,255,255,0.28)" }}>
-                    {impliedPct(e.odds)} implied
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center gap-1">
-                  <span className="text-[11px] font-black" style={{ color: "rgba(255,255,255,0.4)" }}>$</span>
-                  <input type="number" min={0} placeholder="0.00" value={e.wager}
-                    onChange={ev => onWager(e.eventId, e.side, ev.target.value)}
-                    className="flex-1 bg-transparent border-b text-[12px] font-bold text-white outline-none"
-                    style={{ borderColor: "rgba(249,115,22,0.35)", paddingBottom: 2 }} />
-                  {payout && (
-                    <span className="text-[10px] font-bold shrink-0" style={{ color: "#22c55e" }}>
-                      → ${payout}
-                    </span>
-                  )}
-                </div>
+          {entries.map(e => (
+            <div key={`${e.eventId}-${e.side}`} className="rounded-lg p-3 relative"
+              style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
+              <button onClick={() => onRemove(e.eventId, e.side)}
+                className="absolute top-2 right-2 transition-opacity hover:opacity-60"
+                style={{ color: "#8B8E98" }}>
+                <X size={12} />
+              </button>
+              <p className="text-[11px] font-bold text-white pr-5 leading-snug">{e.teamName}</p>
+              <p className="text-[8px] mt-0.5 uppercase tracking-wide" style={{ color: "#8B8E98" }}>
+                ML · {e.matchup}
+              </p>
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-[15px] font-black"
+                  style={{ color: e.odds >= 0 ? "#00E676" : "#FF6A00" }}>
+                  {fmtOdds(e.odds)}
+                </span>
+                <span className="text-[8px]" style={{ color: "#8B8E98" }}>
+                  {impliedPct(e.odds)} implied
+                </span>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
 
+      {/* ── Wager + Place ── */}
       {entries.length > 0 && (
-        <div className="p-3 flex flex-col gap-2"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <div className="flex justify-between text-[10px]">
-            <span style={{ color: "rgba(255,255,255,0.35)" }}>Total wager</span>
-            <span className="font-bold text-white">${totalWager.toFixed(2)}</span>
+        <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: "1px solid #2A2B32" }}>
+          {/* Wager row */}
+          <div className="flex items-center gap-2 px-3 py-2.5 mt-2"
+            style={{ background: "#17181E", border: "1px solid #2A2B32", borderRadius: 8 }}>
+            <span className="text-[13px] font-black" style={{ color: "#8B8E98" }}>$</span>
+            <input
+              type="number" min={0} placeholder="0.00" value={wager}
+              onChange={ev => setWager(ev.target.value)}
+              className="flex-1 bg-transparent text-[13px] font-bold text-white outline-none"
+              style={{ caretColor: "#FF6A00" }}
+            />
+            {totalPayout > 0 && (
+              <span className="text-[10px] font-black shrink-0" style={{ color: "#00E676" }}>
+                → ${totalPayout.toFixed(0)}
+              </span>
+            )}
           </div>
-          <div className="flex justify-between text-[10px]">
-            <span style={{ color: "rgba(255,255,255,0.35)" }}>Est. payout</span>
-            <span className="font-bold" style={{ color: "#22c55e" }}>${totalPayout.toFixed(2)}</span>
-          </div>
-          <p className="text-[9px] text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
+
+          {/* Payout summary */}
+          {wagerNum > 0 && (
+            <div className="flex justify-between text-[9px] px-0.5">
+              <span style={{ color: "#8B8E98" }}>Est. payout</span>
+              <span className="font-bold" style={{ color: "#00E676" }}>${totalPayout.toFixed(2)}</span>
+            </div>
+          )}
+
+          <p className="text-[8px] text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
             Virtual chips only · No real-money wagering
           </p>
-          <button onClick={onPlace}
-            className="w-full py-2.5 rounded-lg font-orbitron text-[11px] font-black uppercase tracking-widest"
-            style={{ background: "linear-gradient(135deg,#f97316,#ea580c)", color: "#fff",
-              boxShadow: "0 0 18px rgba(249,115,22,0.4)" }}>
+
+          {/* Place button */}
+          <button onClick={() => onPlace(wager)}
+            className="w-full py-2.5 rounded-lg font-orbitron text-[11px] font-black uppercase tracking-widest transition-opacity active:opacity-80"
+            style={{
+              background: "linear-gradient(135deg, #FF6A00, #cc5500)",
+              color: "#fff",
+              boxShadow: "0 0 18px rgba(255,106,0,0.35)",
+            }}>
             Place {entries.length === 1 ? "Bet" : `${entries.length} Bets`}
           </button>
         </div>
@@ -1386,7 +1416,7 @@ export function SportsbookPage() {
     setSelected(prev => { const n = new Set(prev); n.delete(`${id}-${side}`); return n; });
   }
   function clearSlip() { setSlip([]); setSelected(new Set()); }
-  function placeBets()  { setPlaced(true); clearSlip(); setTimeout(() => setPlaced(false), 3500); }
+  function placeBets(_wager?: string)  { setPlaced(true); clearSlip(); setTimeout(() => setPlaced(false), 3500); }
 
   const liveEvents = events.filter(e => e.live);
 
@@ -1661,10 +1691,10 @@ export function SportsbookPage() {
             <BetSlip
               entries={slip}
               popularEvents={pagedEvents}
-              onWager={updateWager}
               onRemove={removeEntry}
               onClear={clearSlip}
               onPlace={placeBets}
+              onSelect={toggleSelection}
             />
           </div>
         </div>
