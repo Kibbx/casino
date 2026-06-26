@@ -40,6 +40,7 @@ import { MktComingSoon }      from "./MktComingSoon";
 import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
+import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
 import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
 
 const IMGS = import.meta.env.BASE_URL;
@@ -115,6 +116,28 @@ const navGroups: NavGroup[] = [
   },
 ];
 
+/* ─── Live Activity — server game string → display/nav config ─── */
+const ACTIVITY_MAP: Record<string, { cfgKey: string; name: string; route: string; launchKey?: string; tokenId?: string }> = {
+  "blackjack":    { cfgKey: "blackjack", name: "Blackjack",       route: "/blackjack",    launchKey: "blackjack" },
+  "roulette":     { cfgKey: "roulette",  name: "Roulette",        route: "/roulette",     launchKey: "roulette"  },
+  "baccarat":     { cfgKey: "baccarat",  name: "Baccarat",        route: "/baccarat",     launchKey: "baccarat"  },
+  "poker":        { cfgKey: "poker",     name: "Poker",           route: "/poker-tables", launchKey: "poker"     },
+  "poker-lobby":  { cfgKey: "poker",     name: "Poker",           route: "/poker-tables", launchKey: "poker"     },
+  "high-low":     { cfgKey: "highlow",   name: "High Low",        route: "/high-low",     launchKey: "highlow"   },
+  "highlow":      { cfgKey: "highlow",   name: "High Low",        route: "/high-low",     launchKey: "highlow"   },
+  "slots":        { cfgKey: "slots",     name: "Slots",           route: "/slots",        tokenId: "slots"       },
+  "fortuna":      { cfgKey: "slots",     name: "Fortuna",         route: "/rome-slots",   tokenId: "slots"       },
+  "rome-slots":   { cfgKey: "slots",     name: "Fortuna",         route: "/rome-slots",   tokenId: "slots"       },
+  "western-slots":{ cfgKey: "slots",     name: "Deadwood Dollars",route: "/western-slots",tokenId: "slots"       },
+  "mines":        { cfgKey: "mines",     name: "Mines",           route: "/mines",        launchKey: "mines"     },
+  "mob-tower":    { cfgKey: "mob_tower", name: "Mob Tower",       route: "/mob-tower",    launchKey: "mobtower"  },
+  "horse-racing": { cfgKey: "horse",     name: "Horse Racing",    route: "/horse-racing", launchKey: "horse"     },
+  "bingo":        { cfgKey: "bingo",     name: "Bingo",           route: "/bingo",        launchKey: "bingo"     },
+  "lottery":      { cfgKey: "lottery",   name: "Lottery",         route: "/lottery",      launchKey: "lottery"   },
+  "cases":        { cfgKey: "slots",     name: "Case Opening",    route: "/cases"                                },
+  "keno":         { cfgKey: "slots",     name: "Keno",            route: "/keno",         tokenId: "keno"        },
+};
+
 /* ─── Section header ──────────────────────────────────────────── */
 function SectionHeader({ label, dotColor }: { label: string; dotColor: string }) {
   return (
@@ -155,12 +178,37 @@ export function Lobby() {
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
 
-  // ── Recently Played + Live Activity — both from localStorage ────
+  // ── Recently Played ───────────────────────────────────────────
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedEntry[]>(getRecentlyPlayed);
 
   useEffect(() => {
     if (activeNav !== "home") return;
     setRecentlyPlayed(getRecentlyPlayed());
+  }, [activeNav]);
+
+  // ── Live Activity — real players from server, polled every 10 s ──
+  const [liveActivity, setLiveActivity] = useState<Array<{ username: string; game: string }>>([]);
+
+  useEffect(() => {
+    if (activeNav !== "home") return;
+    async function poll() {
+      try {
+        const r = await fetch(`${BASE}/api/live-activity`);
+        if (!r.ok) return;
+        const data: Array<{ username: string; game: string }> = await r.json();
+        const seen = new Set<string>();
+        const deduped = data.filter(({ game }) => {
+          if (!ACTIVITY_MAP[game]) return false;
+          if (seen.has(game)) return false;
+          seen.add(game);
+          return true;
+        }).slice(0, 4);
+        setLiveActivity(deduped);
+      } catch { /* keep previous state */ }
+    }
+    poll();
+    const id = setInterval(poll, 10_000);
+    return () => clearInterval(id);
   }, [activeNav]);
 
 
@@ -468,28 +516,41 @@ export function Lobby() {
                 </div>
                 <div>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
-                  {recentlyPlayed.length > 0 ? (
+                  {liveActivity.length > 0 ? (
                     <CardGrid>
-                      {recentlyPlayed.map((entry) => (
-                        <CatalogCard
-                          key={entry.id}
-                          game={{ ...entry.game, statusLabel: "ACTIVE", statusColor: "#22c55e" }}
-                          onClick={() => {
-                            if (entry.launchData?.tableId !== undefined) {
-                              setAccessToken("blackjack", "open");
-                              sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: entry.launchData.tableId, password: entry.launchData.password ?? null }));
-                              setLocation("/blackjack");
-                            } else {
-                              if (entry.tokenId) setAccessToken(entry.tokenId, "open");
-                              setLocation(entry.route);
-                            }
-                          }}
-                        />
-                      ))}
+                      {liveActivity.map(({ username, game }) => {
+                        const m   = ACTIVITY_MAP[game]!;
+                        const cfg = GAME_CFG[m.cfgKey] ?? GAME_CFG.blackjack;
+                        const g: CatalogGame = {
+                          id:          `live-${username}-${game}`,
+                          name:        m.name,
+                          description: cfg.description,
+                          gradient:    cfg.gradient,
+                          neonClass:   cfg.neonClass,
+                          neonColor:   cfg.neonColor,
+                          players:     `${username} is playing`,
+                          statusLabel: "ACTIVE",
+                          statusColor: "#22c55e",
+                        };
+                        return (
+                          <CatalogCard
+                            key={g.id}
+                            game={g}
+                            onClick={() => {
+                              if (m.launchKey) {
+                                const def = GAMES[m.launchKey];
+                                if (def) { enter(def); return; }
+                              }
+                              if (m.tokenId) setAccessToken(m.tokenId, "open");
+                              setLocation(m.route);
+                            }}
+                          />
+                        );
+                      })}
                     </CardGrid>
                   ) : (
                     <p className="text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.22)" }}>
-                      No active games yet. Start playing to see your activity here.
+                      No players online right now. Check back soon.
                     </p>
                   )}
                 </div>
