@@ -461,25 +461,21 @@ function PreviousResults({ sessionToken }: { sessionToken: string | null }) {
     <div
       className="rounded-2xl overflow-hidden"
       style={{
-        background: "linear-gradient(160deg,#0b0a10 0%,#080710 100%)",
-        border: "1px solid rgba(139,92,246,0.2)",
-        boxShadow: "0 0 32px rgba(139,92,246,0.04)",
+        background: "linear-gradient(160deg,#0e0b06 0%,#0a0804 100%)",
+        border: "1px solid rgba(245,197,24,0.15)",
       }}
     >
-      {/* Toggle header */}
+      {/* Toggle header — same height/style as YourTickets */}
       <button
         className="w-full px-6 py-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
-        style={{ borderBottom: open ? "1px solid rgba(139,92,246,0.15)" : "none" }}
+        style={{ borderBottom: open ? "1px solid rgba(245,197,24,0.1)" : "none" }}
         onClick={handleToggle}
       >
-        <div className="flex items-center gap-3">
-          <Award size={18} style={{ color: "#8b5cf6" }} />
-          <span className="font-rajdhani font-black text-base uppercase tracking-widest text-white">
-            {open ? "Hide Previous Results" : "Show Previous Results"}
-          </span>
-        </div>
+        <span className="font-rajdhani font-black text-base uppercase tracking-widest text-white">
+          Previous Results
+        </span>
         <motion.span animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
-          <ChevronDown size={18} style={{ color: "rgba(255,255,255,0.35)" }} />
+          <ChevronDown size={18} style={{ color: "rgba(255,255,255,0.4)" }} />
         </motion.span>
       </button>
 
@@ -493,102 +489,90 @@ function PreviousResults({ sessionToken }: { sessionToken: string | null }) {
             transition={{ duration: 0.25, ease: "easeInOut" }}
             style={{ overflow: "hidden" }}
           >
-            <div className="px-6 py-5">
+            <div className="px-6 py-4">
               {loading && (
-                <div className="text-center py-8" style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+                <div className="text-center py-6" style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
                   Loading results…
                 </div>
               )}
               {!loading && draws.length === 0 && (
-                <div className="text-center py-8 flex flex-col items-center gap-2">
-                  <Calendar size={28} style={{ color: "rgba(255,255,255,0.1)" }} />
+                <div className="text-center py-6 flex flex-col items-center gap-2">
+                  <Calendar size={24} style={{ color: "rgba(255,255,255,0.1)" }} />
                   <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>No completed draws yet</p>
                 </div>
               )}
               {!loading && draws.length > 0 && (
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-3">
                   {draws.map(d => {
                     const hasWin = d.myTickets.some(t => t.result_tier === "jackpot" || t.result_tier === "consolation");
                     const hasJackpotWin = d.myTickets.some(t => t.result_tier === "jackpot");
                     return (
                       <div key={d.id}
-                        className="rounded-xl p-4"
+                        className="rounded-xl p-3"
                         style={{
-                          background: hasWin ? "rgba(245,197,24,0.04)" : "rgba(255,255,255,0.025)",
-                          border: `1px solid ${hasWin ? "rgba(245,197,24,0.2)" : "rgba(255,255,255,0.07)"}`,
+                          background: hasWin ? "rgba(245,197,24,0.04)" : "rgba(255,255,255,0.02)",
+                          border: `1px solid ${hasWin ? "rgba(245,197,24,0.18)" : "rgba(255,255,255,0.06)"}`,
                         }}
                       >
-                        {/* Draw header */}
-                        <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
-                          <div>
-                            <p className="text-xs font-black uppercase tracking-widest mb-0.5"
-                              style={{ color: "#8b5cf6" }}>
+                        {/* Draw header row */}
+                        <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-black uppercase tracking-widest"
+                              style={{ color: "rgba(245,197,24,0.7)" }}>
                               Draw #{d.id}
-                            </p>
-                            <div className="flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
-                              <Calendar size={11} />
-                              <span className="text-[11px]">{fmtDrawLabel(d.drawTime)}</span>
+                            </span>
+                            <div className="flex items-center gap-1" style={{ color: "rgba(255,255,255,0.3)" }}>
+                              <Calendar size={10} />
+                              <span className="text-[10px]">{fmtShortDate(d.drawTime)}</span>
                             </div>
                           </div>
 
                           {/* Result badges */}
-                          <div className="flex flex-wrap gap-1.5">
+                          <div className="flex flex-wrap gap-1">
                             {d.jackpotRolledOver && (
-                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
-                                style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}>
-                                🔄 Jackpot Rolled Over
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+                                style={{ background: "rgba(239,68,68,0.1)", color: "#f87171", border: "1px solid rgba(239,68,68,0.2)" }}>
+                                Rolled Over
                               </span>
                             )}
                             {d.consolationRolledIntoJackpot && (
-                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
-                                style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }}>
-                                ↑ Consolation → Jackpot
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+                                style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", border: "1px solid rgba(255,255,255,0.1)" }}>
+                                Con→Jack
                               </span>
                             )}
                             {hasJackpotWin && (
-                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
-                                style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.3)" }}>
-                                🏆 You Won!
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+                                style={{ background: "rgba(251,191,36,0.12)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.25)" }}>
+                                🏆 Won
                               </span>
                             )}
                             {!hasJackpotWin && hasWin && (
-                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
-                                style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
-                                🎉 Consolation Win
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase"
+                                style={{ background: "rgba(34,197,94,0.1)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.2)" }}>
+                                🎉 Win
                               </span>
                             )}
                           </div>
                         </div>
 
-                        {/* Winning numbers */}
-                        <div>
-                          <p className="text-[9px] uppercase tracking-[0.18em] mb-2"
-                            style={{ color: "rgba(255,255,255,0.3)" }}>Winning Numbers</p>
-                          {d.winningNumbers.length === 0 ? (
-                            <p className="text-xs italic" style={{ color: "rgba(255,255,255,0.2)" }}>Not drawn</p>
-                          ) : (
-                            <div className="flex gap-2 flex-wrap">
-                              {d.winningNumbers.map((n, i) => <WinBall key={i} n={n} />)}
+                        {/* Winning number balls + prizes on one row */}
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div className="flex gap-1.5">
+                            {d.winningNumbers.length === 0
+                              ? <span className="text-[10px] italic" style={{ color: "rgba(255,255,255,0.2)" }}>Not drawn</span>
+                              : d.winningNumbers.map((n, i) => <WinBall key={i} n={n} size={28} />)
+                            }
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <div className="rounded px-2 py-1" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Jackpot</p>
+                              <p className="text-[10px] font-black" style={{ color: "#f5c518" }}>{fmt(d.jackpot)}</p>
                             </div>
-                          )}
-                        </div>
-
-                        {/* Prize summary */}
-                        <div className="flex gap-3 mt-3">
-                          {[
-                            { label: "Jackpot", value: `${fmt(d.jackpot)} chips`, color: "#f5c518" },
-                            { label: "Consolation", value: `${fmt(d.consolation)} chips`, color: "#a78bfa" },
-                          ].map(({ label, value, color }) => (
-                            <div key={label} className="flex-1 rounded-lg px-3 py-2"
-                              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                              <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</p>
-                              <p className="text-xs font-black" style={{ color }}>{value}</p>
+                            <div className="rounded px-2 py-1" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              <p className="text-[8px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.25)" }}>Tickets</p>
+                              <p className="text-[10px] font-black text-white">{d.myTickets.length}</p>
                             </div>
-                          ))}
-                          <div className="flex-1 rounded-lg px-3 py-2"
-                            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                            <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Your Tickets</p>
-                            <p className="text-xs font-black text-white">{d.myTickets.length}</p>
                           </div>
                         </div>
                       </div>
@@ -947,11 +931,11 @@ export function LotteryPage() {
               )}
             </AnimatePresence>
           </div>
-          <YourTickets tickets={tickets} settings={settings} loading={ticketsLoading} />
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <YourTickets tickets={tickets} settings={settings} loading={ticketsLoading} />
+            <PreviousResults sessionToken={sessionToken} />
+          </div>
         </div>
-
-        {/* Full-width previous results */}
-        <PreviousResults sessionToken={sessionToken} />
       </div>
     </PageWrapper>
   );
