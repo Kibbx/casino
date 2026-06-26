@@ -38,6 +38,7 @@ interface ScoreInfo {
 type ScoreMap = Record<string, ScoreInfo>; // keyed by event ID
 
 interface BetSlipEntry {
+  selectionId: string;      // unique per side: `${eventId}-${side}`
   eventId: string;
   side: "home" | "away";
   teamName: string;
@@ -923,7 +924,7 @@ function BetSlip({
   entries: BetSlipEntry[];
   popularEvents?: SbEvent[];
   onWager?: (id: string, side: "home" | "away", val: string) => void;
-  onRemove: (id: string, side: "home" | "away") => void;
+  onRemove: (selectionId: string) => void;
   onClear: () => void;
   onPlace: (wager: string) => void;
   onSelect?: (ev: SbEvent, side: "home" | "away") => void;
@@ -932,10 +933,9 @@ function BetSlip({
   const [parlayWager,  setParlayWager]  = useState("");
   const [singleWagers, setSingleWagers] = useState<Record<string, string>>({});
 
-  const key = (e: BetSlipEntry) => `${e.eventId}-${e.side}`;
-  const getSingleWager = (e: BetSlipEntry) => singleWagers[key(e)] ?? "";
+  const getSingleWager = (e: BetSlipEntry) => singleWagers[e.selectionId] ?? "";
   const setSingleWager = (e: BetSlipEntry, val: string) =>
-    setSingleWagers(prev => ({ ...prev, [key(e)]: val }));
+    setSingleWagers(prev => ({ ...prev, [e.selectionId]: val }));
   const addToSingle = (e: BetSlipEntry, amt: number) => {
     const cur = parseFloat(getSingleWager(e)) || 0;
     setSingleWager(e, String(cur + amt));
@@ -1096,9 +1096,9 @@ function BetSlip({
               {/* Picks list */}
               <div className="flex flex-col px-3 pt-2 gap-1.5">
                 {entries.map(e => (
-                  <div key={key(e)} className="flex items-center gap-2 py-1.5 px-2 rounded-lg"
+                  <div key={e.selectionId} className="flex items-center gap-2 py-1.5 px-2 rounded-lg"
                     style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
-                    <button onClick={() => onRemove(e.eventId, e.side)}
+                    <button onClick={() => onRemove(e.selectionId)}
                       className="shrink-0 rounded-full p-0.5 transition-opacity hover:opacity-70"
                       style={{ border: "1px solid rgba(255,106,0,0.4)", color: "#FF6A00" }}>
                       <X size={9} />
@@ -1169,7 +1169,7 @@ function BetSlip({
             const swNum  = parseFloat(sw) || 0;
             const payout = swNum > 0 ? swNum * americanToDecimal(e.odds) : 0;
             return (
-              <div key={key(e)} className="rounded-xl overflow-hidden"
+              <div key={e.selectionId} className="rounded-xl overflow-hidden"
                 style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
                 {/* Pick header */}
                 <div className="flex items-start justify-between px-3 pt-2.5 pb-1.5"
@@ -1184,7 +1184,7 @@ function BetSlip({
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
-                    <button onClick={() => onRemove(e.eventId, e.side)}
+                    <button onClick={() => onRemove(e.selectionId)}
                       className="rounded-full p-0.5 transition-opacity hover:opacity-70"
                       style={{ border: "1px solid rgba(255,106,0,0.4)", color: "#FF6A00" }}>
                       <X size={9} />
@@ -1541,25 +1541,29 @@ export function SportsbookPage() {
   }
 
   function toggleSelection(event: SbEvent, side: "home" | "away") {
-    const key  = `${event.id}-${side}`;
-    const odds = side === "home" ? event.bestHomeOdds : event.bestAwayOdds;
-    const team = side === "home" ? event.homeTeam    : event.awayTeam;
+    const selId = `${event.id}-${side}`;
+    const odds  = side === "home" ? event.bestHomeOdds : event.bestAwayOdds;
+    const team  = side === "home" ? event.homeTeam     : event.awayTeam;
     if (odds === null) return;
-    setSelected(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
+    setSelected(prev => { const n = new Set(prev); n.has(selId) ? n.delete(selId) : n.add(selId); return n; });
     setSlip(prev => {
-      const exists = prev.find(e => e.eventId === event.id && e.side === side);
-      if (exists) return prev.filter(e => !(e.eventId === event.id && e.side === side));
-      return [...prev, { eventId: event.id, side, teamName: team,
-        matchup: `${event.homeTeam} vs ${event.awayTeam}`, odds, wager: "" }];
+      const exists = prev.find(e => e.selectionId === selId);
+      if (exists) return prev.filter(e => e.selectionId !== selId);
+      return [...prev, {
+        selectionId: selId,
+        eventId: event.id,
+        side,
+        teamName: team,
+        matchup: `${event.homeTeam} vs ${event.awayTeam}`,
+        odds,
+        wager: "",
+      }];
     });
   }
 
-  function updateWager(id: string, side: "home" | "away", val: string) {
-    setSlip(prev => prev.map(e => e.eventId === id && e.side === side ? { ...e, wager: val } : e));
-  }
-  function removeEntry(id: string, side: "home" | "away") {
-    setSlip(prev => prev.filter(e => !(e.eventId === id && e.side === side)));
-    setSelected(prev => { const n = new Set(prev); n.delete(`${id}-${side}`); return n; });
+  function removeEntry(selectionId: string) {
+    setSlip(prev => prev.filter(e => e.selectionId !== selectionId));
+    setSelected(prev => { const n = new Set(prev); n.delete(selectionId); return n; });
   }
   function clearSlip() { setSlip([]); setSelected(new Set()); }
   function placeBets(_wager?: string)  { setPlaced(true); clearSlip(); setTimeout(() => setPlaced(false), 3500); }

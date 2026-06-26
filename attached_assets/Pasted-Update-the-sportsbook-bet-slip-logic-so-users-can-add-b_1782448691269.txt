@@ -1,0 +1,141 @@
+Update the sportsbook bet slip logic so users can add both moneyline sides from the **same game** into a parlay.
+
+Currently, the app likely blocks same-game conflicting selections, such as:
+
+* Dodgers ML
+* Yankees ML
+
+or:
+
+* Norway ML
+* France ML
+
+Change the behavior so both teams from the same event can be selected together and included in the same parlay.
+
+### Goal
+
+Allow a parlay to contain multiple moneyline selections from the same game, including both opposing teams.
+
+### Requirements
+
+#### Selection Rules
+
+* Do not automatically remove the first team when the user selects the opposing team from the same game.
+* Do not block the second team from being added.
+* Do not show an error like:
+
+  * `Cannot parlay selections from the same game`
+  * `Conflicting selection`
+  * `Only one pick per event`
+* Allow both moneyline selections from the same event to appear in the bet slip.
+
+Example allowed parlay:
+
+```txt
+Norway vs France
+- Norway Moneyline
+
+Norway vs France
+- France Moneyline
+```
+
+Another allowed parlay:
+
+```txt
+Dodgers vs Yankees
+- Dodgers ML
+- Yankees ML
+```
+
+#### Data Model
+
+Update the selection uniqueness logic.
+
+Selections should be unique by `selectionId`, not by `eventId`.
+
+Bad logic to remove:
+
+```js
+selectedBets.find(bet => bet.eventId === newBet.eventId)
+```
+
+or:
+
+```js
+selectedBets.filter(bet => bet.eventId !== newBet.eventId)
+```
+
+Correct logic:
+
+```js
+selectedBets.find(bet => bet.selectionId === newBet.selectionId)
+```
+
+Each team/side should have its own unique `selectionId`, even if both belong to the same `eventId`.
+
+Example:
+
+```js
+{
+  eventId: "norway-france",
+  selectionId: "norway-france-norway-ml",
+  eventName: "Norway vs France",
+  team: "Norway",
+  market: "Moneyline",
+  odds: +150
+}
+
+{
+  eventId: "norway-france",
+  selectionId: "norway-france-france-ml",
+  eventName: "Norway vs France",
+  team: "France",
+  market: "Moneyline",
+  odds: -120
+}
+```
+
+#### Bet Slip Display
+
+When both sides are selected:
+
+* Show both selections as separate rows.
+* Keep the same event name on each row.
+* Show the selected team name clearly.
+* Show the market as `Moneyline`.
+* Show each odds value.
+* Allow each row to be removed individually.
+
+#### Parlay Logic
+
+* Include all selected moneyline picks in the parlay calculation, even if multiple picks share the same `eventId`.
+* Parlay odds should recalculate using every selected bet.
+* The bet count should reflect the true number of selections.
+
+Example:
+
+```txt
+2 Pick Parlay
+Norway ML
+France ML
+```
+
+#### Singles Logic
+
+* Singles should still show each selection individually.
+* If both teams from the same game are selected, both should appear as separate singles.
+* Each single should have its own wager state.
+
+#### UI Behavior
+
+* If a selected odd is clicked again, toggle only that exact selection off.
+* Do not remove other selections from the same game.
+* Visually mark both odds buttons as selected if both sides are clicked.
+
+#### Important
+
+This is intentionally allowing same-game opposing moneyline selections for demo/custom sportsbook behavior. Do not enforce real sportsbook restriction logic unless explicitly requested later.
+
+### Deliverable
+
+Modify the current bet selection and bet slip logic so the user can parlay both moneyline sides from the same game while keeping Parlay and Singles views separated.
