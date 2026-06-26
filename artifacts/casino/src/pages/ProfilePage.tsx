@@ -59,7 +59,13 @@ export function ProfilePage() {
   const [txs,       setTxs]       = useState<Transaction[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
+  const [showSecurity, setShowSecurity] = useState(false);
+  const [curPin,       setCurPin]       = useState("");
+  const [newPin,       setNewPin]       = useState("");
+  const [confirmPin,   setConfirmPin]   = useState("");
+  const [pinSaving,    setPinSaving]    = useState(false);
+  const [pinMsg,       setPinMsg]       = useState<{ ok: boolean; text: string } | null>(null);
 
   const load = useCallback(async () => {
     if (!sessionToken || !playerId) return;
@@ -82,6 +88,29 @@ export function ProfilePage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (player) setAvatarUrl(player.avatarUrl ?? null); }, [player]);
+
+  async function handleChangePin() {
+    if (!curPin || !newPin) { setPinMsg({ ok: false, text: "Fill in all fields." }); return; }
+    if (newPin.length < 4)  { setPinMsg({ ok: false, text: "New PIN must be at least 4 characters." }); return; }
+    if (newPin !== confirmPin) { setPinMsg({ ok: false, text: "New PINs don't match." }); return; }
+    setPinSaving(true); setPinMsg(null);
+    try {
+      const res = await fetch(`${BASE}/api/players/change-pin`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
+        body: JSON.stringify({ currentPin: curPin, newPin }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error((body as any).error ?? "Failed to change PIN");
+      setPinMsg({ ok: true, text: "PIN changed successfully." });
+      setCurPin(""); setNewPin(""); setConfirmPin("");
+      setTimeout(() => { setShowSecurity(false); setPinMsg(null); }, 2000);
+    } catch (e: any) {
+      setPinMsg({ ok: false, text: e.message ?? "Failed to change PIN" });
+    } finally {
+      setPinSaving(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -207,6 +236,75 @@ export function ProfilePage() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Security — change PIN */}
+          <div className="px-5 pb-5">
+            <button
+              onClick={() => { setShowSecurity(s => !s); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
+              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+              style={{
+                background: showSecurity ? "rgba(245,197,24,0.12)" : "rgba(232,64,10,0.10)",
+                color: showSecurity ? "#f5c518" : "#e8400a",
+                border: `1px solid ${showSecurity ? "rgba(245,197,24,0.35)" : "rgba(232,64,10,0.40)"}`,
+                letterSpacing: "0.1em",
+              }}
+            >
+              Security
+            </button>
+
+            {showSecurity && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                {(["Current PIN", "New PIN", "Confirm PIN"] as const).map((label, i) => {
+                  const val   = [curPin, newPin, confirmPin][i];
+                  const setFn = [setCurPin, setNewPin, setConfirmPin][i];
+                  return (
+                    <div key={label} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                      <span style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)" }}>
+                        {label}
+                      </span>
+                      <input
+                        type="password"
+                        value={val}
+                        onChange={e => setFn(e.target.value)}
+                        onKeyDown={e => e.key === "Enter" && handleChangePin()}
+                        placeholder="••••"
+                        style={{
+                          background: "rgba(0,0,0,0.35)",
+                          border: "1px solid rgba(255,255,255,0.09)",
+                          borderRadius: 7, padding: "6px 10px",
+                          color: "#fff", fontSize: 13, outline: "none",
+                          width: "100%", boxSizing: "border-box",
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+
+                {pinMsg && (
+                  <p style={{ fontSize: 11, margin: 0, color: pinMsg.ok ? "#22c55e" : "#ef4444" }}>
+                    {pinMsg.text}
+                  </p>
+                )}
+
+                <button
+                  onClick={handleChangePin}
+                  disabled={pinSaving}
+                  style={{
+                    marginTop: 2, padding: "8px 0", borderRadius: 7,
+                    background: "rgba(245,197,24,0.14)",
+                    border: "1px solid rgba(245,197,24,0.35)",
+                    color: "#f5c518", fontWeight: 700, fontSize: 11,
+                    letterSpacing: "0.08em", textTransform: "uppercase",
+                    cursor: pinSaving ? "not-allowed" : "pointer",
+                    opacity: pinSaving ? 0.7 : 1,
+                    fontFamily: "Rajdhani, sans-serif",
+                  }}
+                >
+                  {pinSaving ? "Saving…" : "Change PIN"}
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
