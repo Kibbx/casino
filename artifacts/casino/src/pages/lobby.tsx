@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import {
@@ -201,167 +202,81 @@ const NAME_TO_GAME: Record<string, string> = {
   "Bingo": "bingo", "Lottery": "lottery", "Slots Tournament": "slots",
 };
 
-/* ─── Neon colors ─────────────────────────────────────────────── */
-const RECENT_NEON   = ["neon-green", "neon-red", "neon-pink", "neon-orange"] as const;
-const LIVE_NEON     = ["neon-orange", "neon-blue", "neon-yellow", "neon-teal"] as const;
-const PULSE_DELAYS  = ["0s", "-1s", "-2s", "-3s"];
-
-/* ─── Status pill ─────────────────────────────────────────────── */
-const STATUS: Record<string, { label: string; color: string; bg: string }> = {
-  "In Progress":  { label: "IN PROGRESS", color: "#06b6d4", bg: "rgba(6,182,212,0.15)"   },
-  "Betting Open": { label: "BETTING",     color: "#22c55e", bg: "rgba(34,197,94,0.15)"   },
-  "Active":       { label: "ACTIVE",      color: "#f97316", bg: "rgba(249,115,22,0.15)"  },
-  "Race Live":    { label: "LIVE",        color: "#ef4444", bg: "rgba(239,68,68,0.18)"   },
-  "Completed":    { label: "DONE",        color: "#6b7280", bg: "rgba(107,114,128,0.12)" },
-};
-
-function StatusPill({ status }: { status: string }) {
-  const s = STATUS[status] ?? STATUS["Completed"];
-  const isLive = status === "Race Live";
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
-      style={{ color: s.color, background: s.bg, border: `1px solid ${s.color}55` }}
-    >
-      {isLive && (
-        <span className="w-1.5 h-1.5 rounded-full inline-block animate-pulse" style={{ background: s.color, boxShadow: `0 0 5px ${s.color}` }} />
-      )}
-      {s.label}
-    </span>
-  );
-}
-
-function PlayerDots({ count }: { count: number }) {
-  const show = Math.min(count, 4);
-  return (
-    <div className="flex -space-x-1.5">
-      {Array.from({ length: show }).map((_, i) => (
-        <div key={i} className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-black"
-          style={{ background: "linear-gradient(135deg,#1a1a1a,#2a2a2a)", border: "1px solid rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.7)", zIndex: show - i }}>
-          {String.fromCharCode(65 + i)}
-        </div>
-      ))}
-      {count > 4 && (
-        <div className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-black"
-          style={{ background: "#1f1f1f", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", zIndex: 0 }}>
-          +{count - 4}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── Recently Played Card ────────────────────────────────────── */
-function RecentCard({ game, neonClass, delay, onPlay }: { game: RecentGame; neonClass: string; delay: string; onPlay: () => void }) {
+/* ─── Recently Played Card — hub-page style ───────────────────── */
+function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) {
   const won = game.won;
-  const accentColor = won ? "#22c55e" : "#ef4444";
-  const pillLabel   = won ? "WON" : "LOST";
-  const pillBg      = won ? "rgba(34,197,94,0.15)" : "rgba(239,68,68,0.15)";
-
+  const accent = won ? "#4ade80" : "#ef4444";
+  const pillBg = won ? "rgba(74,222,128,0.18)" : "rgba(239,68,68,0.18)";
   return (
-    <div
-      className={`rounded-2xl overflow-hidden group neon-card ${neonClass}`}
-      style={{ width: "220px", background: "rgba(10,7,7,0.92)", animationDelay: delay }}
+    <motion.button
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      onClick={onPlay}
+      className="group relative rounded-2xl overflow-hidden cursor-pointer focus:outline-none"
+      style={{ width: 200, height: 280, background: "#050a0f", flexShrink: 0 }}
     >
-      <div className="relative h-32 overflow-hidden">
-        <img src={game.image} alt={game.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,5,5,0.95) 0%, rgba(8,5,5,0.3) 60%, transparent 100%)" }} />
-        <div className="absolute top-2.5 left-2.5">
-          <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider" style={{ background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.62)", border: "1px solid rgba(255,255,255,0.14)" }}>
-            {game.category}
-          </span>
-        </div>
-        <div className="absolute top-2.5 right-2.5">
-          <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest"
-            style={{ color: accentColor, background: pillBg, border: `1px solid ${accentColor}55` }}>
-            {pillLabel}
-          </span>
-        </div>
+      <img src={game.image} alt={game.name} className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
+      {/* Status dot */}
+      <div className="absolute top-2 left-2">
+        <span className="w-2 h-2 rounded-full inline-block" style={{ background: accent }} />
       </div>
-      <div className="px-4 py-3">
-        <h3 className="font-rajdhani text-white text-base font-black uppercase tracking-wide mb-2 leading-tight">{game.name}</h3>
-        <div className="flex items-center justify-between mb-3">
-          <PlayerDots count={game.players} />
-          <span className="text-[11px] font-medium" style={{ color: "rgba(255,255,255,0.52)" }}>{game.players}/{game.maxPlayers}</span>
-        </div>
-        <div className="flex items-center justify-between pt-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <div>
-            <p className="flex items-center gap-1 text-[10px] uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.42)" }}>
-              <Clock size={9} /> {game.lastPlayed}
-            </p>
-            <p className="text-xl font-black" style={{ color: accentColor, textShadow: `0 0 8px ${accentColor}55` }}>{game.result}</p>
-          </div>
-          <button
-            onClick={onPlay}
-            className="text-xs font-bold uppercase tracking-wide px-3.5 py-2 rounded-lg transition-all duration-200"
-            style={{ color: "rgba(255,255,255,0.65)", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.18)" }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = "#fff"; b.style.borderColor = "rgba(255,255,255,0.38)"; b.style.background = "rgba(255,255,255,0.12)"; b.style.boxShadow = "0 0 10px rgba(255,255,255,0.1)"; }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.color = "rgba(255,255,255,0.65)"; b.style.borderColor = "rgba(255,255,255,0.18)"; b.style.background = "rgba(255,255,255,0.06)"; b.style.boxShadow = "none"; }}
-          >
-            Play Again
-          </button>
-        </div>
+      {/* WON / LOST badge */}
+      <div className="absolute top-2 right-2">
+        <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.16em", color: accent, background: pillBg, border: `1px solid ${accent}55`, borderRadius: 4, padding: "2px 8px", textTransform: "uppercase" as const }}>
+          {won ? "WON" : "LOST"}
+        </span>
       </div>
-    </div>
+      {/* Bottom bar */}
+      <div className="absolute bottom-0 inset-x-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)" }}>
+        <p style={{ color: "#fff", fontWeight: 900, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.2, margin: 0 }}>{game.name}</p>
+        <p style={{ color: accent, fontSize: 12, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
+          {game.result !== "—" ? `${game.result} chips` : "No history"} · {game.lastPlayed}
+        </p>
+      </div>
+      {/* Hover overlay */}
+      <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0)", transition: "background 0.15s" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+        onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0)")} />
+    </motion.button>
   );
 }
 
-/* ─── Live Activity Card ──────────────────────────────────────── */
-function LiveCard({ game, neonClass, delay, onPlay }: { game: Game; neonClass: string; delay: string; onPlay: () => void }) {
-  const s = STATUS[game.status] ?? STATUS["Active"];
+/* ─── Live Activity Card — hub-page style ─────────────────────── */
+function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
   const isRaceLive = game.status === "Race Live";
-
+  const dotColor   = isRaceLive ? "#ef4444" : "#4ade80";
+  const subColor   = isRaceLive ? "rgba(248,113,113,0.9)" : "rgba(251,191,36,0.9)";
   return (
-    <div
-      className={`rounded-2xl overflow-hidden group neon-card ${neonClass}`}
-      style={{ width: "220px", background: "rgba(10,7,7,0.92)", animationDelay: delay }}
+    <motion.button
+      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+      onClick={onPlay}
+      className="group relative rounded-2xl overflow-hidden cursor-pointer focus:outline-none"
+      style={{ width: 200, height: 280, background: "#050a0f", flexShrink: 0 }}
     >
-      <div className="relative h-32 overflow-hidden">
-        <img src={game.image} alt={game.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,5,5,0.95) 0%, rgba(8,5,5,0.2) 60%, transparent 100%)" }} />
-        {isRaceLive && (
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(239,68,68,0.18)", border: "1px solid rgba(239,68,68,0.45)" }}>
-            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: "#ef4444", boxShadow: "0 0 6px #ef4444" }} />
-            <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: "#ef4444" }}>Live</span>
-          </div>
-        )}
-        {!isRaceLive && (
-          <div className="absolute top-2.5 left-2.5">
-            <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider" style={{ background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.62)", border: "1px solid rgba(255,255,255,0.14)" }}>
-              {game.category}
-            </span>
-          </div>
-        )}
-        <div className="absolute top-2.5 right-2.5">
-          <StatusPill status={game.status} />
-        </div>
+      <img src={game.image} alt={game.name} className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
+      {/* Status dot */}
+      <div className="absolute top-2 left-2">
+        <span className="w-2 h-2 rounded-full inline-block" style={{ background: dotColor }} />
       </div>
-      <div className="px-4 py-3">
-        <h3 className="font-rajdhani text-white text-base font-black uppercase tracking-wide mb-2 leading-tight">{game.name}</h3>
-        <div className="flex items-center justify-between mb-3">
-          <PlayerDots count={game.players} />
-          <div className="flex items-center gap-1" style={{ color: "rgba(255,255,255,0.52)" }}>
-            <Users size={10} />
-            <span className="text-[11px] font-medium">{game.players}/{game.maxPlayers}</span>
-          </div>
+      {/* Player count badge */}
+      {game.players > 0 && (
+        <div className="absolute top-2 right-2">
+          <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.16em", color: "rgba(251,191,36,0.9)", background: "rgba(0,0,0,0.65)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4, padding: "2px 8px", textTransform: "uppercase" as const }}>
+            {game.players} ONLINE
+          </span>
         </div>
-        <div className="flex items-center justify-between pt-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}>
-          <div>
-            <p className="text-[10px] uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.42)" }}>Active Bets</p>
-            <p className="text-lg font-black" style={{ color: "#f5c518", textShadow: "0 0 8px rgba(245,197,24,0.35)" }}>{game.activeBets}</p>
-          </div>
-          <button
-            onClick={onPlay}
-            className="text-xs font-black uppercase tracking-wider px-4 py-2 rounded-lg transition-all duration-200"
-            style={{ color: "#e8400a", background: "rgba(232,64,10,0.1)", border: "1px solid rgba(232,64,10,0.45)" }}
-            onMouseEnter={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "linear-gradient(135deg,#e8400a,#c43209)"; b.style.color = "#fff"; b.style.boxShadow = "0 0 18px rgba(232,64,10,0.55)"; b.style.borderColor = "#e8400a"; }}
-            onMouseLeave={e => { const b = e.currentTarget as HTMLButtonElement; b.style.background = "rgba(232,64,10,0.1)"; b.style.color = "#e8400a"; b.style.boxShadow = "none"; b.style.borderColor = "rgba(232,64,10,0.45)"; }}
-          >
-            Join
-          </button>
-        </div>
+      )}
+      {/* Bottom bar */}
+      <div className="absolute bottom-0 inset-x-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)" }}>
+        <p style={{ color: "#fff", fontWeight: 900, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.2, margin: 0 }}>{game.name}</p>
+        <p style={{ color: subColor, fontSize: 12, marginTop: 3 }}>
+          {isRaceLive ? "Race in Progress" : game.activeBets ? `${game.activeBets} wagered` : game.status}
+        </p>
       </div>
-    </div>
+      {/* Hover overlay */}
+      <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0)", transition: "background 0.15s" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+        onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0)")} />
+    </motion.button>
   );
 }
 
@@ -778,8 +693,8 @@ export function Lobby() {
                 <section>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
                   <div className="flex flex-wrap justify-center gap-5">
-                    {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g, i) => (
-                      <RecentCard key={g.id} game={g} neonClass={RECENT_NEON[i % RECENT_NEON.length]} delay={PULSE_DELAYS[i % PULSE_DELAYS.length]}
+                    {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g) => (
+                      <RecentCard key={g.id} game={g}
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
                   </div>
@@ -787,8 +702,8 @@ export function Lobby() {
                 <section>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
                   <div className="flex flex-wrap justify-center gap-5">
-                    {liveActivity.slice(0, 4).map((g, i) => (
-                      <LiveCard key={g.id} game={g} neonClass={LIVE_NEON[i % LIVE_NEON.length]} delay={PULSE_DELAYS[i % PULSE_DELAYS.length]}
+                    {liveActivity.slice(0, 4).map((g) => (
+                      <LiveCard key={g.id} game={g}
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
                   </div>
