@@ -670,7 +670,7 @@ export function Lobby() {
         </aside>
 
         {/* ── Main ── */}
-        <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404" }}>
+        <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }}>
           {activeNav === "home" && (
             <>
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
