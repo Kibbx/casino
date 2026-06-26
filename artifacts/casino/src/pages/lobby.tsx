@@ -191,6 +191,25 @@ const NAME_TO_GAME: Record<string, string> = {
   "Bingo": "bingo", "Lottery": "lottery", "Slots Tournament": "slots",
 };
 
+/* GAME_DISPLAY / cfgKey → wouter route (where clicking a card should navigate) */
+const CFG_KEY_TO_ROUTE: Record<string, string> = {
+  blackjack:     "/tablegames",
+  roulette:      "/tablegames",
+  baccarat:      "/tablegames",
+  highlow:       "/tablegames",
+  poker:         "/poker-tables",
+  slots:         "/slots",
+  rome_slots:    "/slots",
+  western_slots: "/slots",
+  mines:         "/minigames",
+  mob_tower:     "/minigames",
+  fortune:       "/minigames",
+  horse:         "/horse-racing",
+  bingo:         "/bingo",
+  lottery:       "/lottery",
+  tournament:    "/tournaments",
+};
+
 const DEFAULT_CFG = GAME_CFG.blackjack;
 
 /* ─── Recently Played Card ────────────────────────────────────── */
@@ -668,7 +687,7 @@ export function Lobby() {
                     <CardGrid>
                       {recentGames.map((g) => (
                         <RecentCard key={g.id} game={g}
-                          onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
+                          onPlay={() => setLocation(CFG_KEY_TO_ROUTE[g.cfgKey ?? ""] ?? "/tablegames")} />
                       ))}
                     </CardGrid>
                   ) : (
@@ -680,10 +699,13 @@ export function Lobby() {
                 <div>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
                   <CardGrid>
-                    {liveActivity.slice(0, 4).map((g) => (
-                      <LiveCard key={g.id} game={g}
-                        onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
-                    ))}
+                    {liveActivity.slice(0, 4).map((g) => {
+                      const cfgKey = Object.keys(GAME_DISPLAY).find(k => GAME_DISPLAY[k]?.name === g.name) ?? "";
+                      const route = CFG_KEY_TO_ROUTE[cfgKey] ?? "/tablegames";
+                      return (
+                        <LiveCard key={g.id} game={g} onPlay={() => setLocation(route)} />
+                      );
+                    })}
                   </CardGrid>
                 </div>
               </div>
