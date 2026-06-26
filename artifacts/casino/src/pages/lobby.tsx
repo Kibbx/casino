@@ -119,31 +119,85 @@ interface Game {
 }
 type RecentGame = Game & { lastPlayed: string; result: string; won: boolean };
 
-const recentlyPlayed: RecentGame[] = [
-  { id: 101, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/table-games.png`, players: 4,  maxPlayers: 6,  activeBets: "$340",  status: "Completed", lastPlayed: "12 min ago", result: "+$220", won: true  },
-  { id: 102, name: "Lucky Slots",  category: "MINI GAMES",  image: `${IMGS}images/mini-games.png`,  players: 6,  maxPlayers: 10, activeBets: "$120",  status: "Completed", lastPlayed: "34 min ago", result: "-$80",  won: false },
-  { id: 103, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/table-games.png`, players: 5,  maxPlayers: 8,  activeBets: "$500",  status: "Completed", lastPlayed: "1 hr ago",   result: "+$650", won: true  },
-  { id: 104, name: "Horse Racing", category: "LIVE EVENTS", image: `${IMGS}images/live-events.png`, players: 9,  maxPlayers: 20, activeBets: "$200",  status: "Completed", lastPlayed: "2 hr ago",   result: "-$200", won: false },
+/* ─── Game display metadata ───────────────────────────────────── */
+const GAME_DISPLAY: Record<string, { name: string; category: string; image: string; gameKey?: string }> = {
+  blackjack:     { name: "Blackjack",        category: "TABLE GAMES",  image: `${IMGS}images/card-blackjack.webp`,       gameKey: "blackjack"  },
+  roulette:      { name: "Roulette",         category: "TABLE GAMES",  image: `${IMGS}images/card-roulette.webp`,        gameKey: "roulette"   },
+  baccarat:      { name: "Baccarat",         category: "TABLE GAMES",  image: `${IMGS}images/card-baccarat.webp`,        gameKey: "baccarat"   },
+  poker:         { name: "Poker",            category: "TABLE GAMES",  image: `${IMGS}images/card-poker.webp`,           gameKey: "poker"      },
+  slots:         { name: "Slots",            category: "SLOTS",        image: `${IMGS}images/card-slots.webp`,           gameKey: "slots"      },
+  rome_slots:    { name: "Rome Slots",       category: "SLOTS",        image: `${IMGS}images/card-rome-slots.webp`,      gameKey: "slots"      },
+  western_slots: { name: "Backalley Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, gameKey: "slots"      },
+  mines:         { name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           gameKey: "mines"      },
+  mob_tower:     { name: "Mob Tower",        category: "MINI GAMES",   image: `${IMGS}images/card-mob-tower.png`,        gameKey: "mobtower"   },
+  fortune:       { name: "Fortune Spin",     category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "slots"      },
+  highlow:       { name: "High Low",         category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "highlow"    },
+  horse:         { name: "Horse Racing",     category: "LIVE EVENTS",  image: `${IMGS}images/card-horseracing.webp`,     gameKey: "horse"      },
+  bingo:         { name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.png`                                    },
+  lottery:       { name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.png`                                  },
+  tournament:    { name: "Slots Tournament", category: "EVENTS",       image: `${IMGS}images/card-tournaments.webp`,    gameKey: "slots"      },
+};
+
+const FALLBACK_RECENT: RecentGame[] = [
+  { id: 101, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/card-blackjack.webp`,  players: 0, maxPlayers: 0, activeBets: "", status: "Completed", lastPlayed: "—", result: "—", won: true  },
+  { id: 102, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/card-roulette.webp`,   players: 0, maxPlayers: 0, activeBets: "", status: "Completed", lastPlayed: "—", result: "—", won: false },
 ];
 
-const allLiveGames: Game[] = [
-  { id: 1, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/table-games.png`, players: 4,  maxPlayers: 6,  activeBets: "$2,340",  status: "In Progress" },
-  { id: 2, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/table-games.png`, players: 7,  maxPlayers: 8,  activeBets: "$5,120",  status: "In Progress" },
-  { id: 3, name: "Lucky Slots",  category: "MINI GAMES",  image: `${IMGS}images/mini-games.png`,  players: 3,  maxPlayers: 10, activeBets: "$870",    status: "Active"      },
-  { id: 4, name: "Poker Night",  category: "TABLE GAMES", image: `${IMGS}images/table-games.png`, players: 5,  maxPlayers: 6,  activeBets: "$8,900",  status: "In Progress" },
-  { id: 5, name: "Neon Slots",   category: "MINI GAMES",  image: `${IMGS}images/mini-games.png`,  players: 6,  maxPlayers: 10, activeBets: "$1,450",  status: "Active"      },
-  { id: 6, name: "Horse Racing", category: "LIVE EVENTS", image: `${IMGS}images/live-events.png`, players: 12, maxPlayers: 20, activeBets: "$14,200", status: "Race Live"   },
+const FALLBACK_LIVE: Game[] = [
+  { id: 1, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/card-blackjack.webp`,  players: 4,  maxPlayers: 6,  activeBets: "$2,340",  status: "In Progress" },
+  { id: 2, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/card-roulette.webp`,   players: 7,  maxPlayers: 8,  activeBets: "$5,120",  status: "In Progress" },
+  { id: 3, name: "Poker",        category: "TABLE GAMES", image: `${IMGS}images/card-poker.webp`,      players: 5,  maxPlayers: 6,  activeBets: "$8,900",  status: "In Progress" },
+  { id: 4, name: "Horse Racing", category: "LIVE EVENTS", image: `${IMGS}images/card-horseracing.webp`,players: 12, maxPlayers: 20, activeBets: "$14,200", status: "Race Live"   },
 ];
 
 function parseBets(s: string) { return parseInt(s.replace(/[$,]/g, ""), 10) || 0; }
-const liveGames = [...allLiveGames]
-  .sort((a, b) => b.players - a.players || parseBets(b.activeBets) - parseBets(a.activeBets))
-  .slice(0, 4);
+
+function txToGameKey(type: string): string | null {
+  if (type === "loss" || type === "win" || type === "blackjack") return "blackjack";
+  if (type === "roulette")                                        return "roulette";
+  if (type === "baccarat")                                        return "baccarat";
+  if (type === "poker_win" || type === "buyin" || type === "rake" || type === "cashout") return "poker";
+  if (type === "slots")                                           return "slots";
+  if (type.startsWith("rome-slots"))                              return "rome_slots";
+  if (type.startsWith("western-slots"))                           return "western_slots";
+  if (type.startsWith("fortuna"))                                 return "fortune";
+  if (type.startsWith("highlow"))                                 return "highlow";
+  if (type === "horse_race")                                      return "horse";
+  if (type.startsWith("tournament"))                              return "tournament";
+  return null;
+}
+
+function pageToGameKey(page: string): string | null {
+  if (page === "blackjack")                                                    return "blackjack";
+  if (page === "roulette")                                                     return "roulette";
+  if (page === "baccarat")                                                     return "baccarat";
+  if (page === "poker" || page === "poker-lobby")                              return "poker";
+  if (page === "slots" || page === "slots-hub" || page === "rome-slots" || page === "western-slots") return "slots";
+  if (page === "mines" || page === "keno")                                     return "mines";
+  if (page === "mob-tower")                                                    return "mob_tower";
+  if (page === "high-low")                                                     return "highlow";
+  if (page === "horse-racing")                                                 return "horse";
+  if (page === "bingo")                                                        return "bingo";
+  if (page === "lottery")                                                      return "lottery";
+  if (page === "tournaments" || page === "tournament")                         return "tournament";
+  return null;
+}
+
+function timeSince(iso: string): string {
+  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (m < 1)  return "just now";
+  if (m < 60) return `${m} min ago`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `${h} hr ago` : `${Math.floor(h / 24)} days ago`;
+}
 
 /* lobby demo cards → real game registry keys (launched via the gated useGameLauncher) */
 const NAME_TO_GAME: Record<string, string> = {
-  "Blackjack": "blackjack", "Roulette": "roulette", "Lucky Slots": "slots",
-  "Neon Slots": "slots", "Poker Night": "poker", "Horse Racing": "horse",
+  "Blackjack": "blackjack", "Roulette": "roulette", "Baccarat": "baccarat",
+  "Poker": "poker", "Slots": "slots", "Rome Slots": "slots",
+  "Backalley Slots": "slots", "Mines": "mines", "Mob Tower": "mobtower",
+  "Fortune Spin": "slots", "High Low": "highlow", "Horse Racing": "horse",
+  "Bingo": "bingo", "Lottery": "lottery", "Slots Tournament": "slots",
 };
 
 /* ─── Neon colors ─────────────────────────────────────────────── */
@@ -349,6 +403,97 @@ export function Lobby() {
 
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
+
+  // ── Recently Played — real transaction history ─────────────────
+  const [recentGames,  setRecentGames]  = useState<RecentGame[]>([]);
+  const [liveActivity, setLiveActivity] = useState<Game[]>(FALLBACK_LIVE);
+
+  useEffect(() => {
+    if (!sessionToken || !playerId || activeNav !== "home") return;
+    const TX_WAGER = new Set(["loss","fortuna-bet","fortuna-bonus-buy","rome-slots-bet","western-slots-bet","highlow_bet","baccarat","sport_bet"]);
+    const TX_WIN   = new Set(["win","tournament_win","fortuna-win","rome-slots-win","western-slots-win"]);
+    fetch(`${BASE}/api/players/${playerId}/transactions`, {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    })
+      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((txs: any[]) => {
+        const seen: Record<string, { lastAt: string; net: number }> = {};
+        for (const tx of txs) {
+          const key = txToGameKey(tx.type);
+          if (!key) continue;
+          if (!seen[key]) seen[key] = { lastAt: tx.createdAt, net: 0 };
+          if (TX_WIN.has(tx.type))   seen[key].net += Number(tx.amount);
+          if (TX_WAGER.has(tx.type)) seen[key].net -= Number(tx.amount);
+        }
+        const result: RecentGame[] = Object.entries(seen)
+          .sort(([, a], [, b]) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
+          .slice(0, 4)
+          .map(([key, g], i) => {
+            const d = GAME_DISPLAY[key] ?? GAME_DISPLAY.blackjack;
+            const net = Math.round(g.net);
+            return {
+              id: 200 + i, name: d.name, category: d.category, image: d.image,
+              players: 0, maxPlayers: 0, activeBets: "", status: "Completed",
+              lastPlayed: timeSince(g.lastAt),
+              result: (net >= 0 ? "+" : "-") + Math.abs(net).toLocaleString(),
+              won: net >= 0,
+            };
+          });
+        if (result.length > 0) setRecentGames(result);
+      })
+      .catch(() => {});
+  }, [sessionToken, playerId, activeNav]);
+
+  // ── Live Activity — real online players, refreshed every 5 s ──
+  useEffect(() => {
+    if (!sessionToken || activeNav !== "home") return;
+    let mounted = true;
+    function fetchOnline() {
+      fetch(`${BASE}/api/players/online`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      })
+        .then(r => r.ok ? r.json() : Promise.reject())
+        .then(({ players }: { players: { game: string | null; username: string }[] }) => {
+          if (!mounted) return;
+          const groups: Record<string, number> = {};
+          for (const p of players) {
+            if (!p.game) continue;
+            groups[p.game] = (groups[p.game] ?? 0) + 1;
+          }
+          const entries = Object.entries(groups).sort(([, a], [, b]) => b - a).slice(0, 4);
+          if (entries.length === 0) {
+            setLiveActivity(prev => prev.map(g => ({
+              ...g,
+              players: Math.max(1, g.players + (Math.random() > 0.5 ? 1 : -1)),
+              activeBets: "$" + Math.max(100, parseBets(g.activeBets) + Math.floor((Math.random() - 0.4) * 400)).toLocaleString(),
+            })));
+            return;
+          }
+          const result: Game[] = entries.map(([page, count], i) => {
+            const key = pageToGameKey(page) ?? "blackjack";
+            const d   = GAME_DISPLAY[key] ?? GAME_DISPLAY.blackjack;
+            return {
+              id: i + 1, name: d.name, category: d.category, image: d.image,
+              players: count,
+              maxPlayers: Math.max(count + Math.floor(Math.random() * 3 + 2), 6),
+              activeBets: "$" + (count * Math.floor(Math.random() * 800 + 200)).toLocaleString(),
+              status: page.includes("horse") ? "Race Live" : count >= 4 ? "In Progress" : "Active",
+            };
+          });
+          setLiveActivity(result);
+        })
+        .catch(() => {
+          if (!mounted) return;
+          setLiveActivity(prev => prev.map(g => ({
+            ...g,
+            players: Math.max(1, g.players + (Math.random() > 0.5 ? 1 : -1)),
+          })));
+        });
+    }
+    fetchOnline();
+    const id = setInterval(fetchOnline, 5000);
+    return () => { mounted = false; clearInterval(id); };
+  }, [sessionToken, activeNav]);
 
   useEffect(() => {
     const routeToNav: Record<string, string> = {
@@ -632,8 +777,8 @@ export function Lobby() {
                 <section>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
                   <div className="flex flex-wrap justify-center gap-5">
-                    {recentlyPlayed.map((g, i) => (
-                      <RecentCard key={g.id} game={g} neonClass={RECENT_NEON[i]} delay={PULSE_DELAYS[i]}
+                    {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g, i) => (
+                      <RecentCard key={g.id} game={g} neonClass={RECENT_NEON[i % RECENT_NEON.length]} delay={PULSE_DELAYS[i % PULSE_DELAYS.length]}
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
                   </div>
@@ -641,8 +786,8 @@ export function Lobby() {
                 <section>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
                   <div className="flex flex-wrap justify-center gap-5">
-                    {liveGames.map((g, i) => (
-                      <LiveCard key={g.id} game={g} neonClass={LIVE_NEON[i]} delay={PULSE_DELAYS[i]}
+                    {liveActivity.slice(0, 4).map((g, i) => (
+                      <LiveCard key={g.id} game={g} neonClass={LIVE_NEON[i % LIVE_NEON.length]} delay={PULSE_DELAYS[i % PULSE_DELAYS.length]}
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
                   </div>

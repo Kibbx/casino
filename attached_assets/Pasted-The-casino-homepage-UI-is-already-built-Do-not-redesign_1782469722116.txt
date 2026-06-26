@@ -1,0 +1,68 @@
+The casino homepage UI is already built. Do not redesign it.
+
+Make the existing homepage functional.
+
+I need the “Recently Played” section to show the logged-in user’s actual recent game activity, and the “Live Activity” section to show other players currently active on the website.
+
+Tasks:
+
+1. Wire up Recently Played
+- Find the existing Recently Played cards/components.
+- Replace any hardcoded placeholder cards with data-driven rendering.
+- Create or connect a recentGames data source for the logged-in user.
+- Each item should display:
+  - game name
+  - category
+  - thumbnail
+  - win/loss result
+  - amount won or lost
+  - time played
+  - progress/count value
+  - Play Again button
+- The Play Again button should route the user back to that game.
+
+2. Wire up Live Activity
+- Find the existing Live Activity cards/components.
+- Replace static placeholder cards with activeSessions data.
+- Show other players currently playing across the site.
+- Each card should display:
+  - game name
+  - category
+  - thumbnail
+  - status: Live, Active, or In Progress
+  - current players / max players
+  - active bets amount
+  - Join button
+- The Join button should route the user into that live game/session.
+
+3. Add mock backend-style data for now
+Use mock arrays if no backend exists yet:
+- recentGames
+- activeSessions
+- currentUser
+
+Keep the data in a separate file like src/data/mockCasinoData.js so it can later be replaced with an API.
+
+4. Add real-time simulation
+- Use setInterval to update Live Activity every few seconds.
+- Randomly adjust:
+  - player counts
+  - active bet totals
+  - game statuses
+- Do not refresh the page.
+- Clean up intervals properly.
+
+5. Preserve the existing design
+- Do not change the layout.
+- Do not change the visual style.
+- Do not rebuild the page.
+- Only make the existing components functional.
+- Keep the dark neon casino look exactly as it is.
+
+6. Expected result
+When the homepage loads:
+- Recently Played shows the logged-in user’s latest games.
+- Live Activity shows other players actively playing.
+- Player counts and active bets update automatically.
+- Play Again and Join buttons navigate correctly.
+- The existing homepage looks the same, but now it works.
