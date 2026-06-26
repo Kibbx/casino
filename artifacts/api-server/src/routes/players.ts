@@ -677,35 +677,40 @@ router.get("/leaderboard", requirePlayer, async (_req, res) => {
       username: playersTable.username,
       chips: playersTable.chips,
       handsPlayed: playersTable.handsPlayed,
+      wins: (playersTable as any).wins,
+      totalWon: (playersTable as any).totalWon,
       avatarUrl: playersTable.avatarUrl,
       staffRole: playersTable.staffRole,
     })
     .from(playersTable)
     .where(sqlFn`${playersTable.isBot} = false`);
 
-  const playerIds = players.map(p => p.id);
-
-  // Lifetime deposits per player
-  const txRows = await db
-    .select({ playerId: transactionsTable.playerId, amount: transactionsTable.amount, type: transactionsTable.type })
-    .from(transactionsTable)
-    .where(inArray(transactionsTable.playerId, playerIds) as any);
-
-  const depositMap = new Map<number, number>();
-  for (const tx of txRows) {
-    if (tx.type !== "deposit" || tx.playerId == null) continue;
-    depositMap.set(tx.playerId, (depositMap.get(tx.playerId) ?? 0) + (tx.amount ?? 0));
+  function getTier(chips: number): string {
+    if (chips >= 1_000_000) return "Diamond";
+    if (chips >= 500_000)   return "Platinum";
+    if (chips >= 200_000)   return "Gold";
+    if (chips >= 50_000)    return "Silver";
+    return "Bronze";
   }
 
-  const result = players.map(p => ({
-    id: p.id,
-    username: p.username,
-    chips: p.chips,
-    handsPlayed: p.handsPlayed,
-    lifetimeDeposits: depositMap.get(p.id) ?? 0,
-    avatarUrl: p.avatarUrl ?? null,
-    staffRole: p.staffRole ?? null,
-  }));
+  const result = players.map(p => {
+    const wins = (p.wins as number) ?? 0;
+    const games = p.handsPlayed ?? 0;
+    const winRate = games > 0 ? Math.round((wins / games) * 100) : 0;
+    const totalWon = (p.totalWon as number) ?? 0;
+    return {
+      id: p.id,
+      username: p.username,
+      games,
+      wins,
+      winRate,
+      totalWon,
+      chips: p.chips,
+      tier: getTier(p.chips),
+      avatarUrl: p.avatarUrl ?? null,
+      staffRole: p.staffRole ?? null,
+    };
+  });
 
   return res.json(result);
 });

@@ -1,56 +1,66 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageWrapper } from "./shared";
 import { useStore } from "../store";
-import { Trophy, Coins, Hash, TrendingUp } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type LeaderEntry = {
   id: number;
   username: string;
+  games: number;
+  wins: number;
+  winRate: number;
+  totalWon: number;
   chips: number;
-  handsPlayed: number;
-  lifetimeDeposits: number;
+  tier: string;
   avatarUrl: string | null;
   staffRole: string | null;
 };
 
-type Tab = "chips" | "hands" | "deposits";
+type Tab = "winnings" | "winrate" | "games";
 
-const TABS: { id: Tab; label: string; icon: React.ElementType; color: string; accentColor: string }[] = [
-  { id: "chips",    label: "Top Chips",         icon: Coins,     color: "#f5c518", accentColor: "rgba(245,197,24,0.18)"  },
-  { id: "hands",    label: "Most Hands Played",  icon: Hash,      color: "#22c55e", accentColor: "rgba(34,197,94,0.18)"  },
-  { id: "deposits", label: "Biggest Depositors", icon: TrendingUp, color: "#e8400a", accentColor: "rgba(232,64,10,0.18)" },
+const TABS: { id: Tab; label: string; col: string }[] = [
+  { id: "winnings", label: "Total Winnings", col: "Total Won"    },
+  { id: "winrate",  label: "Win Rate",        col: "Win Rate"    },
+  { id: "games",    label: "Games Played",    col: "Games"       },
 ];
 
-const RANK_MEDAL = ["🥇", "🥈", "🥉"];
+const TIER_COLORS: Record<string, { color: string; bg: string; border: string }> = {
+  Diamond:  { color: "#7dd3fc", bg: "rgba(125,211,252,0.12)", border: "rgba(125,211,252,0.3)" },
+  Platinum: { color: "#e2e8f0", bg: "rgba(226,232,240,0.10)", border: "rgba(226,232,240,0.25)" },
+  Gold:     { color: "#f5c518", bg: "rgba(245,197,24,0.12)",  border: "rgba(245,197,24,0.3)"  },
+  Silver:   { color: "#9ca3af", bg: "rgba(156,163,175,0.10)", border: "rgba(156,163,175,0.25)" },
+  Bronze:   { color: "#cd7f32", bg: "rgba(205,127,50,0.12)",  border: "rgba(205,127,50,0.3)"  },
+};
 
-function fmt(n: number) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (n >= 1_000)     return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+const MEDALS = ["🥇", "🥈", "🥉"];
+const CURRENT_USER = "Jonah Hydell";
+
+function fmtWon(n: number): string {
+  if (n === 0) return "$0";
+  const abs = Math.abs(n);
+  let s: string;
+  if (abs >= 1_000_000) s = (abs / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  else if (abs >= 1_000) s = (abs / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  else s = abs.toLocaleString();
+  return (n >= 0 ? "+" : "-") + "$" + s;
+}
+
+function fmtGames(n: number): string {
   return n.toLocaleString();
 }
 
-function getInitials(name: string) {
-  return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
-}
-
-function getRoleColor(role: string | null) {
-  if (!role) return null;
-  const r = role.toLowerCase();
-  if (r === "owner")    return "#f5c518";
-  if (r === "manager")  return "#a855f7";
-  if (r === "security") return "#ef4444";
-  if (r === "cashier" || r === "cage_clerk") return "#22c55e";
-  return "#60a5fa";
+function getInitials(name: string): string {
+  return name.split(" ").map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 }
 
 export function LeaderboardsPage() {
-  const { sessionToken, playerId } = useStore();
-  const [activeTab, setActiveTab] = useState<Tab>("chips");
+  const { sessionToken, playerId, playerUsername } = useStore();
+  const [activeTab, setActiveTab] = useState<Tab>("winnings");
   const [data, setData] = useState<LeaderEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hoveredRow, setHoveredRow] = useState<number | null>(null);
 
   useEffect(() => {
     if (!sessionToken) return;
@@ -59,170 +69,258 @@ export function LeaderboardsPage() {
     fetch(`${BASE}/api/players/leaderboard`, {
       headers: { Authorization: `Bearer ${sessionToken}` },
     })
-      .then(r => r.ok ? r.json() : r.json().then((e: any) => Promise.reject(e?.error ?? "Failed to load")))
+      .then(r => r.ok ? r.json() : r.json().then((e: any) => Promise.reject(e?.error ?? "Failed")))
       .then((rows: LeaderEntry[]) => { setData(rows); setLoading(false); })
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load leaderboard"); setLoading(false); });
   }, [sessionToken]);
 
-  const tab = TABS.find(t => t.id === activeTab)!;
+  const sorted = useMemo(() => {
+    const copy = [...data];
+    if (activeTab === "winnings") copy.sort((a, b) => b.totalWon - a.totalWon);
+    if (activeTab === "winrate")  copy.sort((a, b) => b.winRate  - a.winRate);
+    if (activeTab === "games")    copy.sort((a, b) => b.games    - a.games);
+    return copy;
+  }, [data, activeTab]);
 
-  const sorted = [...data].sort((a, b) => {
-    if (activeTab === "chips")    return b.chips - a.chips;
-    if (activeTab === "hands")    return b.handsPlayed - a.handsPlayed;
-    return b.lifetimeDeposits - a.lifetimeDeposits;
-  });
+  const myRank = sorted.findIndex(e => e.id === playerId || e.username === (playerUsername ?? CURRENT_USER)) + 1;
+  const currentTab = TABS.find(t => t.id === activeTab)!;
 
-  function getStatValue(entry: LeaderEntry) {
-    if (activeTab === "chips")    return fmt(entry.chips) + " chips";
-    if (activeTab === "hands")    return fmt(entry.handsPlayed) + " hands";
-    return "$" + fmt(entry.lifetimeDeposits);
+  function getStatDisplay(entry: LeaderEntry): string {
+    if (activeTab === "winnings") return fmtWon(entry.totalWon);
+    if (activeTab === "winrate")  return entry.winRate + "%";
+    return fmtGames(entry.games);
   }
 
-  const myRank = sorted.findIndex(e => e.id === playerId) + 1;
+  function getStatColor(entry: LeaderEntry, rank: number): string {
+    if (activeTab === "winnings") return entry.totalWon >= 0 ? "#22c55e" : "#ef4444";
+    if (activeTab === "winrate") {
+      if (entry.winRate >= 65) return "#22c55e";
+      if (entry.winRate >= 50) return "rgba(255,255,255,0.75)";
+      return "#f97316";
+    }
+    if (rank === 1) return "#f5c518";
+    if (rank === 2) return "#9ca3af";
+    if (rank === 3) return "#cd7f32";
+    return "rgba(255,255,255,0.65)";
+  }
 
   return (
-    <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor={tab.color}>
-      {/* Tab row */}
+    <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7">
+
+      {/* ── Tab row ───────────────────────────────────────────────────── */}
       <div className="flex gap-2 mb-6 flex-wrap">
-        {TABS.map(t => {
-          const Icon = t.icon;
-          const active = t.id === activeTab;
+        {TABS.map(tab => {
+          const active = tab.id === activeTab;
           return (
             <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150"
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="px-5 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150"
               style={{
-                background: active ? t.accentColor : "rgba(255,255,255,0.04)",
-                color:      active ? t.color : "rgba(255,255,255,0.40)",
-                border:     `1px solid ${active ? t.color + "55" : "rgba(255,255,255,0.08)"}`,
+                background: active ? "rgba(168,85,247,0.18)" : "rgba(255,255,255,0.04)",
+                color:      active ? "#a855f7"               : "rgba(255,255,255,0.40)",
+                border:     `1px solid ${active ? "rgba(168,85,247,0.50)" : "rgba(255,255,255,0.08)"}`,
+                boxShadow:  active ? "0 0 14px rgba(168,85,247,0.2)" : "none",
+                transform:  active ? "translateY(-1px)" : "none",
               }}
             >
-              <Icon size={13} />
-              {t.label}
+              {tab.label}
             </button>
           );
         })}
       </div>
 
-      {/* Your rank badge */}
+      {/* ── Your rank banner ─────────────────────────────────────────── */}
       {!loading && !error && myRank > 0 && (
         <div
           className="flex items-center gap-3 px-4 py-3 rounded-xl mb-5"
-          style={{ background: `${tab.color}10`, border: `1px solid ${tab.color}30` }}
+          style={{
+            background: "rgba(168,85,247,0.08)",
+            border: "1px solid rgba(168,85,247,0.25)",
+          }}
         >
-          <Trophy size={16} style={{ color: tab.color, flexShrink: 0 }} />
-          <span className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
-            Your rank: <span className="font-black" style={{ color: tab.color }}>#{myRank}</span>
-            {" "}of {sorted.length} players
+          <span style={{ fontSize: 18 }}>
+            {myRank <= 3 ? MEDALS[myRank - 1] : `#${myRank}`}
+          </span>
+          <span className="text-sm" style={{ color: "rgba(255,255,255,0.65)" }}>
+            Your rank on <span style={{ color: "#a855f7", fontWeight: 700 }}>{currentTab.label}</span>
+            {" "}— <span style={{ color: "#fff", fontWeight: 700 }}>#{myRank}</span> of {sorted.length} players
           </span>
         </div>
       )}
 
-      {/* Table */}
-      <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)" }}>
+      {/* ── Table ────────────────────────────────────────────────────── */}
+      <div
+        className="rounded-2xl overflow-hidden w-full"
+        style={{ border: "1px solid rgba(255,255,255,0.08)" }}
+      >
         {/* Header */}
         <div
-          className="grid px-5 py-3 text-[10px] font-bold uppercase tracking-widest"
+          className="px-5 py-3 text-[10px] font-bold uppercase tracking-widest"
           style={{
             background: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.30)",
-            gridTemplateColumns: "52px 1fr 140px",
+            color: "rgba(255,255,255,0.28)",
             borderBottom: "1px solid rgba(255,255,255,0.06)",
+            display: "grid",
+            gridTemplateColumns: "52px 1fr 80px 80px 110px 110px",
           }}
         >
           <span>Rank</span>
           <span>Player</span>
-          <span className="text-right">{tab.label}</span>
+          <span className="hidden sm:block">Games</span>
+          <span className="hidden sm:block">Win %</span>
+          <span className="hidden sm:block">Tier</span>
+          <span style={{ textAlign: "right" }}>{currentTab.col}</span>
         </div>
 
+        {/* Loading */}
         {loading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: `${tab.color} transparent transparent transparent` }} />
+          <div className="flex items-center justify-center py-16 gap-3">
+            <div
+              className="w-5 h-5 rounded-full border-2 animate-spin"
+              style={{ borderColor: "rgba(168,85,247,0.8) transparent transparent transparent" }}
+            />
+            <span className="text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>Loading leaderboard…</span>
           </div>
         )}
 
+        {/* Error */}
         {error && (
-          <div className="py-12 text-center text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <div className="py-12 text-center text-sm" style={{ color: "rgba(255,100,100,0.6)" }}>
             {error}
           </div>
         )}
 
+        {/* Empty */}
         {!loading && !error && sorted.length === 0 && (
-          <div className="py-12 text-center text-sm" style={{ color: "rgba(255,255,255,0.35)" }}>
+          <div className="py-12 text-center text-sm" style={{ color: "rgba(255,255,255,0.28)" }}>
             No players yet
           </div>
         )}
 
+        {/* Rows */}
         {!loading && !error && sorted.map((entry, i) => {
-          const isMe = entry.id === playerId;
-          const roleColor = getRoleColor(entry.staffRole);
+          const rank   = i + 1;
+          const isMe   = entry.id === playerId || entry.username === (playerUsername ?? CURRENT_USER);
+          const hovered = hoveredRow === entry.id && !isMe;
+          const tier   = TIER_COLORS[entry.tier] ?? TIER_COLORS.Bronze;
+
           return (
             <div
               key={entry.id}
-              className="grid px-5 py-4 items-center transition-colors duration-100"
+              onMouseEnter={() => setHoveredRow(entry.id)}
+              onMouseLeave={() => setHoveredRow(null)}
               style={{
-                gridTemplateColumns: "52px 1fr 140px",
+                display: "grid",
+                gridTemplateColumns: "52px 1fr 80px 80px 110px 110px",
+                padding: "14px 20px",
+                alignItems: "center",
                 borderBottom: i < sorted.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                background: isMe ? `${tab.color}0d` : "transparent",
+                background: isMe
+                  ? "rgba(168,85,247,0.10)"
+                  : hovered ? "rgba(255,255,255,0.03)" : "transparent",
+                transition: "background 0.12s ease",
+                cursor: "default",
               }}
-              onMouseEnter={e => { if (!isMe) (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.025)"; }}
-              onMouseLeave={e => { if (!isMe) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
             >
               {/* Rank */}
-              <div className="flex items-center">
-                {i < 3 ? (
-                  <span className="text-xl leading-none">{RANK_MEDAL[i]}</span>
+              <div style={{ display: "flex", alignItems: "center" }}>
+                {rank <= 3 ? (
+                  <span style={{ fontSize: 22, lineHeight: 1 }}>{MEDALS[rank - 1]}</span>
                 ) : (
-                  <span className="text-sm font-black tabular-nums" style={{ color: "rgba(255,255,255,0.30)" }}>#{i + 1}</span>
+                  <span style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.28)", fontVariantNumeric: "tabular-nums" }}>
+                    #{rank}
+                  </span>
                 )}
               </div>
 
               {/* Player */}
-              <div className="flex items-center gap-3 min-w-0">
+              <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
                 {entry.avatarUrl ? (
-                  <img src={entry.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" style={{ border: `1px solid ${isMe ? tab.color : "rgba(255,255,255,0.1)"}44` }} />
-                ) : (
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black flex-shrink-0"
+                  <img
+                    src={entry.avatarUrl}
+                    alt=""
                     style={{
-                      background: isMe ? `${tab.color}22` : "rgba(255,255,255,0.06)",
-                      border:     `1px solid ${isMe ? tab.color + "44" : "rgba(255,255,255,0.10)"}`,
-                      color:      isMe ? tab.color : "rgba(255,255,255,0.5)",
+                      width: 32, height: 32, borderRadius: "50%",
+                      objectFit: "cover", flexShrink: 0,
+                      border: `1.5px solid ${isMe ? "rgba(168,85,247,0.5)" : "rgba(255,255,255,0.08)"}`,
                     }}
-                  >
+                  />
+                ) : (
+                  <div style={{
+                    width: 32, height: 32, borderRadius: "50%",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 11, fontWeight: 900, flexShrink: 0,
+                    background: isMe ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.06)",
+                    border: `1.5px solid ${isMe ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.09)"}`,
+                    color: isMe ? "#a855f7" : "rgba(255,255,255,0.45)",
+                  }}>
                     {getInitials(entry.username)}
                   </div>
                 )}
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
+
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                     <span
                       className="font-rajdhani font-bold text-sm truncate"
-                      style={{ color: isMe ? tab.color : "rgba(255,255,255,0.85)" }}
+                      style={{ color: isMe ? "#c084fc" : "rgba(255,255,255,0.88)" }}
                     >
                       {entry.username}
                     </span>
                     {isMe && (
-                      <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full" style={{ background: `${tab.color}20`, color: tab.color, border: `1px solid ${tab.color}33` }}>
-                        YOU
-                      </span>
-                    )}
-                    {roleColor && (
-                      <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full" style={{ background: `${roleColor}18`, color: roleColor, border: `1px solid ${roleColor}33` }}>
-                        {entry.staffRole}
+                      <span style={{
+                        fontSize: 9, fontWeight: 900, letterSpacing: "0.1em",
+                        padding: "1px 6px", borderRadius: 99,
+                        background: "rgba(168,85,247,0.2)", color: "#a855f7",
+                        border: "1px solid rgba(168,85,247,0.35)", textTransform: "uppercase",
+                      }}>
+                        you
                       </span>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Stat */}
-              <div className="text-right">
-                <span
-                  className="text-sm font-black tabular-nums"
-                  style={{ color: i === 0 ? tab.color : i === 1 ? "rgba(255,255,255,0.85)" : i === 2 ? "#cd7f32" : "rgba(255,255,255,0.65)" }}
-                >
-                  {getStatValue(entry)}
+              {/* Games */}
+              <span
+                className="hidden sm:block text-sm tabular-nums"
+                style={{ color: "rgba(255,255,255,0.45)" }}
+              >
+                {fmtGames(entry.games)}
+              </span>
+
+              {/* Win Rate */}
+              <span
+                className="hidden sm:block text-sm font-bold tabular-nums"
+                style={{
+                  color: entry.winRate >= 65
+                    ? "#22c55e"
+                    : entry.winRate >= 50
+                      ? "rgba(255,255,255,0.7)"
+                      : "#f97316",
+                }}
+              >
+                {entry.games > 0 ? entry.winRate + "%" : "—"}
+              </span>
+
+              {/* Tier */}
+              <div className="hidden sm:flex">
+                <span style={{
+                  fontSize: 10, fontWeight: 900, letterSpacing: "0.08em",
+                  padding: "2px 8px", borderRadius: 99, textTransform: "uppercase",
+                  color: tier.color, background: tier.bg, border: `1px solid ${tier.border}`,
+                }}>
+                  {entry.tier}
+                </span>
+              </div>
+
+              {/* Primary stat */}
+              <div style={{ textAlign: "right" }}>
+                <span style={{
+                  fontSize: 14, fontWeight: 900, fontVariantNumeric: "tabular-nums",
+                  color: getStatColor(entry, rank),
+                }}>
+                  {getStatDisplay(entry)}
                 </span>
               </div>
             </div>
@@ -230,8 +328,8 @@ export function LeaderboardsPage() {
         })}
       </div>
 
-      <p className="mt-4 text-[11px] text-center" style={{ color: "rgba(255,255,255,0.22)" }}>
-        Live data · Bots excluded · Updates on page load
+      <p className="mt-4 text-[11px] text-center" style={{ color: "rgba(255,255,255,0.20)" }}>
+        Live data · Updates on page load · Bots excluded from rankings
       </p>
     </PageWrapper>
   );

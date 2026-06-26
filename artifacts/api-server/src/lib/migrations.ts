@@ -1389,6 +1389,14 @@ export async function runMigrations(): Promise<void> {
       name: "players.exclude_from_login_logs column",
       sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS exclude_from_login_logs BOOLEAN NOT NULL DEFAULT false`,
     },
+    {
+      name: "players.wins column",
+      sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS wins INTEGER NOT NULL DEFAULT 0`,
+    },
+    {
+      name: "players.total_won column",
+      sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS total_won BIGINT NOT NULL DEFAULT 0`,
+    },
   ];
 
   for (const step of steps) {
