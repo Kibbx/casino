@@ -1,0 +1,163 @@
+Replace the current backend/admin Sport Bets page with a bet slip management dashboard.
+
+Goal
+
+Remove the current backend Sport Bets layout that shows:
+
+Bet Limits
+Sport Events
+Create Event
+Min Bet / Max Bet controls
+
+Replace it with an admin view where staff/owners can see every player’s submitted bet slips.
+
+New Backend Page
+
+Page title:
+
+Sport Bet Slips
+
+Subtitle:
+
+View and manage all player sportsbook bet slips.
+Required Data
+
+Each bet slip record should show:
+
+Slip ID
+Player username
+Player ID
+Submitted date/time
+Slip type:
+Parlay
+Single
+Status:
+Pending
+Won
+Lost
+Voided
+Cashed Out
+Total wager amount
+Potential payout
+Actual payout, if settled
+Number of selections
+Full list of selections
+
+Each selection should include:
+
+Sport
+League
+Event name
+Market
+Pick/team
+Odds
+Event start time
+Result status if available
+Backend UI Layout
+
+Create a table/list view with columns:
+
+Player | Type | Wager | Potential Payout | Status | Submitted | Actions
+
+Each row should have an expandable details section showing the full bet slip selections.
+
+Filters
+
+Add filters at the top:
+
+Search by player username
+Filter by status
+Filter by slip type
+Date range
+Minimum wager
+Maximum wager
+Actions
+
+For each bet slip, staff should be able to:
+
+View details
+Mark as Won
+Mark as Lost
+Void slip
+Mark as Cashed Out
+Delete slip, only if owner role
+Add admin note
+
+When a slip is marked as won:
+
+Credit the player’s real chip balance with the payout amount.
+Update the slip status to Won.
+Store the settlement timestamp.
+Store which staff member settled it.
+
+When a slip is marked as lost:
+
+Update the slip status to Lost.
+Do not credit chips.
+
+When a slip is voided:
+
+Refund the original wager to the player.
+Update status to Voided.
+Data Persistence
+
+Use the existing database/backend system.
+
+Create or update a table/model such as:
+
+BetSlip {
+  id
+  playerId
+  playerUsername
+  type
+  wagerAmount
+  potentialPayout
+  actualPayout
+  status
+  selections
+  createdAt
+  settledAt
+  settledBy
+  adminNote
+}
+
+The selections field can be JSON if needed.
+
+Frontend Integration
+
+When a player places a sportsbook bet:
+
+Save the full bet slip to the backend/database.
+Deduct the wager from the player’s real chip balance.
+Make the slip appear immediately in the admin Sport Bet Slips dashboard.
+Remove Current Sport Bets Backend Features
+
+Remove or hide the current backend Sport Bets sections:
+
+Bet Limits card
+Min Bet input
+Max Bet input
+Sport Events card
+Create Event button
+Empty “No events yet” state
+
+This page should only focus on viewing and managing submitted player bet slips.
+
+Permissions
+Staff can view, filter, and settle slips.
+Only owner/admin can delete slips.
+Player accounts should not access this backend page.
+Styling
+
+Match the existing admin dashboard aesthetic:
+
+Dark background
+Red/orange accent buttons
+Rounded cards
+Thin borders
+Compact table rows
+Pixel/arcade typography where already used
+Keep the existing top navigation and page shell unchanged
+Deliverable
+
+Replace the current backend Sport Bets admin page with a complete bet slip management dashboard connected to real submitted player bet slips and real chip balances.

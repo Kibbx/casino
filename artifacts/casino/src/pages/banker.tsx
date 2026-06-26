@@ -5319,7 +5319,7 @@ function GamesTab({ canManageBets = false, isOwner = false, staffUsername = "sta
 
       {gamesView === "prizes" && <PrizesManagementPanel isOwner={isOwner} staffUsername={staffUsername} />}
 
-      {gamesView === "sportbets" && <SportBetsTab />}
+      {gamesView === "sportbets" && <SportBetsTab isOwner={isOwner} />}
 
       {gamesView === "games" && <>
       <p className="text-xs uppercase tracking-widest font-semibold" style={{ color: "rgba(255,255,255,0.35)" }}>Toggle games open/closed · Set bet limits · Manage room passwords</p>
@@ -11279,602 +11279,293 @@ type SBEntry = { id: number; eventId: number; optionId: number; playerId: number
 type SBEvent = { id: number; title: string; description: string; league: string; gameDate: string | null; status: string; winnerId: number | null; rakePercent: number; createdBy: string; createdAt: string; settledAt: string | null; options: SBOption[]; entries: SBEntry[]; totalWagered: number };
 type SBPayout = { entryId: number; eventId: number; eventTitle: string; playerName: string; player: SBPlayer | null; betAmount: number; optionLabel: string; odds: string; grossPayout: number; rakeAmount: number; rakePercent: number; payoutAmount: number; enteredAt: string };
 
-function SportBetsTab() {
+type BetSlipRecord = {
+  id: number; playerId: number; playerUsername: string; type: string;
+  wagerAmount: number; potentialPayout: number; actualPayout: number | null;
+  status: string; selections: string; adminNote: string | null;
+  settledAt: string | null; settledBy: string | null; createdAt: string;
+};
+type SlipSel = { teamName?: string; odds?: number; matchup?: string };
+
+function fmtOddsAdmin(o: number) { return o >= 0 ? `+${o}` : String(o); }
+
+function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
   const { bankerToken, sessionToken } = useStore();
   const authToken = bankerToken || sessionToken || "";
 
-  // ── Events state ───────────────────────────────────────────────────────────
-  const [events, setEvents] = useState<SBEvent[]>([]);
-  const [eventsError, setEventsError] = useState<string | null>(null);
+  // ── Slips state ─────────────────────────────────────────────────────────────
+  const [slips, setSlips] = useState<BetSlipRecord[]>([]);
+  const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
-  const [createTitle, setCreateTitle] = useState("");
-  const [createDesc, setCreateDesc] = useState("");
-  const [createLeague, setCreateLeague] = useState("");
-  const [createGameDate, setCreateGameDate] = useState("");
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [noteInputs, setNoteInputs] = useState<Record<number, string>>({});
+  const [noteEditing, setNoteEditing] = useState<number | null>(null);
 
-  // Convert a datetime-local string (treated as Eastern time) to a UTC ISO string
-  function datetimeLocalToEasternUTC(localStr: string): string {
-    if (!localStr) return localStr;
-    const [datePart, timePart = "00:00"] = localStr.split("T");
-    const [y, m, d] = datePart.split("-").map(Number);
-    const [h, min] = timePart.split(":").map(Number);
-    // Probe: what hour does Eastern timezone show when it's this time in UTC?
-    const probeUTC = new Date(Date.UTC(y, m - 1, d, h, min));
-    const nyHourStr = new Intl.DateTimeFormat("en-US", {
-      timeZone: "America/New_York", hour: "numeric", hour12: false,
-    }).formatToParts(probeUTC).find(p => p.type === "hour")?.value ?? "0";
-    const nyHour = parseInt(nyHourStr);
-    // Offset = hours to add to Eastern to get UTC
-    let offsetH = h - nyHour;
-    if (offsetH > 12) offsetH -= 24;
-    if (offsetH < -12) offsetH += 24;
-    return new Date(Date.UTC(y, m - 1, d, h + offsetH, min)).toISOString();
-  }
+  // Filters
+  const [fPlayer, setFPlayer] = useState("");
+  const [fStatus, setFStatus] = useState("");
+  const [fType, setFType] = useState("");
+  const [fMinWager, setFMinWager] = useState("");
+  const [fMaxWager, setFMaxWager] = useState("");
 
-  // Format a UTC date string for display in Eastern time
-  function fmtEasternDate(d: string | null, opts: Intl.DateTimeFormatOptions): string {
-    if (!d) return "";
-    return new Date(d).toLocaleString("en-US", { timeZone: "America/New_York", ...opts });
-  }
-  const [createRake, setCreateRake] = useState("0");
-  const [createOptions, setCreateOptions] = useState([{ label: "", odds: "" }, { label: "", odds: "" }]);
-  const [creating, setCreating] = useState(false);
-  const [createMsg, setCreateMsg] = useState<string | null>(null);
-
-  // Bet limits settings
-  const [sbMinBet, setSbMinBet] = useState("100");
-  const [sbMaxBet, setSbMaxBet] = useState("50000");
-  const [sbSettingsSaving, setSbSettingsSaving] = useState(false);
-  const [sbSettingsMsg, setSbSettingsMsg] = useState<{ text: string; ok: boolean } | null>(null);
-
-  function loadSbSettings() {
-    fetch(`${BASE_URL}/api/sportbets/settings`, { headers: { Authorization: `Bearer ${authToken}` } })
-      .then(r => r.json())
-      .then(d => { if (d.minBet !== undefined) { setSbMinBet(String(d.minBet)); setSbMaxBet(String(d.maxBet)); } })
-      .catch(() => {});
-  }
-
-  async function saveSbSettings() {
-    setSbSettingsSaving(true); setSbSettingsMsg(null);
-    try {
-      const r = await fetch(`${BASE_URL}/api/sportbets/settings`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ minBet: parseInt(sbMinBet) || 100, maxBet: parseInt(sbMaxBet) || 50000 }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Failed");
-      setSbMinBet(String(d.minBet)); setSbMaxBet(String(d.maxBet));
-      setSbSettingsMsg({ text: "Saved", ok: true });
-    } catch (err: any) { setSbSettingsMsg({ text: err.message || "Failed", ok: false }); }
-    setSbSettingsSaving(false);
-    setTimeout(() => setSbSettingsMsg(null), 3000);
-  }
-
-  // Pending payouts
-  const [pendingPayouts, setPendingPayouts] = useState<SBPayout[]>([]);
-  const [markingPaid, setMarkingPaid] = useState<number | null>(null);
-
-  function loadPendingPayouts() {
+  async function loadSlips() {
     if (!authToken) return;
-    fetch(`${BASE_URL}/api/sportbets/pending-payouts`, { headers: { Authorization: `Bearer ${authToken}` } })
-      .then(r => r.json())
-      .then(d => { if (Array.isArray(d)) setPendingPayouts(d); })
-      .catch(() => {});
-  }
-
-  async function handleMarkPaid(entryId: number) {
-    setMarkingPaid(entryId);
+    const p = new URLSearchParams();
+    if (fPlayer)   p.set("player",   fPlayer);
+    if (fStatus)   p.set("status",   fStatus);
+    if (fType)     p.set("type",     fType);
+    if (fMinWager) p.set("minWager", fMinWager);
+    if (fMaxWager) p.set("maxWager", fMaxWager);
     try {
-      const r = await fetch(`${BASE_URL}/api/sportbets/event-entries/${entryId}/pay`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      if (r.ok) {
-        loadEvents();
-        loadPendingPayouts();
-      }
+      const r = await fetch(`${BASE_URL}/api/sportbets/admin/slips?${p}`, { headers: { Authorization: `Bearer ${authToken}` } });
+      const d = await r.json();
+      if (Array.isArray(d)) setSlips(d);
     } catch {}
-    setMarkingPaid(null);
-  }
-
-  function parseOdds(odds: string): number {
-    const m = odds.match(/^(\d+\.?\d*)/);
-    return m ? parseFloat(m[1]) : 1;
-  }
-
-  const [settlingId, setSettlingId] = useState<number | null>(null);
-  const [settleWinner, setSettleWinner] = useState<number | null>(null);
-
-  function loadEvents() {
-    if (!authToken) return;
-    fetch(`${BASE_URL}/api/sportbets/events`, { headers: { Authorization: `Bearer ${authToken}` } })
-      .then(async r => {
-        const d = await r.json();
-        if (!r.ok) { setEventsError(d.error || `Auth error (${r.status}) — please log out and back in`); return; }
-        if (Array.isArray(d)) { setEventsError(null); setEvents(d); }
-      })
-      .catch(() => {});
-  }
-
-  async function handleCreateEvent(e: React.FormEvent) {
-    e.preventDefault();
-    if (!createTitle.trim()) return;
-    setCreating(true); setCreateMsg(null);
-    try {
-      const r = await fetch(`${BASE_URL}/api/sportbets/events`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ title: createTitle, description: createDesc, league: createLeague, gameDate: createGameDate ? datetimeLocalToEasternUTC(createGameDate) : null, options: createOptions, rakePercent: parseInt(createRake) || 0 }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error || "Failed");
-      setCreateTitle(""); setCreateDesc(""); setCreateLeague(""); setCreateGameDate(""); setCreateRake("0"); setCreateOptions([{ label: "", odds: "" }, { label: "", odds: "" }]);
-      setShowCreate(false);
-      loadEvents();
-    } catch (err: any) { setCreateMsg(err.message || "Failed"); }
-    setCreating(false);
-  }
-
-  async function handleDeleteEntry(id: number) {
-    await fetch(`${BASE_URL}/api/sportbets/event-entries/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${authToken}` } });
-    loadEvents();
-  }
-
-  async function handleSetStatus(eventId: number, status: string, winnerId?: number) {
-    const body: any = { status };
-    if (winnerId) body.winnerId = winnerId;
-    await fetch(`${BASE_URL}/api/sportbets/events/${eventId}`, {
-      method: "PATCH",
-      headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setSettlingId(null); setSettleWinner(null);
-    loadEvents();
-    if (status === "settled") { loadPendingPayouts(); }
-  }
-
-  async function handleDeleteEvent(id: number) {
-    await fetch(`${BASE_URL}/api/sportbets/events/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${authToken}` } });
-    loadEvents();
+    setLoading(false);
   }
 
   useEffect(() => {
-    loadEvents();
-    loadPendingPayouts();
-    loadSbSettings();
-    const iv = setInterval(() => { loadEvents(); loadPendingPayouts(); }, 5000);
+    loadSlips();
+    const iv = setInterval(loadSlips, 6000);
     return () => clearInterval(iv);
-  }, [authToken]);
+  }, [authToken, fPlayer, fStatus, fType, fMinWager, fMaxWager]);
+
+  async function handleSetStatus(slipId: number, status: string) {
+    setActionLoading(slipId);
+    try {
+      await fetch(`${BASE_URL}/api/sportbets/admin/slips/${slipId}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      loadSlips();
+    } catch {}
+    setActionLoading(null);
+  }
+
+  async function handleSaveNote(slipId: number) {
+    const note = noteInputs[slipId] ?? "";
+    try {
+      await fetch(`${BASE_URL}/api/sportbets/admin/slips/${slipId}/note`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ note }),
+      });
+      setNoteEditing(null);
+      loadSlips();
+    } catch {}
+  }
+
+  async function handleDelete(slipId: number) {
+    if (!window.confirm("Permanently delete this bet slip?")) return;
+    try {
+      await fetch(`${BASE_URL}/api/sportbets/admin/slips/${slipId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      loadSlips();
+    } catch {}
+  }
+
+  const statusStyle = (s: string): React.CSSProperties => {
+    if (s === "won")       return { background: "#052e16", border: "1px solid #16a34a", color: "#4ade80" };
+    if (s === "lost")      return { background: "#3b0707", border: "1px solid #ef4444", color: "#f87171" };
+    if (s === "voided")    return { background: "#1c1917", border: "1px solid #78716c", color: "#a8a29e" };
+    if (s === "cashed_out") return { background: "#0c1445", border: "1px solid #3b82f6", color: "#93c5fd" };
+    return { background: "#1c0e00", border: "1px solid #f59e0b", color: "#fbbf24" }; // pending
+  };
 
   const fmt = (n: number) => n.toLocaleString();
 
-  const statusBadge = (status: string) =>
-    status === "open" ? "bg-green-900 text-green-400" :
-    status === "closed" ? "bg-amber-900 text-amber-400" :
-    "bg-blue-900 text-blue-400";
-
-
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
+    <div style={{ display: "flex", flexDirection: "column", gap: "20px", maxWidth: "900px", margin: "0 auto" }}>
+      {/* Header */}
       <div>
-        <h2 className="text-lg font-display font-semibold text-foreground mb-1">Sport Bets</h2>
-        <p className="text-xs text-muted-foreground">Manage sport betting events, entries, and payouts.</p>
+        <h2 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "18px", color: "#e2e8f0", margin: 0 }}>Sport Bet Slips</h2>
+        <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0 0" }}>View and manage all player sportsbook bet slips.</p>
       </div>
 
-      {/* ── Bet limits ───────────────────────────────────────────────────── */}
-      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "16px", padding: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
-        <h3 style={{ fontFamily: "Oswald, sans-serif", fontWeight: 600, color: "#e2e8f0", fontSize: "14px", display: "flex", alignItems: "center", gap: "8px", margin: 0 }}>
-          <Settings style={{ width: "16px", height: "16px", color: "#64748b" }} /> Bet Limits
-        </h3>
-        <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: "110px" }}>
-            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Min Bet</label>
-            <input type="number" min="1" value={sbMinBet} onChange={e => setSbMinBet(e.target.value)}
-              style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
-          </div>
-          <div style={{ flex: 1, minWidth: "110px" }}>
-            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Max Bet</label>
-            <input type="number" min="1" value={sbMaxBet} onChange={e => setSbMaxBet(e.target.value)}
-              style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
-          </div>
-          <button onClick={saveSbSettings} disabled={sbSettingsSaving}
-            style={{ padding: "7px 18px", background: "#a0223a", border: "none", borderRadius: "8px", fontSize: "13px", fontWeight: 700, color: "#fff", cursor: sbSettingsSaving ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.04em", opacity: sbSettingsSaving ? 0.6 : 1 }}>
-            {sbSettingsSaving ? "Saving…" : "Save"}
-          </button>
+      {/* Filters */}
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "16px", display: "flex", flexWrap: "wrap", gap: "10px", alignItems: "flex-end" }}>
+        <div style={{ flex: "1 1 140px" }}>
+          <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Player</label>
+          <input value={fPlayer} onChange={e => setFPlayer(e.target.value)} placeholder="Search username…"
+            style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
         </div>
-        {sbSettingsMsg && <p style={{ fontSize: "12px", color: sbSettingsMsg.ok ? "#4ade80" : "#f87171", margin: 0 }}>{sbSettingsMsg.text}</p>}
+        <div style={{ flex: "1 1 120px" }}>
+          <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Status</label>
+          <select value={fStatus} onChange={e => setFStatus(e.target.value)}
+            style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none" }}>
+            <option value="">All</option>
+            <option value="pending">Pending</option>
+            <option value="won">Won</option>
+            <option value="lost">Lost</option>
+            <option value="voided">Voided</option>
+            <option value="cashed_out">Cashed Out</option>
+          </select>
+        </div>
+        <div style={{ flex: "1 1 100px" }}>
+          <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Type</label>
+          <select value={fType} onChange={e => setFType(e.target.value)}
+            style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none" }}>
+            <option value="">All</option>
+            <option value="parlay">Parlay</option>
+            <option value="single">Single</option>
+          </select>
+        </div>
+        <div style={{ flex: "1 1 90px" }}>
+          <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Min Wager</label>
+          <input type="number" value={fMinWager} onChange={e => setFMinWager(e.target.value)} placeholder="0"
+            style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+        </div>
+        <div style={{ flex: "1 1 90px" }}>
+          <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Max Wager</label>
+          <input type="number" value={fMaxWager} onChange={e => setFMaxWager(e.target.value)} placeholder="∞"
+            style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+        </div>
+        <button onClick={() => { setFPlayer(""); setFStatus(""); setFType(""); setFMinWager(""); setFMaxWager(""); }}
+          style={{ padding: "6px 14px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", fontSize: "11px", color: "#94a3b8", cursor: "pointer", fontWeight: 600, letterSpacing: "0.04em", alignSelf: "flex-end" }}>
+          Reset
+        </button>
       </div>
 
-      {/* ── Pending Payouts card ─────────────────────────────────────────── */}
-      {pendingPayouts.length > 0 && (
-        <div className="bg-card border border-amber-700 rounded-2xl p-5 space-y-3">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-amber-400" />
-            <h3 className="font-display font-semibold text-foreground">Pending Payouts</h3>
-            <span className="ml-auto text-xs bg-amber-900 text-amber-400 px-2 py-0.5 rounded-full">{pendingPayouts.length} unpaid</span>
-          </div>
-          <div className="space-y-2">
-            {pendingPayouts.map(p => (
-              <div key={p.entryId} className="flex items-center justify-between gap-3 bg-zinc-800 rounded-xl px-4 py-3">
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm text-foreground truncate">{p.playerName}</p>
-                  <p className="text-xs text-muted-foreground truncate">{p.eventTitle} — {p.optionLabel} ({p.odds})</p>
-                  {p.player && (
-                    <p className="text-xs text-muted-foreground/70 truncate">
-                      {p.player.stateId ? `ID: ${p.player.stateId}` : ""}
-                      {p.player.phoneNumber ? ` · ${p.player.phoneNumber}` : ""}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <div className="text-right">
-                    <p className="text-xs text-muted-foreground/60">Bet: ${fmt(p.betAmount)}</p>
-                    {p.rakeAmount > 0 && (
-                      <>
-                        <p className="text-xs text-muted-foreground line-through">${fmt(p.grossPayout)}</p>
-                        <p className="text-xs text-yellow-400">−${fmt(p.rakeAmount)} rake ({p.rakePercent}%)</p>
-                      </>
-                    )}
-                    <p className="text-lg font-display font-bold text-green-400">${fmt(p.payoutAmount)}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-green-600 hover:bg-green-500 text-white"
-                    isLoading={markingPaid === p.entryId}
-                    onClick={() => handleMarkPaid(p.entryId)}
-                  >
-                    Mark Paid
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ── Events section ──────────────────────────────────────────────── */}
-      <div className="bg-card border border-zinc-700 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-400" />
-            <h3 className="font-display font-semibold text-foreground">Sport Events</h3>
-          </div>
-          <button
-            onClick={() => { setShowCreate(v => !v); setCreateMsg(null); }}
-            className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-semibold hover:bg-primary/80 transition-colors"
-          >
-            {showCreate ? "Cancel" : "+ Create Event"}
-          </button>
+      {/* Table */}
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", overflow: "hidden" }}>
+        {/* Column headers */}
+        <div style={{ display: "grid", gridTemplateColumns: "80px 1fr 90px 100px 100px 90px 120px", gap: "8px", padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.3)" }}>
+          {["Slip ID", "Player", "Type", "Wager", "Pot. Payout", "Status", "Submitted"].map(col => (
+            <span key={col} style={{ fontSize: "10px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.07em" }}>{col}</span>
+          ))}
         </div>
 
-        {/* Create event form */}
-        {showCreate && (
-          <form onSubmit={handleCreateEvent} className="space-y-3 border border-zinc-700 rounded-xl p-4 bg-zinc-900">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">New Event</p>
-            <Input placeholder="Event title (e.g. Chiefs vs Eagles)" value={createTitle} onChange={e => setCreateTitle(e.target.value)} />
-            <div className="flex gap-2">
-              <Input placeholder="League (e.g. NFL, NBA, UFC)" value={createLeague} onChange={e => setCreateLeague(e.target.value)} className="flex-1" />
-              <div className="flex-1">
-                <label className="text-xs text-muted-foreground font-semibold block mb-1">Game Date & Time <span className="text-muted-foreground/50 font-normal">(EST)</span></label>
-                <input
-                  type="datetime-local"
-                  value={createGameDate}
-                  onChange={e => setCreateGameDate(e.target.value)}
-                  className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
-            </div>
-            <Input placeholder="Description (optional)" value={createDesc} onChange={e => setCreateDesc(e.target.value)} />
-            <div className="flex items-center gap-3">
-              <label className="text-xs text-muted-foreground font-semibold whitespace-nowrap">House Rake %</label>
-              <Input
-                type="number" min="0" max="100" step="1"
-                placeholder="0"
-                value={createRake}
-                onChange={e => setCreateRake(e.target.value)}
-                className="w-24"
-              />
-              <span className="text-xs text-muted-foreground">taken from winning pool before payouts</span>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground font-semibold">Options (minimum 2)</p>
-              {createOptions.map((opt, i) => (
-                <div key={i} className="flex gap-2 items-center">
-                  <Input
-                    placeholder={`Option ${i + 1} (e.g. ${i === 0 ? "Chiefs Win" : i === 1 ? "Eagles Win" : "Draw"})`}
-                    value={opt.label}
-                    onChange={e => setCreateOptions(prev => prev.map((o, j) => j === i ? { ...o, label: e.target.value } : o))}
-                    className="flex-1"
-                  />
-                  <Input
-                    placeholder="Odds (e.g. 2.5x)"
-                    value={opt.odds}
-                    onChange={e => setCreateOptions(prev => prev.map((o, j) => j === i ? { ...o, odds: e.target.value } : o))}
-                    className="w-28"
-                  />
-                  {createOptions.length > 2 && (
-                    <button type="button" onClick={() => setCreateOptions(prev => prev.filter((_, j) => j !== i))}
-                      className="text-muted-foreground/50 hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button type="button" onClick={() => setCreateOptions(prev => [...prev, { label: "", odds: "" }])}
-                className="text-xs text-primary hover:underline">
-                + Add Option
-              </button>
-            </div>
-            {createMsg && <p className="text-xs text-destructive">{createMsg}</p>}
-            <Button type="submit" isLoading={creating} disabled={!createTitle.trim() || createOptions.some(o => !o.label.trim() || !o.odds.trim())}>
-              Create Event
-            </Button>
-          </form>
+        {loading && (
+          <p style={{ textAlign: "center", padding: "32px", fontSize: "12px", color: "#475569" }}>Loading…</p>
+        )}
+        {!loading && slips.length === 0 && (
+          <p style={{ textAlign: "center", padding: "32px", fontSize: "12px", color: "#475569" }}>No bet slips found.</p>
         )}
 
-        {/* Events list */}
-        {eventsError && (
-          <p className="text-xs text-red-400 text-center py-6">⚠️ {eventsError}</p>
-        )}
-        {!eventsError && events.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-6">No events yet. Create one above.</p>
-        )}
-        {events.map(ev => {
-          const isExpanded = expandedId === ev.id;
-          const isSettling = settlingId === ev.id;
+        {slips.map(slip => {
+          const isExpanded = expandedId === slip.id;
+          const sels: SlipSel[] = (() => { try { return JSON.parse(slip.selections); } catch { return []; } })();
+          const ss = statusStyle(slip.status);
+          const busy = actionLoading === slip.id;
+
           return (
-            <div key={ev.id} className="border border-zinc-700 rounded-xl overflow-hidden">
-              {/* Event header */}
+            <div key={slip.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+              {/* Row */}
               <button
-                onClick={() => setExpandedId(isExpanded ? null : ev.id)}
-                className="w-full flex items-center gap-3 p-3 text-left hover:bg-zinc-900 transition-colors"
+                onClick={() => setExpandedId(isExpanded ? null : slip.id)}
+                style={{ width: "100%", display: "grid", gridTemplateColumns: "80px 1fr 90px 100px 100px 90px 120px", gap: "8px", padding: "10px 16px", background: isExpanded ? "rgba(255,255,255,0.03)" : "transparent", border: "none", cursor: "pointer", textAlign: "left", alignItems: "center" }}
               >
-                <span className={`shrink-0 text-xs px-2 py-0.5 rounded font-semibold ${statusBadge(ev.status)}`}>
-                  {ev.status === "settled" && ev.winnerId ? "✓ " : ""}{ev.status.charAt(0).toUpperCase() + ev.status.slice(1)}
-                </span>
-                {ev.league && (
-                  <span className="shrink-0 text-xs px-2 py-0.5 rounded font-bold bg-violet-900 text-violet-300">🏆 {ev.league}</span>
-                )}
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium text-foreground block truncate">{ev.title}</span>
-                  {ev.gameDate && (
-                    <span className="text-xs text-muted-foreground/70">
-                      📅 {fmtEasternDate(ev.gameDate, { month: "short", day: "numeric", year: "numeric" })} {fmtEasternDate(ev.gameDate, { hour: "2-digit", minute: "2-digit" })} EST
-                    </span>
-                  )}
+                <span style={{ fontSize: "11px", color: "#64748b", fontFamily: "monospace" }}>#{slip.id}</span>
+                <div style={{ minWidth: 0 }}>
+                  <span style={{ fontSize: "12px", fontWeight: 700, color: "#e2e8f0", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{slip.playerUsername}</span>
+                  <span style={{ fontSize: "10px", color: "#475569" }}>ID {slip.playerId}</span>
                 </div>
-                <span className="shrink-0 text-xs text-muted-foreground">${fmt(ev.totalWagered)} wagered</span>
-                {isExpanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
+                <span style={{ fontSize: "11px", fontWeight: 600, color: slip.type === "parlay" ? "#f59e0b" : "#94a3b8", textTransform: "capitalize" }}>{slip.type}</span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#e2e8f0" }}>${fmt(slip.wagerAmount)}</span>
+                <span style={{ fontSize: "12px", fontWeight: 700, color: "#00E676" }}>${fmt(slip.potentialPayout)}</span>
+                <span style={{ fontSize: "10px", fontWeight: 700, padding: "3px 8px", borderRadius: "20px", textTransform: "capitalize", ...ss, display: "inline-block", whiteSpace: "nowrap" }}>
+                  {slip.status.replace("_", " ")}
+                </span>
+                <span style={{ fontSize: "10px", color: "#475569" }}>
+                  {new Date(slip.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                </span>
               </button>
 
-              {/* Expanded content */}
+              {/* Expanded detail */}
               {isExpanded && (
-                <div className="border-t border-zinc-700 p-4 space-y-4 bg-zinc-900">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {ev.description && <p className="text-xs text-muted-foreground flex-1 min-w-full">{ev.description}</p>}
-                    {ev.rakePercent > 0 && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-yellow-950 text-yellow-400 font-semibold">{ev.rakePercent}% rake</span>
+                <div style={{ padding: "12px 16px 16px", background: "rgba(0,0,0,0.25)", borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {/* Selections */}
+                  <div>
+                    <p style={{ fontSize: "10px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "8px" }}>
+                      {sels.length} Selection{sels.length !== 1 ? "s" : ""}
+                    </p>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                      {sels.length === 0 && <p style={{ fontSize: "11px", color: "#475569" }}>No selections recorded.</p>}
+                      {sels.map((sel, i) => (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", background: "rgba(255,255,255,0.04)", borderRadius: "8px", padding: "7px 10px" }}>
+                          <span style={{ fontSize: "12px", fontWeight: 700, color: "#e2e8f0", flex: 1 }}>{sel.teamName ?? "?"}</span>
+                          {sel.matchup && <span style={{ fontSize: "10px", color: "#64748b" }}>{sel.matchup}</span>}
+                          {sel.odds !== undefined && (
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: sel.odds >= 0 ? "#00E676" : "#94a3b8" }}>{fmtOddsAdmin(sel.odds)}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Settlement info */}
+                  {slip.status !== "pending" && (
+                    <div style={{ fontSize: "11px", color: "#64748b", display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                      {slip.settledBy && <span>Settled by <span style={{ color: "#94a3b8", fontWeight: 600 }}>{slip.settledBy}</span></span>}
+                      {slip.settledAt && <span>at {new Date(slip.settledAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>}
+                      {slip.actualPayout !== null && slip.actualPayout !== undefined && (
+                        <span>Actual payout: <span style={{ color: "#4ade80", fontWeight: 700 }}>${fmt(slip.actualPayout)}</span></span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Admin note */}
+                  <div>
+                    {noteEditing === slip.id ? (
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <input
+                          autoFocus
+                          value={noteInputs[slip.id] ?? slip.adminNote ?? ""}
+                          onChange={e => setNoteInputs(prev => ({ ...prev, [slip.id]: e.target.value }))}
+                          placeholder="Admin note…"
+                          style={{ flex: 1, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "6px 10px", fontSize: "12px", color: "#e2e8f0", outline: "none" }}
+                        />
+                        <button onClick={() => handleSaveNote(slip.id)}
+                          style={{ padding: "5px 12px", background: "#a0223a", border: "none", borderRadius: "7px", fontSize: "11px", fontWeight: 700, color: "#fff", cursor: "pointer" }}>Save</button>
+                        <button onClick={() => setNoteEditing(null)}
+                          style={{ padding: "5px 10px", background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "7px", fontSize: "11px", color: "#94a3b8", cursor: "pointer" }}>Cancel</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setNoteEditing(slip.id); setNoteInputs(prev => ({ ...prev, [slip.id]: slip.adminNote ?? "" })); }}
+                        style={{ fontSize: "11px", color: slip.adminNote ? "#e2e8f0" : "#475569", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "8px", padding: "6px 12px", cursor: "pointer", textAlign: "left", width: "100%" }}>
+                        {slip.adminNote ? `📝 ${slip.adminNote}` : "＋ Add admin note"}
+                      </button>
                     )}
-                    <span className="text-xs text-muted-foreground/60 ml-auto">Submitted by <span className="text-muted-foreground font-semibold">{ev.createdBy}</span></span>
                   </div>
-
-                  {/* Options grid */}
-                  <div className="grid gap-2">
-                    {ev.options.map(opt => (
-                      <div key={opt.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg text-xs ${ev.winnerId === opt.id ? "bg-green-950 border border-green-700" : "bg-zinc-800"}`}>
-                        {ev.winnerId === opt.id && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
-                        <span className="flex-1 font-medium text-foreground">{opt.label}</span>
-                        <span className="text-primary font-bold">{opt.odds}</span>
-                        <span className="text-muted-foreground">{opt.entryCount} bets</span>
-                        <span className="text-muted-foreground">${fmt(opt.totalWagered)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Entries list */}
-                  {ev.entries.length > 0 && (
-                    <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold mb-2">Entries</p>
-                      <div className="space-y-1.5 max-h-64 overflow-y-auto">
-                        {ev.entries.map(entry => {
-                          const opt = ev.options.find(o => o.id === entry.optionId);
-                          const isWinner = ev.winnerId === entry.optionId;
-                          const isLoser = ev.status === "settled" && ev.winnerId !== null && !isWinner;
-                          const payout = isWinner && opt ? Math.floor(entry.amount * parseOdds(opt.odds) * (1 - (ev.rakePercent ?? 0) / 100)) : null;
-                          return (
-                            <div key={entry.id} className={`rounded-lg px-3 py-2 border ${isWinner ? "border-green-700 bg-green-950" : isLoser ? "border-red-600 bg-red-900" : "border-zinc-700 bg-zinc-900"}`}>
-                              <div className="flex items-center gap-2 text-xs">
-                                {isWinner && <Trophy className="w-3 h-3 text-amber-400 shrink-0" />}
-                                {isLoser && <span className="shrink-0 text-red-500 font-black text-sm leading-none">✕</span>}
-                                <span className={`flex-1 font-semibold truncate ${isWinner ? "text-green-400" : isLoser ? "text-red-400" : "text-foreground"}`}>{entry.playerName}</span>
-                                <span className={`shrink-0 px-1.5 py-0.5 rounded font-semibold ${isLoser ? "bg-red-900 text-red-300" : "bg-zinc-800 text-foreground"}`}>{opt?.label ?? "?"}</span>
-                                {isLoser && <span className="shrink-0 px-2 py-0.5 rounded bg-red-950 text-red-400 font-bold tracking-wide">LOST</span>}
-                                {payout !== null ? (
-                                  <span className="shrink-0 font-bold text-green-400">→ ${fmt(payout)}</span>
-                                ) : (
-                                  <span className={`shrink-0 font-bold ${isWinner ? "text-green-400" : isLoser ? "text-red-400 line-through" : ""}`}>${fmt(entry.amount)}</span>
-                                )}
-                                {isWinner && ev.status === "settled" && (
-                                  entry.paidAt
-                                    ? <span className="shrink-0 px-1.5 py-0.5 rounded bg-green-900 text-green-400 font-semibold">✓ Paid</span>
-                                    : <button
-                                        onClick={() => handleMarkPaid(entry.id)}
-                                        disabled={markingPaid === entry.id}
-                                        className="shrink-0 px-2 py-0.5 rounded bg-amber-900 text-amber-400 font-semibold hover:bg-amber-800 transition-colors disabled:opacity-50 cursor-pointer"
-                                      >
-                                        {markingPaid === entry.id ? "…" : "Mark Paid"}
-                                      </button>
-                                )}
-                                {ev.status === "open" && (
-                                  <button onClick={() => handleDeleteEntry(entry.id)} className="shrink-0 text-muted-foreground/40 hover:text-destructive">✕</button>
-                                )}
-                              </div>
-                              {/* Math formula for this entry */}
-                              <div className="mt-1 text-xs font-mono text-muted-foreground/70 flex flex-wrap gap-x-1 items-center">
-                                {isWinner && opt ? (
-                                  <>
-                                    <span>${fmt(entry.amount)}</span>
-                                    <span className="text-muted-foreground/40">×</span>
-                                    <span>{opt.odds}</span>
-                                    <span className="text-muted-foreground/40">=</span>
-                                    <span>${fmt(Math.floor(entry.amount * parseOdds(opt.odds)))}</span>
-                                    {(ev.rakePercent ?? 0) > 0 && (
-                                      <>
-                                        <span className="text-muted-foreground/40">−</span>
-                                        <span className="text-yellow-400">{ev.rakePercent}% rake</span>
-                                        <span className="text-muted-foreground/40">=</span>
-                                        <span className="text-green-400">${fmt(Math.floor(entry.amount * parseOdds(opt.odds) * (1 - (ev.rakePercent ?? 0) / 100)))}</span>
-                                      </>
-                                    )}
-                                  </>
-                                ) : (
-                                  <>
-                                    <span>${fmt(entry.amount)}</span>
-                                    <span className="text-muted-foreground/40">× {opt?.odds ?? "?"}</span>
-                                  </>
-                                )}
-                              </div>
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs">
-                                {entry.player?.stateId && <span className="text-muted-foreground">State ID: {entry.player.stateId}</span>}
-                                {entry.player?.phoneNumber && <span className="text-primary font-medium">📞 {entry.player.phoneNumber}</span>}
-                                <span className="text-muted-foreground/50 ml-auto">💎 {entry.enteredBy}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* ── Event financial summary ───────────────────────── */}
-                  {(() => {
-                    const totalPool = ev.entries.reduce((s, e) => s + e.amount, 0);
-                    if (totalPool === 0) return null;
-
-                    const winnerOpt = ev.options.find(o => o.id === ev.winnerId);
-                    const winningEntries = ev.entries.filter(e => e.optionId === ev.winnerId);
-                    const grossPayouts = winningEntries.reduce((s, e) => {
-                      const odds = winnerOpt ? parseOdds(winnerOpt.odds) : 1;
-                      return s + Math.floor(e.amount * odds);
-                    }, 0);
-                    const rakeAmount = ev.status === "settled" && winnerOpt
-                      ? winningEntries.reduce((s, e) => {
-                          const gross = Math.floor(e.amount * parseOdds(winnerOpt.odds));
-                          const net   = Math.floor(e.amount * parseOdds(winnerOpt.odds) * (1 - (ev.rakePercent ?? 0) / 100));
-                          return s + (gross - net);
-                        }, 0)
-                      : Math.floor(grossPayouts * (ev.rakePercent ?? 0) / 100);
-                    const netPayouts = grossPayouts - rakeAmount;
-                    const houseNet = totalPool - netPayouts;
-
-                    return (
-                      <div className="rounded-xl border border-zinc-700 bg-zinc-900 p-3 space-y-1.5 text-xs">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-2">Event Financials</p>
-
-                        {/* Per-option projected pool for open/closed events */}
-                        {ev.status !== "settled" && ev.options.map(opt => {
-                          const optEntries = ev.entries.filter(e => e.optionId === opt.id);
-                          const optPool = optEntries.reduce((s, e) => s + e.amount, 0);
-                          const projGross = optEntries.reduce((s, e) => s + Math.floor(e.amount * parseOdds(opt.odds)), 0);
-                          const projRake  = Math.floor(projGross * (ev.rakePercent ?? 0) / 100);
-                          const projNet   = projGross - projRake;
-                          const projHouseNet = totalPool - projNet;
-                          return (
-                            <div key={opt.id} className="rounded-lg bg-zinc-900 px-3 py-2 space-y-1">
-                              <p className="font-semibold text-foreground">If <span className="text-primary">{opt.label}</span> wins ({opt.odds})</p>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-muted-foreground font-mono">
-                                <span>Winner pool</span><span className="text-right text-foreground">${fmt(optPool)}</span>
-                                <span>Gross payouts</span><span className="text-right text-foreground">${fmt(projGross)}</span>
-                                {(ev.rakePercent ?? 0) > 0 && <><span>Rake ({ev.rakePercent}%)</span><span className="text-right text-yellow-400">−${fmt(projRake)}</span></>}
-                                <span>Net payouts</span><span className="text-right text-green-400">${fmt(projNet)}</span>
-                                <span className="font-semibold text-foreground">House net</span><span className={`text-right font-bold ${projHouseNet >= 0 ? "text-primary" : "text-red-400"}`}>{projHouseNet >= 0 ? "+" : ""}${fmt(projHouseNet)}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {/* Settled event totals */}
-                        {ev.status === "settled" && (
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono text-muted-foreground">
-                            <span>Total pool</span><span className="text-right text-foreground">${fmt(totalPool)}</span>
-                            <span>Gross payouts</span><span className="text-right text-foreground">${fmt(grossPayouts)}</span>
-                            {(ev.rakePercent ?? 0) > 0 && <><span>Rake ({ev.rakePercent}%)</span><span className="text-right text-yellow-400">−${fmt(rakeAmount)}</span></>}
-                            <span>Net payouts</span><span className="text-right text-green-400">${fmt(netPayouts)}</span>
-                            <span className="font-semibold text-foreground pt-1 border-t border-zinc-700">House net</span>
-                            <span className={`text-right font-bold pt-1 border-t border-zinc-700 ${houseNet >= 0 ? "text-primary" : "text-red-400"}`}>
-                              {houseNet >= 0 ? "+" : ""}${fmt(houseNet)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {/* Settle winner picker — shown when settling this event */}
-                  {isSettling && (
-                    <div className="border border-amber-700 rounded-xl bg-amber-950 p-3 space-y-2">
-                      <p className="text-xs font-semibold text-amber-300 uppercase tracking-widest">Select Winning Option</p>
-                      <div className="space-y-1">
-                        {ev.options.map(opt => (
-                          <button
-                            key={opt.id}
-                            onClick={() => setSettleWinner(opt.id)}
-                            className={`w-full text-left text-xs px-3 py-2 rounded-lg border transition-colors ${settleWinner === opt.id ? "border-amber-400 bg-amber-900 text-amber-200 font-semibold" : "border-zinc-700 bg-zinc-900 text-foreground hover:bg-zinc-900"}`}
-                          >
-                            {settleWinner === opt.id && <Trophy className="w-3 h-3 inline mr-1.5 text-amber-400" />}
-                            {opt.label} <span className="text-primary font-bold ml-1">{opt.odds}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <button
-                          onClick={() => { if (settleWinner) handleSetStatus(ev.id, "settled", settleWinner); }}
-                          disabled={!settleWinner}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                        >
-                          Confirm Settle
-                        </button>
-                        <button
-                          onClick={() => { setSettlingId(null); setSettleWinner(null); }}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Action buttons */}
-                  <div className="border-t border-zinc-700 pt-3 mt-1 flex gap-2 flex-wrap">
-                    {ev.status === "open" && (
-                      <button onClick={() => handleSetStatus(ev.id, "closed")}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-muted-foreground hover:text-foreground transition-colors">
-                        <Lock className="w-3 h-3 inline mr-1" />Close Bets
+                  {slip.status === "pending" && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", paddingTop: "4px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                      <button onClick={() => handleSetStatus(slip.id, "won")} disabled={busy}
+                        style={{ padding: "6px 14px", background: busy ? "#1a2e1a" : "#14532d", border: "1px solid #16a34a", borderRadius: "8px", fontSize: "11px", fontWeight: 700, color: "#4ade80", cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                        ✓ Mark Won
                       </button>
-                    )}
-                    {ev.status === "closed" && !isSettling && (
-                      <button onClick={() => { setSettlingId(ev.id); setSettleWinner(null); }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-amber-900 border border-amber-700 text-amber-400 hover:bg-amber-900 transition-colors">
-                        <Trophy className="w-3 h-3 inline mr-1" />Settle Event
+                      <button onClick={() => handleSetStatus(slip.id, "lost")} disabled={busy}
+                        style={{ padding: "6px 14px", background: busy ? "#2e1a1a" : "#3b0707", border: "1px solid #ef4444", borderRadius: "8px", fontSize: "11px", fontWeight: 700, color: "#f87171", cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                        ✕ Mark Lost
                       </button>
-                    )}
-                    {ev.status === "open" && !isSettling && (
-                      <button onClick={() => { setSettlingId(ev.id); setSettleWinner(null); }}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-amber-900 border border-amber-700 text-amber-400 hover:bg-amber-900 transition-colors">
-                        <Trophy className="w-3 h-3 inline mr-1" />Settle Early
+                      <button onClick={() => handleSetStatus(slip.id, "voided")} disabled={busy}
+                        style={{ padding: "6px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", fontSize: "11px", fontWeight: 700, color: "#94a3b8", cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                        ⊘ Void (Refund)
                       </button>
-                    )}
-                    {ev.status !== "settled" ? (
-                      <button onClick={() => handleDeleteEvent(ev.id)}
-                        className="text-xs px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-muted-foreground hover:text-destructive transition-colors ml-auto">
-                        <Trash2 className="w-3 h-3 inline mr-1" />Delete
+                      <button onClick={() => handleSetStatus(slip.id, "cashed_out")} disabled={busy}
+                        style={{ padding: "6px 14px", background: "#0c1445", border: "1px solid #3b82f6", borderRadius: "8px", fontSize: "11px", fontWeight: 700, color: "#93c5fd", cursor: busy ? "not-allowed" : "pointer", opacity: busy ? 0.6 : 1 }}>
+                        ⓟ Cash Out
                       </button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/40 ml-auto italic">Settled events cannot be deleted</span>
-                    )}
-                  </div>
+                      {isOwner && (
+                        <button onClick={() => handleDelete(slip.id)} disabled={busy}
+                          style={{ padding: "6px 14px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", fontSize: "11px", fontWeight: 700, color: "#ef4444", cursor: busy ? "not-allowed" : "pointer", marginLeft: "auto", opacity: busy ? 0.6 : 1 }}>
+                          🗑 Delete
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {slip.status !== "pending" && isOwner && (
+                    <div style={{ display: "flex", justifyContent: "flex-end", paddingTop: "4px", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                      <button onClick={() => handleDelete(slip.id)}
+                        style={{ padding: "5px 12px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "8px", fontSize: "11px", fontWeight: 700, color: "#ef4444", cursor: "pointer" }}>
+                        🗑 Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -11882,6 +11573,12 @@ function SportBetsTab() {
         })}
       </div>
 
+      {/* Summary footer */}
+      {slips.length > 0 && (
+        <p style={{ fontSize: "11px", color: "#475569", textAlign: "right" }}>
+          Showing {slips.length} slip{slips.length !== 1 ? "s" : ""} · Total wagered: <span style={{ color: "#e2e8f0", fontWeight: 700 }}>${fmt(slips.reduce((s, x) => s + x.wagerAmount, 0))}</span>
+        </p>
+      )}
     </div>
   );
 }

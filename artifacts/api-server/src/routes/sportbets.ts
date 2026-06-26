@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { db, sportBetFinancesTable, sportBetEventsTable, sportBetEventOptionsTable, sportBetEventEntriesTable, playersTable, settingsTable, transactionsTable } from "@workspace/db";
-import { eq, desc, inArray, or, ilike, sql } from "drizzle-orm";
-import { requireSportbetsOrAbove, requirePlayer } from "../middleware/auth.js";
+import { db, sportBetFinancesTable, sportBetEventsTable, sportBetEventOptionsTable, sportBetEventEntriesTable, playersTable, settingsTable, transactionsTable, sportBetSlipsTable } from "@workspace/db";
+import { eq, desc, inArray, or, ilike, sql, gte, lte, and } from "drizzle-orm";
+import { requireSportbetsOrAbove, requirePlayer, requireOwner } from "../middleware/auth.js";
 import { broadcastPlayerBalance } from "../lib/table-ws.js";
 
 const router = Router();
@@ -770,9 +770,8 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
     await db.update(playersTable).set({ chips: newChips }).where(eq(playersTable.id, playerId));
     broadcastPlayerBalance(playerId, newChips);
 
-    const pickDesc = Array.isArray(picks)
-      ? picks.map(p => p.teamName ?? "?").join(", ")
-      : "live odds bet";
+    const pickList = Array.isArray(picks) ? picks as { teamName?: string; odds?: number; matchup?: string }[] : [];
+    const pickDesc = pickList.length > 0 ? pickList.map(p => p.teamName ?? "?").join(", ") : "live odds bet";
 
     // Record transaction — non-fatal if it fails
     try {
@@ -786,10 +785,138 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
       console.error("[live-bet] transaction insert failed (non-fatal):", txErr);
     }
 
+    // Save bet slip — non-fatal if it fails
+    try {
+      let decimalOdds = 1;
+      for (const pick of pickList) {
+        const odds = Number(pick.odds);
+        if (odds && !isNaN(odds)) {
+          decimalOdds *= odds >= 0 ? (odds / 100) + 1 : (100 / Math.abs(odds)) + 1;
+        }
+      }
+      const slipType = betType === "parlay" || pickList.length > 1 ? "parlay" : "single";
+      const potentialPayout = Math.floor(w * decimalOdds);
+      await db.insert(sportBetSlipsTable).values({
+        playerId,
+        playerUsername: player.username,
+        type: slipType,
+        wagerAmount: w,
+        potentialPayout,
+        status: "pending",
+        selections: JSON.stringify(pickList),
+      });
+    } catch (slipErr) {
+      console.error("[live-bet] bet slip insert failed (non-fatal):", slipErr);
+    }
+
     console.log(`[live-bet] success — player=${player.username} newChips=${newChips}`);
     return res.json({ success: true, newChips });
   } catch (err) {
     console.error("[live-bet] unhandled error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Admin bet slip routes ─────────────────────────────────────────────────────
+
+// GET /sportbets/admin/slips — list all slips with optional filters
+router.get("/admin/slips", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const { player, status, type, minWager, maxWager } = req.query;
+    const conditions = and(
+      player ? ilike(sportBetSlipsTable.playerUsername, `%${String(player)}%`) : undefined,
+      status ? eq(sportBetSlipsTable.status, String(status)) : undefined,
+      type   ? eq(sportBetSlipsTable.type,   String(type))   : undefined,
+      minWager && !isNaN(parseInt(String(minWager))) ? gte(sportBetSlipsTable.wagerAmount, parseInt(String(minWager))) : undefined,
+      maxWager && !isNaN(parseInt(String(maxWager))) ? lte(sportBetSlipsTable.wagerAmount, parseInt(String(maxWager))) : undefined,
+    );
+    const slips = await db.select().from(sportBetSlipsTable)
+      .where(conditions)
+      .orderBy(desc(sportBetSlipsTable.createdAt))
+      .limit(300);
+    return res.json(slips);
+  } catch (err) {
+    console.error("[slips] get error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// PATCH /sportbets/admin/slips/:id — settle: won / lost / voided / cashed_out
+router.patch("/admin/slips/:id", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const slipId = parseInt(req.params.id);
+    const { status } = req.body as { status: string };
+    const session = (req as any).bankerSession;
+
+    if (!["won", "lost", "voided", "cashed_out"].includes(status)) {
+      return res.status(400).json({ error: "Invalid status" });
+    }
+
+    const [slip] = await db.select().from(sportBetSlipsTable).where(eq(sportBetSlipsTable.id, slipId));
+    if (!slip) return res.status(404).json({ error: "Slip not found" });
+    if (slip.status !== "pending") return res.status(400).json({ error: "Slip already settled" });
+
+    const update: Record<string, unknown> = {
+      status,
+      settledAt: new Date(),
+      settledBy: session.username,
+    };
+
+    if (status === "won") {
+      update.actualPayout = slip.potentialPayout;
+      await db.update(playersTable)
+        .set({ chips: sql`chips + ${slip.potentialPayout}` })
+        .where(eq(playersTable.id, slip.playerId));
+      const [p] = await db.select({ chips: playersTable.chips }).from(playersTable).where(eq(playersTable.id, slip.playerId));
+      if (p) broadcastPlayerBalance(slip.playerId, Number(p.chips));
+      try {
+        await db.insert(transactionsTable).values({
+          playerId: slip.playerId, amount: slip.potentialPayout, type: "win",
+          description: `Sports Bet Won (slip #${slip.id})`, staffUsername: session.username,
+        });
+      } catch {}
+    } else if (status === "voided") {
+      update.actualPayout = slip.wagerAmount;
+      await db.update(playersTable)
+        .set({ chips: sql`chips + ${slip.wagerAmount}` })
+        .where(eq(playersTable.id, slip.playerId));
+      const [p] = await db.select({ chips: playersTable.chips }).from(playersTable).where(eq(playersTable.id, slip.playerId));
+      if (p) broadcastPlayerBalance(slip.playerId, Number(p.chips));
+      try {
+        await db.insert(transactionsTable).values({
+          playerId: slip.playerId, amount: slip.wagerAmount, type: "deposit",
+          description: `Sports Bet Voided – refund (slip #${slip.id})`, staffUsername: session.username,
+        });
+      } catch {}
+    }
+
+    await db.update(sportBetSlipsTable).set(update).where(eq(sportBetSlipsTable.id, slipId));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("[slips] patch error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// POST /sportbets/admin/slips/:id/note — add or update admin note
+router.post("/admin/slips/:id/note", requireSportbetsOrAbove, async (req, res) => {
+  try {
+    const slipId = parseInt(req.params.id);
+    const { note } = req.body as { note: string };
+    await db.update(sportBetSlipsTable).set({ adminNote: note ?? null }).where(eq(sportBetSlipsTable.id, slipId));
+    return res.json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// DELETE /sportbets/admin/slips/:id — owner only
+router.delete("/admin/slips/:id", requireOwner, async (req, res) => {
+  try {
+    const slipId = parseInt(req.params.id);
+    await db.delete(sportBetSlipsTable).where(eq(sportBetSlipsTable.id, slipId));
+    return res.json({ success: true });
+  } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
 });

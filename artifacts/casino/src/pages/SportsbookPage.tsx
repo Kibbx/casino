@@ -1673,8 +1673,8 @@ export function SportsbookPage() {
         },
         body: JSON.stringify({
           wager: w,
-          betType: "live",
-          picks: slip.map(e => ({ teamName: e.teamName })),
+          betType: slip.length > 1 ? "parlay" : "single",
+          picks: slip.map(e => ({ teamName: e.teamName, odds: e.odds, matchup: e.matchup })),
         }),
       });
       const data = await res.json() as { success?: boolean; error?: string };

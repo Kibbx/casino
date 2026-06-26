@@ -30,3 +30,4 @@ export * from "./player-tags";
 export * from "./rakeback";
 export * from "./highlow";
 export * from "./mob-tower";
+export * from "./sport-bet-slips";
