@@ -1146,3 +1146,19 @@
 *:focus-within {
   outline: none !important;
 }
+
+/* suppress scrollbar tracks on root frame — older CEF renders 1px coloured
+   lines even when scrollbar-width: none is set on child elements */
+html, body, #root {
+  outline: none !important;
+  scrollbar-width: none !important;
+  scrollbar-color: transparent transparent !important;
+  -ms-overflow-style: none !important;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+#root::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
