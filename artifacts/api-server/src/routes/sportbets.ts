@@ -741,40 +741,57 @@ router.delete("/event-entries/:id", requireSportbetsOrAbove, async (req, res) =>
 
 // ── Live Odds Bet — deducts chips, broadcasts balance update ──────────────────
 router.post("/public/live-bet", requirePlayer, async (req, res) => {
-  const playerId = (req as any).authenticatedPlayerId as number;
-  const { wager, betType, picks } = req.body as {
-    wager: number;
-    betType?: string;
-    picks?: { teamName?: string }[];
-  };
+  try {
+    const playerId = (req as any).authenticatedPlayerId as number;
+    const { wager, betType, picks } = req.body as {
+      wager: number;
+      betType?: string;
+      picks?: { teamName?: string }[];
+    };
 
-  const w = Math.floor(Number(wager));
-  if (!w || w <= 0) return res.status(400).json({ error: "Wager must be greater than 0" });
+    console.log(`[live-bet] player=${playerId} wager=${wager} betType=${betType}`);
 
-  const [player] = await db
-    .select({ id: playersTable.id, username: playersTable.username, chips: playersTable.chips })
-    .from(playersTable)
-    .where(eq(playersTable.id, playerId));
+    const w = Math.floor(Number(wager));
+    if (!w || w <= 0) return res.status(400).json({ error: "Wager must be greater than 0" });
 
-  if (!player) return res.status(404).json({ error: "Player not found" });
-  if (Number(player.chips) < w) return res.status(400).json({ error: "Insufficient chips" });
+    const [player] = await db
+      .select({ id: playersTable.id, username: playersTable.username, chips: playersTable.chips })
+      .from(playersTable)
+      .where(eq(playersTable.id, playerId));
 
-  const newChips = Number(player.chips) - w;
-  await db.update(playersTable).set({ chips: newChips }).where(eq(playersTable.id, playerId));
-  broadcastPlayerBalance(playerId, newChips);
+    if (!player) return res.status(404).json({ error: "Player not found" });
 
-  const pickDesc = Array.isArray(picks)
-    ? picks.map(p => p.teamName ?? "?").join(", ")
-    : "live odds bet";
+    const currentChips = Number(player.chips);
+    console.log(`[live-bet] player=${player.username} chips=${currentChips} wager=${w}`);
 
-  await db.insert(transactionsTable).values({
-    playerId,
-    amount: w,
-    type: "loss",
-    description: `Sports Bet (${betType ?? "live"}): ${pickDesc}`,
-  } as any);
+    if (currentChips < w) return res.status(400).json({ error: "Insufficient chips" });
 
-  return res.json({ success: true, newChips });
+    const newChips = currentChips - w;
+    await db.update(playersTable).set({ chips: newChips }).where(eq(playersTable.id, playerId));
+    broadcastPlayerBalance(playerId, newChips);
+
+    const pickDesc = Array.isArray(picks)
+      ? picks.map(p => p.teamName ?? "?").join(", ")
+      : "live odds bet";
+
+    // Record transaction — non-fatal if it fails
+    try {
+      await db.insert(transactionsTable).values({
+        playerId,
+        amount: w,
+        type: "loss",
+        description: `Sports Bet (${betType ?? "live"}): ${pickDesc}`,
+      });
+    } catch (txErr) {
+      console.error("[live-bet] transaction insert failed (non-fatal):", txErr);
+    }
+
+    console.log(`[live-bet] success — player=${player.username} newChips=${newChips}`);
+    return res.json({ success: true, newChips });
+  } catch (err) {
+    console.error("[live-bet] unhandled error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 export default router;

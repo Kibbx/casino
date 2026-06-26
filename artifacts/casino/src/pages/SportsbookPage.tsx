@@ -923,7 +923,7 @@ function EventCard({
 /* ── Bet slip ────────────────────────────────────────────────────── */
 function BetSlip({
   entries, popularEvents = [], onRemove, onClear, onPlace, onSelect,
-  chips, placeError, placing = false,
+  chips, chipsKnown = false, placeError, placing = false,
 }: {
   entries: BetSlipEntry[];
   popularEvents?: SbEvent[];
@@ -933,6 +933,7 @@ function BetSlip({
   onPlace: (wager: string) => void;
   onSelect?: (ev: SbEvent, side: "home" | "away") => void;
   chips?: number;
+  chipsKnown?: boolean;
   placeError?: string;
   placing?: boolean;
 }) {
@@ -949,7 +950,7 @@ function BetSlip({
     }
   }, [entries.length]);
 
-  const avail = chips ?? Infinity;
+  const avail = chipsKnown ? (chips ?? Infinity) : Infinity;
 
   const getSingleWager = (e: BetSlipEntry) => singleWagers[e.selectionId] ?? "";
   const setSingleWager = (e: BetSlipEntry, val: string) =>
@@ -1160,7 +1161,7 @@ function BetSlip({
                 </div>
 
                 {/* Validation / place error */}
-                {(placeError || (parlayWagerNum > 0 && chips !== undefined && parlayWagerNum > chips)) && (
+                {(placeError || (chipsKnown && parlayWagerNum > 0 && chips !== undefined && parlayWagerNum > chips)) && (
                   <p className="text-[9px] font-bold" style={{ color: "#ef4444" }}>
                     {placeError ?? "Insufficient chips"}
                   </p>
@@ -1168,7 +1169,7 @@ function BetSlip({
 
                 {/* CTA block */}
                 {(() => {
-                  const insufficient = chips !== undefined && parlayWagerNum > chips;
+                  const insufficient = chipsKnown && chips !== undefined && parlayWagerNum > chips;
                   const canPlace = parlayWagerNum > 0 && !insufficient && !placing;
                   return (
                     <button onClick={() => onPlace(parlayWager)}
@@ -1262,13 +1263,13 @@ function BetSlip({
 
                   {/* Payout / Place row */}
                   {(() => {
-                    const insufficient = chips !== undefined && swNum > chips;
-                    const canPlace = swNum > 0 && !insufficient && !placing;
+                    const insufficient = chipsKnown && chips !== undefined && swNum > chips;
+                    const canPlace = swNum > 0 && !insufficient && !placing && !placeError;
                     return (
                       <>
-                        {insufficient && (
+                        {(placeError || insufficient) && (
                           <p className="text-[8px] font-bold" style={{ color: "#ef4444" }}>
-                            Insufficient chips
+                            {placeError ?? "Insufficient chips"}
                           </p>
                         )}
                         <button onClick={() => onPlace(sw)}
@@ -1643,11 +1644,16 @@ export function SportsbookPage() {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing,    setPlacing]    = useState(false);
 
+  /* true once we have a real balance reading (WS or query) */
+  const chipsKnown = liveChips !== null || currentPlayer !== undefined;
+
   async function placeBets(wager: string) {
     const w = Math.floor(parseFloat(wager) || 0);
+    console.log("[placeBets] wager=", wager, "w=", w, "chips=", chips, "chipsKnown=", chipsKnown, "playerId=", playerId, "hasToken=", !!sessionToken);
     if (!sessionToken || !playerId) { setPlaceError("Not logged in"); return; }
     if (w <= 0) { setPlaceError("Enter a wager amount"); return; }
-    if (w > chips) { setPlaceError("Insufficient chips"); return; }
+    /* only enforce chip guard when we know the real balance */
+    if (chipsKnown && w > chips) { setPlaceError("Insufficient chips"); return; }
     setPlacing(true);
     setPlaceError(null);
     try {
@@ -1664,11 +1670,13 @@ export function SportsbookPage() {
         }),
       });
       const data = await res.json() as { success?: boolean; error?: string };
+      console.log("[placeBets] response status=", res.status, "data=", data);
       if (!res.ok) { setPlaceError(data.error ?? "Failed to place bet"); return; }
       setPlaced(true);
       clearSlip();
       setTimeout(() => setPlaced(false), 3500);
-    } catch {
+    } catch (err) {
+      console.error("[placeBets] fetch error:", err);
       setPlaceError("Network error — try again");
     } finally {
       setPlacing(false);
@@ -1688,7 +1696,7 @@ export function SportsbookPage() {
             background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.38)",
             color: "#22c55e", boxShadow: "0 0 24px rgba(34,197,94,0.28)", backdropFilter: "blur(8px)",
           }}>
-          ✓ Virtual bets placed!
+          ✓ Bet placed!
         </div>
       )}
 
@@ -1953,6 +1961,7 @@ export function SportsbookPage() {
               onPlace={placeBets}
               onSelect={toggleSelection}
               chips={chips}
+              chipsKnown={chipsKnown}
               placeError={placeError}
               placing={placing}
             />
