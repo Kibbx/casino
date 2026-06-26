@@ -1,0 +1,91 @@
+Make my Big House Casino Profile page fully backend-driven.
+
+Use the attached screenshot as the UI reference. Replace all hardcoded profile, wallet, rank, and activity values with data loaded from the backend.
+
+Requirements:
+
+1. Create backend API endpoints:
+- GET /api/profile/:userId
+- GET /api/profile/:userId/stats
+- GET /api/profile/:userId/activity
+- GET /api/profile/:userId/wallet
+- GET /api/profile/:userId/rank
+
+2. The Profile page must load:
+- display name
+- avatar/icon
+- membership badge
+- member since date
+- stat ID
+- referral code
+- credit score label/value
+- chips balance
+- rounds played
+- total wagered
+- total won
+- largest win
+- net result
+- gems
+- recent activity rows
+
+3. Recent activity must come from real transaction/game data, not hardcoded rows.
+Use the backend to calculate:
+- latest bet amount
+- latest win amount
+- biggest single win
+- win/loss status badges
+- game multiplier where available
+
+4. Backend calculations:
+- roundsPlayed = count of completed game rounds
+- totalWagered = sum of all bets
+- totalWon = sum of all payouts
+- netResult = totalWon - totalWagered
+- largestWin = max payout or max profit, depending on existing schema
+- chips = current wallet balance
+- gems = current gem balance
+
+5. Frontend behavior:
+- Show loading skeletons while fetching
+- Show an error state if the API fails
+- Format chip numbers with commas
+- Use red for negative net results and losses
+- Use green for wins
+- Keep the existing neon casino styling exactly like the screenshot
+
+6. Data model:
+Use the existing users, wallets, game_rounds, bets, transactions, or equivalent tables if they already exist.
+If missing, add the minimum schema/migration needed:
+- users
+- wallets
+- game_rounds
+- transactions
+- referrals / referralCode if needed
+
+7. Security:
+- Do not trust a frontend userId for private data if auth exists.
+- Prefer the authenticated session user.
+- Only allow staff/admin users to view other profiles.
+- Validate all route params.
+- Return 404 for missing users.
+
+8. Implementation:
+- Create reusable backend service functions for profile aggregation.
+- Create typed frontend API helpers.
+- Refactor the Profile component so every displayed value is populated from API response data.
+- Do not remove the current design/layout unless necessary.
+- Add seed/dev data matching the screenshot so the page shows:
+  name: Jonah Hydell
+  member since: Jun 25, 2026
+  stat ID: #1111
+  referral: 1111
+  credit score: 300 — POOR
+  chips: 4,593,538
+  rounds played: 3
+  total wagered: 545,200
+  total won: 418,738
+  largest win: 320,892
+  net result: -126,462
+  gems: 0
+
+Deliver the finished code changes and explain which files were modified.

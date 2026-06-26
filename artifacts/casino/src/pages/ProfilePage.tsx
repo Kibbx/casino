@@ -10,12 +10,20 @@ interface PlayerData {
   username: string;
   stateId: string | null;
   chips: number | string;
-  gems?: number;
   creditScore?: number;
   handsPlayed?: number;
   createdAt: string;
   avatarUrl?: string | null;
   referralCode?: string | null;
+}
+
+interface RakebackStatus {
+  claimable: number;
+  wageredReal: number;
+  wonReal: number;
+  lastClaimed: string | null;
+  onCooldown: boolean;
+  nextClaimAt: string | null;
 }
 
 interface Transaction {
@@ -47,6 +55,16 @@ function fmtDate(iso: string) {
     return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   } catch { return iso; }
 }
+function fmtDateTime(iso: string | null) {
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("en-US", {
+      month: "short", day: "numeric",
+      hour: "numeric", minute: "2-digit",
+      timeZoneName: "short",
+    });
+  } catch { return iso; }
+}
 function creditLabel(score: number) {
   if (score >= 750) return { label: "EXCELLENT", color: "#22c55e" };
   if (score >= 600) return { label: "GOOD",      color: "#f5c518" };
@@ -60,6 +78,7 @@ export function ProfilePage() {
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState<string | null>(null);
   const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
+  const [rakeback,     setRakeback]     = useState<RakebackStatus | null>(null);
   const [showSecurity, setShowSecurity] = useState(false);
   const [curPin,       setCurPin]       = useState("");
   const [newPin,       setNewPin]       = useState("");
@@ -71,14 +90,16 @@ export function ProfilePage() {
     if (!sessionToken || !playerId) return;
     try {
       const headers = { Authorization: `Bearer ${sessionToken}` };
-      const [pRes, tRes] = await Promise.all([
+      const [pRes, tRes, rbRes] = await Promise.all([
         fetch(`${BASE}/api/players/${playerId}`, { headers }),
         fetch(`${BASE}/api/players/${playerId}/transactions`, { headers }),
+        fetch(`${BASE}/api/rakeback/status`, { headers }),
       ]);
-      const [pData, tData] = await Promise.all([pRes.json(), tRes.json()]);
+      const [pData, tData, rbData] = await Promise.all([pRes.json(), tRes.json(), rbRes.json()]);
       if (!pRes.ok) throw new Error(pData.error ?? "Failed to load profile");
       setPlayer(pData);
       setTxs(Array.isArray(tData) ? tData : []);
+      if (rbRes.ok) setRakeback(rbData);
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -133,7 +154,6 @@ export function ProfilePage() {
   }
 
   const chips        = Number(player.chips ?? 0);
-  const gems         = Number(player.gems  ?? 0);
   const roundsPlayed = player.handsPlayed ?? 0;
   const totalWagered = txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
   const totalWon     = txs.filter(t => WIN_TYPES.has(t.type)   && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
@@ -160,7 +180,6 @@ export function ProfilePage() {
     { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",         color: "#a855f7" },
     { label: "Net Result",    value: (netResult >= 0 ? "+" : "") + fmt(netResult), sub: "chips",
                               color: netResult >= 0 ? "#22c55e" : "#ef4444" },
-    { label: "Gems",          value: fmt(gems),                                   color: "#a855f7" },
   ];
 
   const activity = [
@@ -288,6 +307,56 @@ export function ProfilePage() {
               )}
             </div>
           ))}
+
+          {/* Rakeback card */}
+          {(() => {
+            const rb = rakeback;
+            const claimable = rb?.claimable ?? 0;
+            const wagered   = rb?.wageredReal ?? 0;
+            const wonBack   = rb?.wonReal ?? 0;
+            const netLoss   = Math.max(0, wagered - wonBack);
+            const rows: [string, string][] = [
+              ["Wagered",      fmt(wagered)  + " chips"],
+              ["Won Back",     fmt(wonBack)  + " chips"],
+              ["Net Loss",     fmt(netLoss)  + " chips"],
+              ["Last Claimed", fmtDateTime(rb?.lastClaimed ?? null)],
+            ];
+            return (
+              <div
+                className="rounded-xl flex flex-col"
+                style={{
+                  background: "#0c0a0a",
+                  border: "1px solid rgba(34,197,94,0.2)",
+                  padding: "18px 20px 14px",
+                }}
+              >
+                <p className="text-[10px] uppercase tracking-widest mb-2"
+                  style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.12em" }}>
+                  Rakeback
+                </p>
+                <p className="font-black tabular-nums leading-none"
+                  style={{
+                    fontFamily: "'Orbitron', monospace",
+                    fontSize: "clamp(16px, 2vw, 26px)",
+                    color: "#22c55e",
+                    textShadow: "0 0 16px rgba(34,197,94,0.55)",
+                  }}>
+                  {fmt(claimable)}
+                </p>
+                <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
+                  claimable now · 3% back
+                </p>
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 4 }}>
+                  {rows.map(([k, v]) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
+                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{k}</span>
+                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.48)", fontWeight: 700, textAlign: "right" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       </div>
 
