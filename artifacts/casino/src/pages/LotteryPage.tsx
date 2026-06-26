@@ -109,28 +109,6 @@ function WeeklyMegaDraw({
           </p>
         </div>
 
-        {/* Prize tiers */}
-        <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] mb-3 font-bold" style={{ color: "rgba(255,255,255,0.3)" }}>Prize Tiers</p>
-          <div className="flex flex-col gap-2">
-            {[
-              { place: "1st", icon: "🏆", amount: draw?.jackpot ?? null },
-              { place: "2nd", icon: "🏆", amount: draw?.consolation ?? null },
-            ].map(({ place, icon, amount }) => (
-              <div key={place} className="flex items-center justify-between px-4 py-2.5 rounded-lg"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
-                <span className="flex items-center gap-2 text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-                  <span>{icon}</span>
-                  <span className="font-semibold">{place}</span>
-                </span>
-                <span className="text-sm font-bold" style={{ color: "rgba(255,255,255,0.8)" }}>
-                  {amount !== null ? `${fmt(amount)} chips` : "—"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* Stats row */}
         <div className="grid grid-cols-2 gap-3">
           {[
