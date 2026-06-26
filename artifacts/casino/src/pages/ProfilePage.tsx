@@ -120,7 +120,6 @@ export function ProfilePage() {
     ...(player.referralCode ? [["Referral", player.referralCode] as [string, string]] : []),
     ...(cs !== undefined   ? [["Credit Score", `${cs} — ${csInfo!.label}`, "credit"] as [string, string, string]] : []),
     ["Chips", fmt(chips),  "gold"],
-    ["Gems",  fmt(gems),   "purple"],
   ];
 
   const stats = [
