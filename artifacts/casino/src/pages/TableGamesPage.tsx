@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { PageWrapper, CatalogCard, CatalogGame, CardGrid } from "./shared";
+import { PageWrapper, CatalogCard, CardGrid } from "./shared";
+import { tableGamesData } from "../lib/gamesData";
 import { setAccessToken } from "../lib/gamePasswordGuard";
 import { Lock } from "lucide-react";
 
@@ -25,56 +26,6 @@ const THEME_CFG = {
   diamond: { gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)", neonClass: "neon-blue",   neonColor: "#06b6d4", label: "VIP" },
 } as const;
 
-/* ─── Static non-blackjack games ──────────────────────────────────────── */
-const otherGames: CatalogGame[] = [
-  {
-    id: "roulette",
-    name: "Roulette",
-    description: "Spin the wheel. Bet on numbers, colors, or ranges in this iconic game.",
-    gradient: "linear-gradient(135deg, #1a0505 0%, #2e0808 60%, #4a1010 100%)",
-    neonClass: "neon-red",
-    neonColor: "#ff3131",
-    players: "8 playing",
-    betRange: "$1 – $1,000",
-    actionLabel: "Join Table",
-    statusLabel: "LIVE",
-    statusColor: "#22c55e",
-  },
-  {
-    id: "baccarat",
-    name: "Baccarat",
-    description: "Bet on Player, Banker, or Tie. High-limit prestige at every hand.",
-    gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)",
-    neonClass: "neon-yellow",
-    neonColor: "#fbbf24",
-    badge: "VIP",
-    badgeColor: "#7c3aed",
-    players: "4 playing",
-    betRange: "$10 – $5,000",
-    actionLabel: "Join Table",
-    statusLabel: "OPEN",
-    statusColor: "#fbbf24",
-  },
-  {
-    id: "highlow",
-    name: "High Low",
-    description: "Predict whether the next card is higher or lower than the dealer's.",
-    gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)",
-    neonClass: "neon-blue",
-    neonColor: "#06b6d4",
-    players: "16 playing",
-    betRange: "$1 – $200",
-    actionLabel: "Play Now",
-    statusLabel: "OPEN",
-    statusColor: "#06b6d4",
-  },
-];
-
-const GAME_NAV: Record<string, { route: string; tokenId?: "roulette" | "highlow" }> = {
-  roulette: { route: "/roulette", tokenId: "roulette" },
-  baccarat: { route: "/baccarat" },
-  highlow:  { route: "/high-low", tokenId: "highlow" },
-};
 
 /* ─── Dynamic Blackjack Table Card ───────────────────────────────────── */
 function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick: () => void; delay: string }) {
@@ -337,18 +288,12 @@ export function TableGamesPage() {
         )}
 
         {/* Static games */}
-        {otherGames.map((g, i) => {
-          const nav = GAME_NAV[g.id];
-          const handleClick = nav
-            ? () => {
-                if (nav.tokenId) setAccessToken(nav.tokenId, "open");
-                setLocation(nav.route);
-              }
-            : undefined;
-          return (
-            <CatalogCard key={g.id} game={g} delay={`${-(openTables.length + i)}s`} onClick={handleClick} />
-          );
-        })}
+        {tableGamesData.map((g, i) => (
+          <CatalogCard key={g.id} game={g} delay={`${-(openTables.length + i)}s`} onClick={() => {
+            if (g.tokenId) setAccessToken(g.tokenId, "open");
+            setLocation(g.route);
+          }} />
+        ))}
       </CardGrid>
     </PageWrapper>
   );

@@ -40,6 +40,7 @@ import { MktComingSoon }      from "./MktComingSoon";
 import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
+import { GAME_CFG, GAME_DISPLAY, FALLBACK_LIVE as LIVE_DEFAULTS } from "../lib/gamesData";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -121,36 +122,13 @@ interface Game {
 }
 type RecentGame = Game & { lastPlayed: string; result: string; won: boolean };
 
-/* ─── Game display metadata ───────────────────────────────────── */
-const GAME_DISPLAY: Record<string, { name: string; category: string; image: string; gameKey?: string }> = {
-  blackjack:     { name: "Blackjack",        category: "TABLE GAMES",  image: `${IMGS}images/card-blackjack.webp`,       gameKey: "blackjack"  },
-  roulette:      { name: "Roulette",         category: "TABLE GAMES",  image: `${IMGS}images/card-roulette.webp`,        gameKey: "roulette"   },
-  baccarat:      { name: "Baccarat",         category: "TABLE GAMES",  image: `${IMGS}images/card-baccarat.webp`,        gameKey: "baccarat"   },
-  poker:         { name: "Poker",            category: "TABLE GAMES",  image: `${IMGS}images/card-poker.webp`,           gameKey: "poker"      },
-  slots:         { name: "Slots",            category: "SLOTS",        image: `${IMGS}images/card-slots.webp`,           gameKey: "slots"      },
-  rome_slots:    { name: "Rome Slots",       category: "SLOTS",        image: `${IMGS}images/card-rome-slots.webp`,      gameKey: "slots"      },
-  western_slots: { name: "Backalley Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, gameKey: "slots"      },
-  mines:         { name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           gameKey: "mines"      },
-  mob_tower:     { name: "Mob Tower",        category: "MINI GAMES",   image: `${IMGS}images/card-mob-tower.png`,        gameKey: "mobtower"   },
-  fortune:       { name: "Fortune Spin",     category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "slots"      },
-  highlow:       { name: "High Low",         category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "highlow"    },
-  horse:         { name: "Horse Racing",     category: "LIVE EVENTS",  image: `${IMGS}images/card-horseracing.webp`,     gameKey: "horse"      },
-  bingo:         { name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.png`                                    },
-  lottery:       { name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.png`                                  },
-  tournament:    { name: "Slots Tournament", category: "EVENTS",       image: `${IMGS}images/card-tournaments.webp`,    gameKey: "slots"      },
-};
 
 const FALLBACK_RECENT: RecentGame[] = [
   { id: 101, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/card-blackjack.webp`,  players: 0, maxPlayers: 0, activeBets: "", status: "Completed", lastPlayed: "—", result: "—", won: true  },
   { id: 102, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/card-roulette.webp`,   players: 0, maxPlayers: 0, activeBets: "", status: "Completed", lastPlayed: "—", result: "—", won: false },
 ];
 
-const FALLBACK_LIVE: Game[] = [
-  { id: 1, name: "Blackjack",    category: "TABLE GAMES", image: `${IMGS}images/card-blackjack.webp`,  players: 4,  maxPlayers: 6,  activeBets: "$2,340",  status: "In Progress" },
-  { id: 2, name: "Roulette",     category: "TABLE GAMES", image: `${IMGS}images/card-roulette.webp`,   players: 7,  maxPlayers: 8,  activeBets: "$5,120",  status: "In Progress" },
-  { id: 3, name: "Poker",        category: "TABLE GAMES", image: `${IMGS}images/card-poker.webp`,      players: 5,  maxPlayers: 6,  activeBets: "$8,900",  status: "In Progress" },
-  { id: 4, name: "Horse Racing", category: "LIVE EVENTS", image: `${IMGS}images/card-horseracing.webp`,players: 12, maxPlayers: 20, activeBets: "$14,200", status: "Race Live"   },
-];
+const FALLBACK_LIVE = LIVE_DEFAULTS as unknown as Game[];
 
 function parseBets(s: string) { return parseInt(s.replace(/[$,]/g, ""), 10) || 0; }
 
@@ -202,24 +180,6 @@ const NAME_TO_GAME: Record<string, string> = {
   "Bingo": "bingo", "Lottery": "lottery", "Slots Tournament": "slots",
 };
 
-/* ─── Per-game catalog config (gradient + neon + description) ─── */
-const GAME_CFG: Record<string, Pick<CatalogGame, "gradient" | "neonClass" | "neonColor" | "description">> = {
-  blackjack:     { gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)", neonClass: "neon-green",  neonColor: "#39ff14", description: "Beat the dealer to 21. Classic table game with live competition." },
-  roulette:      { gradient: "linear-gradient(135deg, #1a0505 0%, #2e0808 60%, #4a1010 100%)", neonClass: "neon-red",    neonColor: "#ff3131", description: "Spin the wheel. Bet on numbers, colors, or ranges in this iconic game." },
-  baccarat:      { gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", description: "Bet on Player, Banker, or Tie. High-limit prestige at every hand." },
-  poker:         { gradient: "linear-gradient(135deg, #1a0505 0%, #2e0808 60%, #4a1010 100%)", neonClass: "neon-red",    neonColor: "#ef4444", description: "Texas Hold'em with live players and real chips on the line." },
-  slots:         { gradient: "linear-gradient(135deg, #0d0020 0%, #1a0035 60%, #280050 100%)", neonClass: "neon-purple", neonColor: "#a855f7", description: "Spin the reels of fortune and uncover massive wins." },
-  rome_slots:    { gradient: "linear-gradient(135deg, #1a0a00 0%, #2e1500 60%, #4a2200 100%)", neonClass: "neon-orange", neonColor: "#f97316", description: "Spin to conquer Rome — classic reels with an epic theme." },
-  western_slots: { gradient: "linear-gradient(135deg, #0a1a08 0%, #122810 60%, #1a3a16 100%)", neonClass: "neon-green",  neonColor: "#22c55e", description: "Saddle up for big wins in the wild west with Deadwood Dollars." },
-  mines:         { gradient: "linear-gradient(135deg, #0a1a10 0%, #122a18 60%, #1a4024 100%)", neonClass: "neon-green",  neonColor: "#39ff14", description: "Uncover gems while dodging hidden mines. Cash out before it's too late." },
-  mob_tower:     { gradient: "linear-gradient(135deg, #1a0800 0%, #2e1200 60%, #4a1e00 100%)", neonClass: "neon-orange", neonColor: "#f97316", description: "Climb the tower, dodge the mobsters. Each floor multiplies your bet." },
-  fortune:       { gradient: "linear-gradient(135deg, #0d0020 0%, #1a0035 60%, #280050 100%)", neonClass: "neon-purple", neonColor: "#a855f7", description: "Spin the fortune wheel for instant prizes and massive multipliers." },
-  highlow:       { gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)", neonClass: "neon-blue",   neonColor: "#06b6d4", description: "Predict whether the next card is higher or lower than the dealer's." },
-  horse:         { gradient: "linear-gradient(135deg, #1a0f05 0%, #2e1e08 60%, #4a3010 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", description: "Bet on your horse and watch the race unfold in real time." },
-  bingo:         { gradient: "linear-gradient(135deg, #0d1a20 0%, #122535 60%, #1a3545 100%)", neonClass: "neon-blue",   neonColor: "#06b6d4", description: "Match your card numbers and shout bingo to win big." },
-  lottery:       { gradient: "linear-gradient(135deg, #1a0010 0%, #2e0020 60%, #4a0030 100%)", neonClass: "neon-pink",   neonColor: "#ec4899", description: "Pick your lucky numbers and try your luck at the jackpot." },
-  tournament:    { gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", description: "Compete in timed slot tournaments for prizes and glory." },
-};
 const DEFAULT_CFG = GAME_CFG.blackjack;
 
 /* ─── Recently Played Card ────────────────────────────────────── */
@@ -247,11 +207,25 @@ function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) 
 }
 
 /* ─── Live Activity Card ──────────────────────────────────────── */
+function liveCtaFor(name: string, status: string): string {
+  if (status === "Race Live")                   return "Watch Race";
+  if (name.toLowerCase().includes("bingo"))     return "Join Room";
+  if (name.toLowerCase().includes("lottery"))   return "Buy Tickets";
+  if (name === "Mines" || name === "Mob Tower") return "Play Now";
+  if (name === "Slots" || name.includes("Slots")) return "Spin Now";
+  if (name === "Keno" || name === "Fortuna")    return "Play Now";
+  if (["Blackjack","Roulette","Baccarat","Poker"].includes(name)) return "Join Table";
+  return "Join Now";
+}
+
 function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
   const gameKey = NAME_TO_GAME[game.name] ?? "blackjack";
   const cfg = GAME_CFG[gameKey] ?? DEFAULT_CFG;
   const isRaceLive = game.status === "Race Live";
-  const statusColor = isRaceLive ? "#ef4444" : "#22c55e";
+  const isLiveDraw = game.status === "Live Draw";
+  const statusColor = isRaceLive ? "#ef4444"
+                    : isLiveDraw ? "#ec4899"
+                    : "#22c55e";
   const g: CatalogGame = {
     id: String(game.id),
     name: game.name,
@@ -261,7 +235,7 @@ function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
     neonColor: cfg.neonColor,
     players: game.players > 0 ? `${game.players} online` : undefined,
     betRange: game.activeBets || undefined,
-    actionLabel: isRaceLive ? "Watch Race" : "Join Now",
+    actionLabel: liveCtaFor(game.name, game.status),
     statusLabel: isRaceLive ? "LIVE" : game.status.toUpperCase(),
     statusColor,
   };
