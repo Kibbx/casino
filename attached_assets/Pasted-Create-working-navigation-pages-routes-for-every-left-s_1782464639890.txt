@@ -1,0 +1,47 @@
+Create working navigation pages/routes for every left sidebar item except Profile and Staff.
+
+Sidebar items to support:
+- Home
+- Item Listings
+- Trades
+- Sales History
+- Stall Settings
+- Trending
+- Shops
+- Inventory
+
+Requirements:
+- Keep the exact same Big House Market art style, dark theme, neon glow accents, typography, spacing, sidebar layout, and top navigation.
+- Do not create routes/pages for Profile or Staff.
+- Each sidebar item should be clickable and navigate to its own page.
+- Add active-state styling so the selected sidebar item uses the same highlighted orange/nav glow treatment as Home in the screenshot.
+- Keep the sidebar visible on every page.
+- Keep the top bar visible on every page.
+- Use the existing icons if available; otherwise use matching minimalist line icons.
+- Make navigation client-side using the project's existing routing solution (React Router if applicable).
+- Organize routes cleanly so future page content can be expanded.
+- Do not modify or break any existing marketplace functionality.
+
+Page behavior:
+- Home should continue showing the current marketplace dashboard exactly as it is now.
+- Item Listings, Trades, Sales History, Stall Settings, Trending, Shops, and Inventory should have their own routes/pages.
+
+For all pages except Home:
+- Do NOT build any actual functionality yet.
+- Do NOT add cards, tables, forms, fake data, or placeholder marketplace content.
+- Instead, show a clean empty-state page.
+- Center the content both vertically and horizontally.
+- Display a large neon-styled heading:
+  "COMING SOON"
+- Add a smaller subtitle underneath:
+  "This section is currently under development."
+- Match the existing Big House Market visual style with subtle glow effects.
+- Keep the background consistent with the rest of the application.
+- Leave plenty of empty space around the message.
+
+Technical requirements:
+- Create all routes now so navigation is fully functional.
+- Ensure browser refresh works correctly on routes.
+- Maintain active sidebar highlighting on the current route.
+- Structure components so real content can easily replace the Coming Soon screen later.
+- Reuse a single reusable ComingSoon component across all unfinished pages.

@@ -34,6 +34,7 @@ import { MktTradingPage }    from "./MktTradingPage";
 import { MktProfilePage }    from "./MktProfilePage";
 import { MktShopsPage }      from "./MktShopsPage";
 import { MktShopBuilderPage } from "./MktShopBuilderPage";
+import { MktComingSoon }      from "./MktComingSoon";
 import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
@@ -644,8 +645,12 @@ export function Lobby() {
           {activeNav === "mkt-trending"  && <MktTrendingPage />}
           {activeNav === "mkt-inventory" && <MktInventoryPage />}
           {activeNav === "mkt-auctions"  && <MktAuctionsPage />}
-          {activeNav === "mkt-sales"     && <MktRecentSalesPage />}
-          {activeNav === "mkt-trading"   && <MktTradingPage />}
+          {activeNav === "mkt-sales"          && <MktRecentSalesPage />}
+          {activeNav === "mkt-trading"        && <MktTradingPage />}
+          {/* sidebar nav-id aliases — keeps sidebar IDs canonical */}
+          {activeNav === "mkt-trades"         && <MktTradingPage />}
+          {activeNav === "mkt-sales-history"  && <MktRecentSalesPage />}
+          {activeNav === "mkt-item-listings"  && <MktComingSoon title="Item Listings" />}
           {activeNav === "mkt-profile"        && <MktProfilePage />}
           {activeNav === "mkt-shops"          && <MktShopsPage />}
           {activeNav === "mkt-stall-settings" && <MktShopBuilderPage onDeleted={() => setActiveNav("mkt-shops")} />}
