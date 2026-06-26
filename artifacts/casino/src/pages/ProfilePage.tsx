@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Dices, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent } from "lucide-react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader } from "./shared";
@@ -229,13 +230,13 @@ export function ProfilePage() {
     ["Chips", fmt(chips),  "gold"],
   ];
 
-  const stats = [
-    { label: "Rounds Played", value: fmt(roundsPlayed),                                icon: "🎲", color: "#06b6d4" },
-    { label: "Total Wagered", value: fmt(totalWagered),  sub: "chips",                 icon: "🪙", color: "#f97316" },
-    { label: "Total Won",     value: fmt(totalWon),      sub: "chips",                 icon: "🏆", color: "#f5c518" },
-    { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",              icon: "⭐", color: "#a855f7" },
+  const stats: { label: string; value: string; sub?: string; icon: React.ReactNode; color: string }[] = [
+    { label: "Rounds Played", value: fmt(roundsPlayed),                                   icon: <Dices size={22} />,      color: "#06b6d4" },
+    { label: "Total Wagered", value: fmt(totalWagered),  sub: "chips",                    icon: <Coins size={22} />,      color: "#f97316" },
+    { label: "Total Won",     value: fmt(totalWon),      sub: "chips",                    icon: <Trophy size={22} />,     color: "#f5c518" },
+    { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",                 icon: <Star size={22} />,       color: "#a855f7" },
     { label: "Net Result",    value: (netResult >= 0 ? "+" : "") + fmt(netResult), sub: "chips",
-                              icon: netResult >= 0 ? "📈" : "📉",                            color: netResult >= 0 ? "#22c55e" : "#ef4444" },
+                              icon: netResult >= 0 ? <TrendingUp size={22} /> : <TrendingDown size={22} />, color: netResult >= 0 ? "#22c55e" : "#ef4444" },
   ];
 
   // Per-type activity breakdown (mirrors old profile overview tab)
@@ -444,7 +445,7 @@ export function ProfilePage() {
                     border: "1px solid rgba(34,197,94,0.33)",
                     boxShadow: "0 0 14px rgba(34,197,94,0.22)",
                   }}>
-                    ♻️
+                    <Percent size={22} />
                   </div>
                   {/* Content */}
                   <div className="flex flex-col min-w-0 items-center text-center flex-1">
