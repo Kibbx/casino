@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader } from "./shared";
+import { AvatarUpload } from "../components/AvatarUpload";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -54,10 +55,11 @@ function creditLabel(score: number) {
 
 export function ProfilePage() {
   const { sessionToken, playerId } = useStore();
-  const [player, setPlayer] = useState<PlayerData | null>(null);
-  const [txs,    setTxs]    = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState<string | null>(null);
+  const [player,    setPlayer]    = useState<PlayerData | null>(null);
+  const [txs,       setTxs]       = useState<Transaction[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!sessionToken || !playerId) return;
@@ -79,6 +81,7 @@ export function ProfilePage() {
   }, [sessionToken, playerId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (player) setAvatarUrl(player.avatarUrl ?? null); }, [player]);
 
   if (loading) {
     return (
@@ -110,7 +113,6 @@ export function ProfilePage() {
   const betCount     = txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).length;
   const winCount     = txs.filter(t => WIN_TYPES.has(t.type)   && !isPokerTx(t)).length;
 
-  const initials = (player.username ?? "?").slice(0, 2).toUpperCase();
   const cs       = player.creditScore;
   const csInfo   = cs !== undefined ? creditLabel(cs) : null;
 
@@ -155,18 +157,13 @@ export function ProfilePage() {
         >
           {/* Avatar + name */}
           <div className="flex items-center gap-3 p-5 pb-4">
-            <div
-              className="flex items-center justify-center rounded-full font-black shrink-0"
-              style={{
-                width: 56, height: 56, fontSize: 18,
-                background: "linear-gradient(135deg,#1e0e06,#2c1506)",
-                border: "2px solid rgba(232,64,10,0.55)",
-                color: "#e8400a",
-                letterSpacing: 1,
-              }}
-            >
-              {initials}
-            </div>
+            <AvatarUpload
+              playerId={player.id}
+              currentAvatarUrl={avatarUrl}
+              username={player.username}
+              size="lg"
+              onUpdate={url => setAvatarUrl(url)}
+            />
             <div className="flex flex-col gap-1 min-w-0">
               <span className="font-rajdhani font-black text-white leading-tight" style={{ fontSize: 16 }}>
                 {player.username}

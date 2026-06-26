@@ -564,6 +564,23 @@ router.patch("/:playerId/avatar", requireAuth, async (req, res) => {
   return res.json(safePlayer(updated));
 });
 
+// Remove avatar — resets to initials fallback
+router.delete("/:playerId/avatar", requireAuth, async (req, res) => {
+  const id = parseInt(req.params.playerId as string);
+  const requesterId = (req as any).authenticatedPlayerId as number | undefined;
+  const isBanker    = (req as any).isBanker;
+  if (!isBanker && requesterId !== id) {
+    return res.status(403).json({ error: "You can only update your own avatar" });
+  }
+  const [updated] = await db
+    .update(playersTable)
+    .set({ avatarUrl: null })
+    .where(eq(playersTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Player not found" });
+  return res.json(safePlayer(updated));
+});
+
 // Direct avatar file upload — own session only
 // Client POSTs the raw image binary with Content-Type: image/*
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {

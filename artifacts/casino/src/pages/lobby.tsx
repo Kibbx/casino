@@ -21,6 +21,7 @@ import { LeaderboardsPage }  from "./LeaderboardsPage";
 import { MarketplacePage }   from "./MarketplacePage";
 import { ProfilePage }       from "./ProfilePage";
 import { StaffPage }         from "./StaffPage";
+import { AvatarImg }         from "../components/AvatarUpload";
 import { MktHomePage }       from "./MktHomePage";
 import { useGetPlayer }      from "@workspace/api-client-react";
 import { usePlayerSocket }   from "../lib/usePlayerSocket";
@@ -499,10 +500,12 @@ export function Lobby() {
 
           {/* Profile chip — avatar always, name/role hidden on mobile */}
           <div className="nav-user-chip">
-            <div
-              className="w-[28px] h-[28px] rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
-              style={{ background: "linear-gradient(135deg,#e8400a,#b83008)", color: "#fff", boxShadow: "0 0 12px rgba(232,64,10,0.5)" }}
-            >{initials}</div>
+            <AvatarImg
+              src={currentPlayer?.avatarUrl}
+              username={displayName}
+              size="sm"
+              style={{ boxShadow: "0 0 10px rgba(232,64,10,0.4)" }}
+            />
             <div className="hidden sm:flex flex-col leading-none gap-[3px] min-w-0">
               <span className="text-[11px] font-semibold truncate max-w-[140px]" style={{ color: "rgba(255,255,255,0.9)" }}>{displayName}</span>
               <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: "#e8400a" }}>Member</span>
