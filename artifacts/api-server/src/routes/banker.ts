@@ -588,6 +588,7 @@ router.get("/stats", requireBanker, async (_req, res) => {
         WHEN description ILIKE 'High-Low%' THEN 'highlow'
         WHEN description ILIKE 'Mob Tower%' THEN 'mobtower'
         WHEN description ILIKE 'Case opening%' THEN 'cases'
+        WHEN description ILIKE 'Sports Bet%' THEN 'sportsbook'
         ELSE 'other'
       END AS game,
       type,
@@ -879,6 +880,7 @@ router.get("/stats/range", requireBanker, async (req, res) => {
         WHEN description ILIKE 'High-Low%' THEN 'highlow'
         WHEN description ILIKE 'Mob Tower%' THEN 'mobtower'
         WHEN description ILIKE 'Case opening%' THEN 'cases'
+        WHEN description ILIKE 'Sports Bet%' THEN 'sportsbook'
         ELSE 'other'
       END AS game,
       COALESCE(SUM(amount), 0)::bigint AS total,
@@ -896,7 +898,8 @@ router.get("/stats/range", requireBanker, async (req, res) => {
 
   // ── Summary aggregation ────────────────────────────────────────────────────
   let deposits = 0, withdrawals = 0, gameProfit = 0, rake = 0, rakebackPaid = 0;
-  const HOUSE_GAMES = new Set(["blackjack", "roulette", "slots", "crash", "horse", "baccarat", "mines", "keno", "highlow", "mobtower", "cases"]);
+  // sportsbook is included in HOUSE_GAMES so wagers/payouts flow through gameProfit
+  const HOUSE_GAMES = new Set(["blackjack", "roulette", "slots", "crash", "horse", "baccarat", "mines", "keno", "highlow", "mobtower", "cases", "sportsbook"]);
 
   for (const r of allRows) {
     const amt = Number(r.total);
@@ -912,7 +915,21 @@ router.get("/stats/range", requireBanker, async (req, res) => {
       if (r.type === "fortuna-win"      || r.type === "western-slots-win")  gameProfit -= amt;
     }
   }
-  const netProfit = (deposits - withdrawals) + gameProfit + rake;
+  // ── Sportsbook live-bet rake (stored in sport_bet_finances, not transactions) ──
+  // The 10% rake charged at bet placement is recorded there, separate from transactions.
+  const sbRakeRows = await db.execute(sql`
+    SELECT COALESCE(SUM(amount), 0)::bigint AS rake_total
+    FROM sport_bet_finances
+    WHERE source = 'rake'
+      AND type = 'income'
+      AND created_at::timestamptz >= (${startTs}::timestamp AT TIME ZONE 'America/New_York')
+      AND created_at::timestamptz <= (${endTs}::timestamp AT TIME ZONE 'America/New_York')
+  `);
+  const sportsbookLiveRake = Number((sbRakeRows.rows[0] as any)?.rake_total ?? 0);
+
+  // gameProfit already includes: sportsbook wagers (type=loss) minus sportsbook payouts (type=win)
+  // Add live-bet rake on top since it's outside the transactions table
+  const netProfit = (deposits - withdrawals) + gameProfit + rake + sportsbookLiveRake;
 
   // ── Per-game breakdown ─────────────────────────────────────────────────────
   function buildGame(game: string) {
@@ -974,22 +991,41 @@ router.get("/stats/range", requireBanker, async (req, res) => {
     net:          (d.deposits - d.withdrawals) + d.gameProfit + d.rake,
   })).sort((a, b) => a.date.localeCompare(b.date));
 
+  // ── Sportsbook summary fields ──────────────────────────────────────────────
+  const sbGame = buildGame("sportsbook");
+  // sportsbookPayouts = chips paid out to winning bettors this period
+  const sportsbookPayouts = sbGame.payouts;
+  // sportsbookWagered  = chips staked by players this period
+  const sportsbookWagered = sbGame.bets;
+  // sportsbookNetProfit = house net from sportsbook (wagers - payouts + live-bet rake)
+  const sportsbookNetProfit = sbGame.profit + sportsbookLiveRake;
+
+  console.log(`[stats/range] sportsbook: wagered=${sportsbookWagered} payouts=${sportsbookPayouts} liveRake=${sportsbookLiveRake} net=${sportsbookNetProfit}`);
+
   res.json({
     range: { start: startDate, end: endDate },
-    summary: { deposits, withdrawals, gameProfit, rake, netProfit, rakebackPaid },
+    summary: {
+      deposits, withdrawals, gameProfit, rake, netProfit, rakebackPaid,
+      // Sportsbook-specific breakdown for the dashboard card
+      sportsbookPayouts,
+      sportsbookWagered,
+      sportsbookRake: sportsbookLiveRake,
+      sportsbookNetProfit,
+    },
     games: {
-      blackjack:  buildGame("blackjack"),
-      baccarat:   buildGame("baccarat"),
-      roulette:   buildGame("roulette"),
-      slots:      buildGame("slots"),
-      crash:      buildGame("crash"),
-      horse:      buildGame("horse"),
-      mines:      buildGame("mines"),
-      keno:       buildGame("keno"),
-      highlow:    buildGame("highlow"),
-      mobtower:   buildGame("mobtower"),
-      cases:      buildGame("cases"),
-      poker:      (() => { const p = buildGame("poker"); return { bets: 0, payouts: 0, profit: 0, rounds: 0, rake: p.rake, rtp: null }; })(),
+      blackjack:   buildGame("blackjack"),
+      baccarat:    buildGame("baccarat"),
+      roulette:    buildGame("roulette"),
+      slots:       buildGame("slots"),
+      crash:       buildGame("crash"),
+      horse:       buildGame("horse"),
+      mines:       buildGame("mines"),
+      keno:        buildGame("keno"),
+      highlow:     buildGame("highlow"),
+      mobtower:    buildGame("mobtower"),
+      cases:       buildGame("cases"),
+      sportsbook:  sbGame, // includes per-period wagered/payouts/profit/rounds from transactions
+      poker:       (() => { const p = buildGame("poker"); return { bets: 0, payouts: 0, profit: 0, rounds: 0, rake: p.rake, rtp: null }; })(),
     },
     rakebackPaid,
     daily,

@@ -5574,7 +5574,18 @@ type RangeGameStat = { bets: number; payouts: number; profit: number; rounds: nu
 type DailyRow = { date: string; deposits: number; withdrawals: number; gameProfit: number; rake: number; net: number };
 type RangeStats = {
   range: { start: string; end: string };
-  summary: { deposits: number; withdrawals: number; gameProfit: number; rake: number; netProfit: number };
+  summary: {
+    deposits: number; withdrawals: number; gameProfit: number; rake: number; netProfit: number;
+    rakebackPaid?: number;
+    /** Total chips paid out to winning sportsbook bettors in this period */
+    sportsbookPayouts?: number;
+    /** Total chips wagered on sportsbook in this period */
+    sportsbookWagered?: number;
+    /** 10% live-bet rake collected from sport_bet_finances in this period */
+    sportsbookRake?: number;
+    /** Net house profit from sportsbook = wagered - payouts + liveRake */
+    sportsbookNetProfit?: number;
+  };
   games: Record<string, RangeGameStat>;
   daily: DailyRow[];
 };
@@ -7116,7 +7127,7 @@ function StatsTab({ isOwner = false, isBanker = false, isJuniorBanker = false, s
                   {summary.netProfit >= 0 ? "+" : "−"}{fmt(Math.abs(summary.netProfit))}
                   <span className="text-base font-normal text-muted-foreground ml-1">chips</span>
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">(Deposits − Withdrawals) + Game Profit + Rake</p>
+                <p className="text-xs text-muted-foreground mt-1">(Deposits − Withdrawals) + Game Profit + Rake + Sportsbook Net</p>
               </div>
               <div className="grid grid-cols-2 grid-cols-3 gap-3">
                 {[
@@ -7135,6 +7146,52 @@ function StatsTab({ isOwner = false, isBanker = false, isJuniorBanker = false, s
                   </div>
                 ))}
               </div>
+
+              {/* Sportsbook Payouts — shown whenever sportsbook data exists for the period */}
+              {(summary.sportsbookPayouts !== undefined) && (
+                <div className="bg-card border border-zinc-700 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-primary" />
+                    <p className="text-xs font-display font-semibold text-foreground uppercase tracking-widest">Sportsbook — Selected Period</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      {
+                        label: "Wagered",
+                        value: summary.sportsbookWagered ?? 0,
+                        color: "text-amber-400",
+                        sign: "",
+                      },
+                      {
+                        label: "Sportsbook Payouts",
+                        value: summary.sportsbookPayouts ?? 0,
+                        color: "text-red-400",
+                        sign: "−",
+                      },
+                      {
+                        label: "Live-Bet Rake",
+                        value: summary.sportsbookRake ?? 0,
+                        color: "text-yellow-400",
+                        sign: "+",
+                      },
+                      {
+                        label: "Sportsbook Net",
+                        value: summary.sportsbookNetProfit ?? 0,
+                        color: (summary.sportsbookNetProfit ?? 0) >= 0 ? "text-green-400" : "text-red-400",
+                        sign: (summary.sportsbookNetProfit ?? 0) >= 0 ? "+" : "−",
+                      },
+                    ].map(card => (
+                      <div key={card.label} className="bg-zinc-800 border border-zinc-700 rounded-xl p-3">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold mb-1">{card.label}</p>
+                        <p className={`text-lg font-display font-bold ${card.color}`}>
+                          {card.sign === "−" ? "−" : card.sign}{fmt(Math.abs(card.value))}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">Sportsbook Net = Wagered − Payouts + Live-Bet Rake. Included in Net Profit above.</p>
+                </div>
+              )}
             </>
           )}
 
