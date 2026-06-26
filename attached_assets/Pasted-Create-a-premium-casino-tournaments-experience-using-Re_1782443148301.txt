@@ -1,0 +1,152 @@
+Create a premium casino tournaments experience using React, TypeScript, and Tailwind CSS.
+
+Design Style:
+
+* Ultra-modern casino aesthetic.
+* Black and charcoal backgrounds.
+* Neon orange and purple accent colors.
+* Glassmorphism panels.
+* Soft glow effects.
+* High-end esports/casino feel.
+* Large, cinematic tournament cards.
+* Smooth animations and hover effects.
+
+Page Header:
+
+* Large centered title: TOURNAMENTS
+* Animated glowing divider lines extending from both sides of the title.
+* Entrance animations when page loads.
+
+Tournament Layout:
+Display large featured tournament cards stacked vertically.
+
+Tournament Card Structure:
+
+Left Section:
+
+* Large visual showcase area.
+* Rich casino-themed artwork.
+* Dynamic glow effects.
+* Floating particles/chips.
+* Premium promotional appearance.
+
+Right Section:
+
+* Tournament category label.
+* Tournament title.
+* Tournament description.
+* Status badges.
+* Tournament statistics.
+* Registration information.
+* Action button.
+
+Featured Tournament #1
+
+Category:
+Texas Hold'em
+
+Title:
+POKER CHAMPIONSHIP
+
+Description:
+Test your skills and outplay the competition.
+
+Theme:
+Orange / Gold
+
+Status:
+OPEN
+
+Statistics:
+
+* Buy-In: $111
+* Prize Pool: $111
+* Players: 1 / 200
+* Starts In: 02:45:18
+
+Additional Features:
+
+* Registration progress bar.
+* Percentage filled.
+* Animated countdown timer.
+* Large glowing CTA button:
+  ✓ REGISTERED — VIEW
+
+Featured Tournament #2
+
+Category:
+Slots
+
+Title:
+FORTUNA JACKPOT
+
+Description:
+Spin your way to massive rewards.
+
+Theme:
+Purple / Neon
+
+Status:
+LIVE
+
+Statistics:
+
+* Buy-In: $1
+* Prize Pool: FREE
+* Players: 0 / 200
+* Starts In: 02:45:18
+
+Additional Features:
+
+* Registration progress bar.
+* Animated countdown timer.
+* Large glowing CTA button:
+  IN PROGRESS — VIEW
+
+Card Design Requirements:
+
+* 1400px max width.
+* Large hero-card appearance.
+* Rounded corners (24px).
+* Gradient borders.
+* Glow effects matching theme color.
+* Hover lift animation.
+* Scale effect on hover.
+* Animated button glow.
+* Subtle background particle effects.
+* Smooth transitions throughout.
+
+Statistics Section:
+Display tournament stats in premium glass panels.
+
+Each stat card should contain:
+
+* Label
+* Value
+* Relevant icon
+* Hover animation
+
+Development Requirements:
+
+* Use React + TypeScript.
+* Use Tailwind CSS.
+* Use Framer Motion for animations.
+* Use Lucide React icons.
+* Store tournament data in a configurable array.
+* Render cards dynamically.
+* Create reusable components:
+
+  * TournamentCard
+  * TournamentStats
+  * StatusBadge
+  * CountdownTimer
+  * ProgressBar
+  * FeatureCard
+
+Responsive Requirements:
+
+* Desktop: hero artwork left, content right.
+* Tablet: stacked layout.
+* Mobile: full-width cards with optimized spacing.
+
+The final result should feel like a AAA casino platform with large promotional tournament cards, strong visual hierarchy, cinematic presentation, and premium casino branding.
