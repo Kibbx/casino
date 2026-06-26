@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader } from "./shared";
 import { AvatarUpload } from "../components/AvatarUpload";
+import { useGetPlayer } from "@workspace/api-client-react";
+import { usePlayerSocket } from "../lib/usePlayerSocket";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -73,10 +75,16 @@ function creditLabel(score: number) {
 
 export function ProfilePage() {
   const { sessionToken, playerId } = useStore();
-  const [player,    setPlayer]    = useState<PlayerData | null>(null);
-  const [txs,       setTxs]       = useState<Transaction[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [error,     setError]     = useState<string | null>(null);
+
+  // Shared player data — same react-query cache as the lobby
+  const { data: player, isLoading: playerLoading } = useGetPlayer(
+    playerId!, { query: { enabled: !!playerId } },
+  );
+  // Live chip balance via socket (mirrors lobby top-right)
+  const { chips: liveChips } = usePlayerSocket(playerId ?? null, sessionToken);
+
+  const [txs,          setTxs]          = useState<Transaction[]>([]);
+  const [txsLoading,   setTxsLoading]   = useState(true);
   const [avatarUrl,    setAvatarUrl]    = useState<string | null>(null);
   const [rakeback,     setRakeback]     = useState<RakebackStatus | null>(null);
   const [rbClaiming,   setRbClaiming]   = useState(false);
@@ -92,20 +100,17 @@ export function ProfilePage() {
     if (!sessionToken || !playerId) return;
     try {
       const headers = { Authorization: `Bearer ${sessionToken}` };
-      const [pRes, tRes, rbRes] = await Promise.all([
-        fetch(`${BASE}/api/players/${playerId}`, { headers }),
+      const [tRes, rbRes] = await Promise.all([
         fetch(`${BASE}/api/players/${playerId}/transactions`, { headers }),
         fetch(`${BASE}/api/rakeback/status`, { headers }),
       ]);
-      const [pData, tData, rbData] = await Promise.all([pRes.json(), tRes.json(), rbRes.json()]);
-      if (!pRes.ok) throw new Error(pData.error ?? "Failed to load profile");
-      setPlayer(pData);
+      const [tData, rbData] = await Promise.all([tRes.json(), rbRes.json()]);
       setTxs(Array.isArray(tData) ? tData : []);
       if (rbRes.ok) setRakeback(rbData);
-    } catch (e: any) {
-      setError(e.message);
+    } catch {
+      // silent — player data errors are handled by useGetPlayer
     } finally {
-      setLoading(false);
+      setTxsLoading(false);
     }
   }, [sessionToken, playerId]);
 
@@ -167,7 +172,7 @@ export function ProfilePage() {
     }
   }
 
-  if (loading) {
+  if (playerLoading || txsLoading) {
     return (
       <PageWrapper title="Profile" breadcrumb="Account / Profile" accentColor="#9ca3af">
         <div className="flex items-center justify-center py-24">
@@ -177,17 +182,18 @@ export function ProfilePage() {
     );
   }
 
-  if (error || !player) {
+  if (!player) {
     return (
       <PageWrapper title="Profile" breadcrumb="Account / Profile" accentColor="#9ca3af">
         <div className="flex items-center justify-center py-24">
-          <span className="text-sm" style={{ color: "#ef4444" }}>{error ?? "Profile not found"}</span>
+          <span className="text-sm" style={{ color: "#ef4444" }}>Profile not found</span>
         </div>
       </PageWrapper>
     );
   }
 
-  const chips        = Number(player.chips ?? 0);
+  // Live chips from socket (same source as lobby top-right), falls back to API value
+  const chips = liveChips ?? Number(player.chips ?? 0);
   const roundsPlayed = player.handsPlayed ?? 0;
   const totalWagered = txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
   const totalWon     = txs.filter(t => WIN_TYPES.has(t.type)   && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
