@@ -1,0 +1,67 @@
+Create a responsive React + Tailwind CSS single-page dashboard inspired by the provided casino profile page screenshot.
+
+Important:
+- Recreate only the design, layout, spacing, visual hierarchy, and component structure.
+- Do not copy any exact user names, balances, dates, IDs, labels, stats, or numeric values from the screenshot.
+- Use generic placeholder data.
+
+Page structure:
+- Full-screen dark casino/arcade UI.
+- Fixed left sidebar navigation.
+- Top header bar with logo area, small controls, tab switcher, glowing search input, rank/status cards, and profile chip.
+- Main content area with a centered “PROFILE” page title and glowing horizontal divider lines.
+- Profile card on the left.
+- Six neon stat cards arranged in a 3-column by 2-row grid on desktop.
+- Activity breakdown table below.
+- Large gold achievement banner at the bottom.
+
+Profile card:
+- Circular glowing avatar/icon.
+- Placeholder player name and membership badge.
+- Detail rows with small icons, labels, and values.
+- One full-width Security button.
+- Two side-by-side action buttons underneath:
+  - Items button with blue/cyan neon styling.
+  - Prizes button with purple/magenta neon styling.
+
+Visual style:
+- Near-black background.
+- Glassmorphism cards.
+- Thin neon borders.
+- Radial gradient glows inside cards.
+- Rounded corners.
+- Futuristic uppercase headings.
+- Letter spacing.
+- High-contrast white text.
+- Accent colors: orange, gold, cyan, purple, green, teal.
+- Subtle hover lift and glow effects.
+
+Activity table:
+- Wide rounded dark card.
+- Multiple rows.
+- Left activity label.
+- Small multiplier pill.
+- Right-aligned positive/negative placeholder values.
+- Green for positive values, red for negative values.
+
+Achievement banner:
+- Wide gold-highlighted card.
+- Star or trophy icon.
+- Small uppercase label.
+- Large placeholder value.
+- Subtle sparkle/glow effects.
+
+Use reusable components:
+- Sidebar
+- TopBar
+- ProfileCard
+- StatCard
+- ActivityTable
+- AchievementBanner
+
+Make it responsive:
+- Desktop should closely match the layout of the screenshot.
+- Tablet: stat cards become 2 columns.
+- Mobile: sidebar collapses or hides, cards stack vertically, and table supports horizontal scrolling.
+
+Use lucide-react icons or simple SVG placeholders. Do not use copyrighted logos or exact image assets.

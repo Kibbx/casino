@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader } from "./shared";
 import { AvatarUpload } from "../components/AvatarUpload";
@@ -88,6 +89,7 @@ function creditLabel(score: number) {
 }
 
 export function ProfilePage() {
+  const [, setLocation] = useLocation();
   const { sessionToken, playerId } = useStore();
 
   // Shared player data — same react-query cache as the lobby
@@ -228,12 +230,12 @@ export function ProfilePage() {
   ];
 
   const stats = [
-    { label: "Rounds Played", value: fmt(roundsPlayed),                           color: "#06b6d4" },
-    { label: "Total Wagered", value: fmt(totalWagered),  sub: "chips",            color: "#f97316" },
-    { label: "Total Won",     value: fmt(totalWon),      sub: "chips",            color: "#f5c518" },
-    { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",         color: "#a855f7" },
+    { label: "Rounds Played", value: fmt(roundsPlayed),                                icon: "🎲", color: "#06b6d4" },
+    { label: "Total Wagered", value: fmt(totalWagered),  sub: "chips",                 icon: "🪙", color: "#f97316" },
+    { label: "Total Won",     value: fmt(totalWon),      sub: "chips",                 icon: "🏆", color: "#f5c518" },
+    { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",              icon: "⭐", color: "#a855f7" },
     { label: "Net Result",    value: (netResult >= 0 ? "+" : "") + fmt(netResult), sub: "chips",
-                              color: netResult >= 0 ? "#22c55e" : "#ef4444" },
+                              icon: netResult >= 0 ? "📈" : "📉",                            color: netResult >= 0 ? "#22c55e" : "#ef4444" },
   ];
 
   // Per-type activity breakdown (mirrors old profile overview tab)
@@ -317,7 +319,7 @@ export function ProfilePage() {
           </div>
 
           {/* Security — change PIN */}
-          <div className="px-5 pb-5">
+          <div className="px-5 pt-1 pb-2">
             <button
               onClick={() => { setShowSecurity(true); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
               className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
@@ -329,6 +331,34 @@ export function ProfilePage() {
               }}
             >
               Security
+            </button>
+          </div>
+
+          {/* Items + Prizes quick-nav */}
+          <div className="px-5 pb-5 flex gap-2">
+            <button
+              onClick={() => setLocation("/cases")}
+              className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+              style={{
+                background: "rgba(6,182,212,0.10)",
+                color: "#06b6d4",
+                border: "1px solid rgba(6,182,212,0.35)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              🎁 Items
+            </button>
+            <button
+              onClick={() => setLocation("/my-rewards")}
+              className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+              style={{
+                background: "rgba(168,85,247,0.10)",
+                color: "#a855f7",
+                border: "1px solid rgba(168,85,247,0.35)",
+                letterSpacing: "0.08em",
+              }}
+            >
+              🏅 Prizes
             </button>
           </div>
 
@@ -348,35 +378,47 @@ export function ProfilePage() {
           {stats.map((s) => (
             <div
               key={s.label}
-              className="rounded-xl flex flex-col justify-between"
+              className="rounded-xl flex flex-row items-center gap-3"
               style={{
                 background: "#0c0a0a",
                 border: `1px solid ${s.color}22`,
-                padding: "13px 16px 11px",
+                padding: "12px 14px",
+                boxShadow: `inset 0 0 28px ${s.color}07`,
               }}
             >
-              <p className="text-[9px] uppercase tracking-widest"
-                style={{ color: "rgba(255,255,255,0.26)", letterSpacing: "0.13em", marginBottom: 6 }}>
-                {s.label}
-              </p>
-              <p className="font-black tabular-nums leading-none"
-                style={{
-                  fontFamily: "'Orbitron', monospace",
-                  fontSize: "clamp(13px, 1.6vw, 20px)",
-                  color: s.color,
-                  textShadow: `0 0 12px ${s.color}44`,
-                }}>
-                {s.value}
-              </p>
-              {s.sub && (
-                <p style={{ fontSize: 9, marginTop: 4, color: "rgba(255,255,255,0.2)" }}>
-                  {s.sub}
+              {/* Neon icon */}
+              <div style={{
+                width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 20,
+                background: `radial-gradient(circle, ${s.color}20 0%, transparent 70%)`,
+                border: `1px solid ${s.color}33`,
+                boxShadow: `0 0 12px ${s.color}22`,
+              }}>
+                {s.icon}
+              </div>
+              {/* Content */}
+              <div className="flex flex-col min-w-0">
+                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.13em", marginBottom: 3 }}>
+                  {s.label}
                 </p>
-              )}
+                <p className="font-black tabular-nums leading-none truncate"
+                  style={{
+                    fontFamily: "'Orbitron', monospace",
+                    fontSize: "clamp(12px, 1.4vw, 18px)",
+                    color: s.color,
+                    textShadow: `0 0 10px ${s.color}55`,
+                  }}>
+                  {s.value}
+                </p>
+                {s.sub && (
+                  <p style={{ fontSize: 9, marginTop: 2, color: "rgba(255,255,255,0.2)" }}>{s.sub}</p>
+                )}
+              </div>
             </div>
           ))}
 
-          {/* Rakeback card — same dimensions as stat cards */}
+          {/* Rakeback card — same icon-left layout */}
           {(() => {
             const rb = rakeback;
             const claimable  = rb?.claimable ?? 0;
@@ -384,32 +426,48 @@ export function ProfilePage() {
             const cdLabel    = fmtCooldown(rb?.nextClaimAt ?? null);
             return (
               <div
-                className="rounded-xl flex flex-col justify-between"
+                className="rounded-xl flex flex-col"
                 style={{
                   background: "#0c0a0a",
                   border: "1px solid rgba(34,197,94,0.22)",
-                  padding: "13px 16px 11px",
+                  padding: "12px 14px",
+                  boxShadow: "inset 0 0 28px rgba(34,197,94,0.04)",
                 }}
               >
-                <p className="text-[9px] uppercase tracking-widest"
-                  style={{ color: "rgba(255,255,255,0.26)", letterSpacing: "0.13em", marginBottom: 6 }}>
-                  Rakeback
-                </p>
-                <p className="font-black tabular-nums leading-none"
-                  style={{
-                    fontFamily: "'Orbitron', monospace",
-                    fontSize: "clamp(13px, 1.6vw, 20px)",
-                    color: "#22c55e",
-                    textShadow: "0 0 12px rgba(34,197,94,0.44)",
+                <div className="flex flex-row items-center gap-3 flex-1">
+                  {/* Neon icon */}
+                  <div style={{
+                    width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 20,
+                    background: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
+                    border: "1px solid rgba(34,197,94,0.33)",
+                    boxShadow: "0 0 12px rgba(34,197,94,0.22)",
                   }}>
-                  {fmt(claimable)}
-                </p>
-                <p style={{ fontSize: 9, marginTop: 4, color: "rgba(255,255,255,0.2)" }}>
-                  claimable now · 3% back
-                </p>
+                    ♻️
+                  </div>
+                  {/* Content */}
+                  <div className="flex flex-col min-w-0">
+                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.13em", marginBottom: 3 }}>
+                      Rakeback
+                    </p>
+                    <p className="font-black tabular-nums leading-none"
+                      style={{
+                        fontFamily: "'Orbitron', monospace",
+                        fontSize: "clamp(12px, 1.4vw, 18px)",
+                        color: "#22c55e",
+                        textShadow: "0 0 10px rgba(34,197,94,0.55)",
+                      }}>
+                      {fmt(claimable)}
+                    </p>
+                    <p style={{ fontSize: 9, marginTop: 2, color: "rgba(255,255,255,0.2)" }}>
+                      claimable now · 3% back
+                    </p>
+                  </div>
+                </div>
 
                 {rbClaimMsg && (
-                  <p style={{ fontSize: 9, marginTop: 4, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
+                  <p style={{ fontSize: 9, marginTop: 5, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
                     {rbClaimMsg.text}
                   </p>
                 )}
