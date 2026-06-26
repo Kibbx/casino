@@ -1,0 +1,117 @@
+Build a modern sportsbook betting slip component that matches the attached design reference.
+
+Requirements
+
+Create a React + Tailwind CSS component called BetSlip.
+
+Layout
+Header
+White background
+Left side:
+Green circular badge with number "2"
+Large bold title: "Bet Slip"
+Right side:
+"Clear All" text button
+Settings gear icon
+Horizontal divider underneath
+Tabs
+Two tabs:
+Parlay (active)
+Singles (inactive)
+Active tab:
+Bold text
+Green underline
+Inactive tab:
+Dark gray text
+Parlay Section
+Large title:
+"2 Pick Parlay"
+Bold typography
+Display odds on right side:
+"6.17"
+Cash Out button:
+Small beige pill button
+Info icon inside
+Bet Selections
+
+Each selection contains:
+
+Event Information
+
+Example:
+"Norway vs France • Today 3:00 PM"
+Light gray text
+
+Selection
+
+Pink outlined circular remove button with minus icon
+Team name in bold
+Secondary text:
+"Moneyline"
+
+Second example:
+
+Senegal vs Iraq • Today 3:00 PM
+Senegal
+Moneyline
+Stake Controls
+
+Four controls displayed horizontally:
+
++$1
++$5
++$20
+Custom wager amount input
+
+Styling:
+
+Light green background
+Rounded corners
+Green text
+Consistent sizing
+Dollar-sign prefix in input
+Wager Area
+
+Large gray action section at bottom.
+
+Content:
+
+Primary text:
+"Enter Wager Amount"
+Large bold centered
+Secondary text:
+"$20.00 pays $123.52"
+Smaller gray text
+Styling
+
+Use these colors:
+
+Green: #4F8F3D
+Light Green: #DCE8D2
+Pink Border: #D9A4AC
+Light Gray Background: #F4F4F4
+Divider Gray: #E5E5E5
+Text Gray: #6B7280
+Functionality
+Switch between Parlay and Singles tabs
+Remove selections
+Increment wager with quick-add buttons
+Support manual wager entry
+Automatically calculate payout using displayed odds
+Update payout in real time
+Technical Requirements
+React
+Tailwind CSS
+Lucide React icons
+Reusable components
+Clean component architecture
+Production-quality styling
+Match the visual spacing, typography, hierarchy, borders, and colors of the reference as closely as possible
+Desktop/web layout (not mobile-only)
+Responsive but optimized for sportsbook web applications
+Deliverables
+Complete React component
+Tailwind styling
+Sample data matching the reference
+State management for selections, tabs, wager amount, and payout calculations
+Clean, maintainable code structure suitable for integration into a sportsbook application.
