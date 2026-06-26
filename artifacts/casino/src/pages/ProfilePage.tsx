@@ -462,9 +462,6 @@ export function ProfilePage() {
                     }}>
                     {fmt(claimable)}
                   </p>
-                  <p style={{ fontSize: 11, marginTop: 3, color: "rgba(255,255,255,0.22)" }}>
-                    claimable now · 3% back
-                  </p>
                 </div>
 
                 {rbClaimMsg && (
