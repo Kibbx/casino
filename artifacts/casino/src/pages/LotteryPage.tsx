@@ -223,7 +223,6 @@ function YourTickets({
   tickets: LotteryTicket[]; settings: Settings | null; loading: boolean;
 }) {
   const [ticketsOpen, setTicketsOpen] = useState(true);
-  const [howOpen, setHowOpen] = useState(false);
 
   const totalSpent = tickets.reduce((s, t) => s + (t.ticket_cost || 0), 0);
   const totalEntries = tickets.length;
@@ -343,58 +342,6 @@ function YourTickets({
         </AnimatePresence>
       </div>
 
-      {/* HOW IT WORKS accordion */}
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{
-          background: "linear-gradient(160deg,#0e0b06 0%,#0a0804 100%)",
-          border: "1px solid rgba(245,197,24,0.1)",
-        }}
-      >
-        <button
-          className="w-full px-6 py-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
-          style={{ borderBottom: howOpen ? "1px solid rgba(245,197,24,0.1)" : "none" }}
-          onClick={() => setHowOpen(o => !o)}
-        >
-          <span className="font-rajdhani font-black text-base uppercase tracking-widest text-white">How It Works</span>
-          <motion.span animate={{ rotate: howOpen ? 0 : -90 }} transition={{ duration: 0.2 }}>
-            <ChevronDown size={18} style={{ color: "rgba(255,255,255,0.4)" }} />
-          </motion.span>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {howOpen && (
-            <motion.div
-              key="how-body"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              style={{ overflow: "hidden" }}
-            >
-              <div className="px-6 py-5 flex flex-col gap-3">
-                {[
-                  { n: 1, title: "Buy a Ticket", desc: "Purchase one or more entries into the current draw using your chip balance." },
-                  { n: 2, title: "Pick Your Numbers", desc: "Each ticket requires you to choose numbers. Use Quick Pick for a random selection." },
-                  { n: 3, title: "Wait for the Draw", desc: "The draw happens at the scheduled time. All submitted tickets are entered." },
-                  { n: 4, title: "Claim Winnings", desc: "Jackpot and consolation prizes are paid out automatically to winners." },
-                ].map(({ n, title, desc }) => (
-                  <div key={n} className="flex gap-3">
-                    <div className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-black"
-                      style={{ background: "rgba(245,197,24,0.15)", color: "#f5c518", border: "1px solid rgba(245,197,24,0.3)" }}>
-                      {n}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-white mb-0.5">{title}</p>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>{desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
     </div>
   );
 }

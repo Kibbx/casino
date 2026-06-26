@@ -282,7 +282,6 @@ export default function LotteryPage() {
   const [submitMsg, setSubmitMsg] = useState<{ text: string; ok: boolean } | null>(null);
   const [now, setNow] = useState(Date.now());
   const [showHistory, setShowHistory] = useState(false);
-  const [showRules, setShowRules] = useState(false);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const apiFetch = useCallback(async (path: string, opts?: RequestInit) => {
@@ -762,36 +761,6 @@ export default function LotteryPage() {
 
         {/* ── Rules ── */}
         <div style={{ marginBottom: 16 }}>
-          <button onClick={() => setShowRules(r => !r)} style={{
-            width: "100%", padding: "12px", borderRadius: 10,
-            background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)",
-            color: "rgba(255,255,255,0.3)", fontSize: 11, fontWeight: 700,
-            cursor: "pointer", letterSpacing: "0.1em", textTransform: "uppercase",
-          }}>
-            {showRules ? "▲ Hide" : "▼ How It Works"}
-          </button>
-          {showRules && (
-            <div style={{
-              marginTop: 8, background: "#0a0a18", border: "1px solid #1a1a2e",
-              borderRadius: 10, padding: "16px 20px",
-              color: "rgba(255,255,255,0.45)", fontSize: 12, lineHeight: 2,
-            }}>
-              {[
-                `Buy tickets for this Sunday's draw.`,
-                `Pick ${settings?.numbersPerTicket ?? 4} numbers from ${settings?.numberMin ?? 1}–${settings?.numberMax ?? 20}.`,
-                `Match all ${settings?.numbersPerTicket ?? 4} to win the rolling jackpot.`,
-                `Match ${(settings?.numbersPerTicket ?? 4) - 1} to split this week's consolation pool.`,
-                `${(settings?.numbersPerTicket ?? 4) - 2} or fewer matches wins nothing.`,
-                `Unsubmitted draft tickets are voided at draw time.`,
-                `The jackpot rolls over each week until someone hits the full match.`,
-              ].map((line, i) => (
-                <div key={i} style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                  <span style={{ color: "rgba(251,191,36,0.4)", fontSize: 10 }}>✦</span>
-                  <span>{line}</span>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
       </div>
