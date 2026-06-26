@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, bigint, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -35,6 +35,8 @@ export const playersTable = pgTable("players", {
   realBalance: integer("real_balance").notNull().default(0),
   babalari: integer("babalari").notNull().default(0),
   excludeFromLoginLogs: boolean("exclude_from_login_logs").notNull().default(false),
+  wins: bigint("wins", { mode: "number" }).notNull().default(0),
+  totalWon: bigint("total_won", { mode: "number" }).notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

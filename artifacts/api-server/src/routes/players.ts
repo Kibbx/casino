@@ -677,8 +677,8 @@ router.get("/leaderboard", requirePlayer, async (_req, res) => {
       username: playersTable.username,
       chips: playersTable.chips,
       handsPlayed: playersTable.handsPlayed,
-      wins: (playersTable as any).wins,
-      totalWon: (playersTable as any).totalWon,
+      wins: playersTable.wins,
+      totalWon: playersTable.totalWon,
       avatarUrl: playersTable.avatarUrl,
       staffRole: playersTable.staffRole,
     })
