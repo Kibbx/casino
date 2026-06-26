@@ -785,6 +785,9 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
       console.error("[live-bet] transaction insert failed (non-fatal):", txErr);
     }
 
+    // Calculate rake (10% of wager) and adjusted potential payout
+    const rakeAmount = Math.floor(w * 0.1);
+
     // Save bet slip — non-fatal if it fails
     try {
       let decimalOdds = 1;
@@ -795,7 +798,8 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
         }
       }
       const slipType = String(betType) === "parlay" ? "parlay" : "single";
-      const potentialPayout = Math.floor(w * decimalOdds);
+      const grossPayout = Math.floor(w * decimalOdds);
+      const potentialPayout = Math.max(0, grossPayout - rakeAmount);
       await db.insert(sportBetSlipsTable).values({
         playerId,
         playerUsername: player.username,
@@ -807,6 +811,19 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
       });
     } catch (slipErr) {
       console.error("[live-bet] bet slip insert failed (non-fatal):", slipErr);
+    }
+
+    // Record rake to sport_bet_finances — non-fatal
+    try {
+      await db.insert(sportBetFinancesTable).values({
+        source: "rake",
+        type: "income",
+        amount: rakeAmount,
+        description: `Live bet rake 10% — ${String(betType) === "parlay" ? "parlay" : "single"} (${pickDesc.substring(0, 80)})`,
+        staffUsername: "system",
+      } as any);
+    } catch (rakeErr) {
+      console.error("[live-bet] rake record failed (non-fatal):", rakeErr);
     }
 
     console.log(`[live-bet] success — player=${player.username} newChips=${newChips}`);
