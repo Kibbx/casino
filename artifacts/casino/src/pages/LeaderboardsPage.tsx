@@ -251,11 +251,7 @@ export function LeaderboardsPage() {
 
         {/* Rows */}
         {!loading && !error && (
-          <div style={{
-            opacity: tabTransition ? 0 : 1,
-            transform: tabTransition ? "translateY(4px)" : "translateY(0)",
-            transition: "opacity 0.15s ease, transform 0.15s ease",
-          }}>
+          <div>
             {ranked.map((entry, i) => {
               const isMe = entry.id === playerId || entry.username === playerUsername;
               const isHov = hovered === entry.id && !isMe;
