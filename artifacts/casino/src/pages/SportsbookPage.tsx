@@ -930,7 +930,7 @@ function BetSlip({
   onWager?: (id: string, side: "home" | "away", val: string) => void;
   onRemove: (selectionId: string) => void;
   onClear: () => void;
-  onPlace: (wager: string) => void;
+  onPlace: (wager: string, entry?: BetSlipEntry) => void;
   onSelect?: (ev: SbEvent, side: "home" | "away") => void;
   chips?: number;
   chipsKnown?: boolean;
@@ -1280,7 +1280,7 @@ function BetSlip({
                             {placeError ?? "Insufficient chips"}
                           </p>
                         )}
-                        <button onClick={() => onPlace(sw)}
+                        <button onClick={() => onPlace(sw, e)}
                           disabled={!canPlace}
                           className="w-full rounded-lg py-2 flex flex-col items-center transition-opacity active:opacity-80"
                           style={{
@@ -1655,12 +1655,17 @@ export function SportsbookPage() {
   /* true once we have a real balance reading (WS or query) */
   const chipsKnown = liveChips !== null || currentPlayer !== undefined;
 
-  async function placeBets(wager: string) {
+  async function placeBets(wager: string, entry?: BetSlipEntry) {
     const w = Math.floor(parseFloat(wager) || 0);
-    console.log("[placeBets] wager=", wager, "w=", w, "chips=", chips, "chipsKnown=", chipsKnown, "playerId=", playerId, "hasToken=", !!sessionToken);
+    const isSingle = !!entry;
+    const picks = isSingle
+      ? [{ teamName: entry.teamName, odds: entry.odds, matchup: entry.matchup }]
+      : slip.map(e => ({ teamName: e.teamName, odds: e.odds, matchup: e.matchup }));
+    const betType = isSingle ? "single" : "parlay";
+
+    console.log("[placeBets] wager=", wager, "w=", w, "betType=", betType, "picks=", picks.length);
     if (!sessionToken || !playerId) { setPlaceError("Not logged in"); return; }
     if (w <= 0) { setPlaceError("Enter a wager amount"); return; }
-    /* only enforce chip guard when we know the real balance */
     if (chipsKnown && w > chips) { setPlaceError("Insufficient chips"); return; }
     setPlacing(true);
     setPlaceError(null);
@@ -1671,17 +1676,19 @@ export function SportsbookPage() {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({
-          wager: w,
-          betType: slip.length > 1 ? "parlay" : "single",
-          picks: slip.map(e => ({ teamName: e.teamName, odds: e.odds, matchup: e.matchup })),
-        }),
+        body: JSON.stringify({ wager: w, betType, picks }),
       });
       const data = await res.json() as { success?: boolean; error?: string };
       console.log("[placeBets] response status=", res.status, "data=", data);
       if (!res.ok) { setPlaceError(data.error ?? "Failed to place bet"); return; }
       setPlaced(true);
-      clearSlip();
+      if (isSingle) {
+        // Remove only this pick; keep the rest of the slip intact
+        setSlip(prev => prev.filter(e => e.selectionId !== entry.selectionId));
+        setSelected(prev => { const n = new Set(prev); n.delete(entry.selectionId); return n; });
+      } else {
+        clearSlip();
+      }
       setTimeout(() => setPlaced(false), 3500);
     } catch (err) {
       console.error("[placeBets] fetch error:", err);
