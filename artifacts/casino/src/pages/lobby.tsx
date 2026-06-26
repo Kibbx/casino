@@ -132,11 +132,27 @@ interface LiveActivityItem {
   tokenId?: string;
 }
 
-const MOCK_USERS = [
-  "Jonah", "Maya", "Ace", "Rico", "Nova",
-  "VegasVince", "LuckyLena", "CardShark_K", "RoyalFlush_R", "AceHunter",
-  "DealBreaker", "SilverStack", "NeonNick",
-];
+// Maps server-reported game strings → LIVE_GAME_POOL gameKey
+const SERVER_GAME_TO_KEY: Record<string, string> = {
+  "blackjack":    "blackjack",
+  "roulette":     "roulette",
+  "baccarat":     "baccarat",
+  "poker":        "poker",
+  "high-low":     "highlow",
+  "highlow":      "highlow",
+  "slots":        "slots",
+  "fortuna":      "slots",
+  "rome-slots":   "rome_slots",
+  "western-slots":"western_slots",
+  "mines":        "mines",
+  "mob-tower":    "mob_tower",
+  "mobtower":     "mob_tower",
+  "horse-racing": "horse",
+  "bingo":        "bingo",
+  "lottery":      "lottery",
+  "cases":        "cases",
+  "keno":         "keno",
+};
 
 const LIVE_GAME_POOL: Array<{ gameKey: string; route: string; launchKey?: string; tokenId?: string }> = [
   { gameKey: "blackjack",    route: "/tablegames",    launchKey: "blackjack" },
@@ -270,19 +286,33 @@ export function Lobby() {
     setRecentlyPlayed(getRecentlyPlayed());
   }, [activeNav]);
 
-  // ── Live Activity — simulated players, rotates every 5 s ──────
+  // ── Live Activity — real players from server, polled every 10 s ──
   useEffect(() => {
     if (activeNav !== "home") return;
-    const interval = setInterval(() => {
-      const poolEntry = LIVE_GAME_POOL[Math.floor(Math.random() * LIVE_GAME_POOL.length)];
-      const user      = MOCK_USERS[Math.floor(Math.random() * MOCK_USERS.length)];
-      const newItem   = buildLiveItem(poolEntry, user);
-      setLiveActivity(prev =>
-        [newItem, ...prev]
-          .filter((item, idx, arr) => arr.findIndex(x => x.gameKey === item.gameKey) === idx)
-          .slice(0, 4)
-      );
-    }, 5000);
+
+    async function fetchLiveActivity() {
+      try {
+        const r = await fetch(`${BASE}/api/live-activity`);
+        if (!r.ok) return;
+        const data: Array<{ username: string; game: string; status: string }> = await r.json();
+        const seen = new Set<string>();
+        const items: LiveActivityItem[] = [];
+        for (const { username, game } of data) {
+          const gameKey   = SERVER_GAME_TO_KEY[game];
+          if (!gameKey) continue;
+          const poolEntry = LIVE_GAME_POOL.find(g => g.gameKey === gameKey);
+          if (!poolEntry) continue;
+          if (seen.has(gameKey)) continue;
+          seen.add(gameKey);
+          items.push(buildLiveItem(poolEntry, username));
+          if (items.length === 4) break;
+        }
+        if (items.length > 0) setLiveActivity(items);
+      } catch { /* keep previous state */ }
+    }
+
+    fetchLiveActivity();
+    const interval = setInterval(fetchLiveActivity, 10_000);
     return () => clearInterval(interval);
   }, [activeNav]);
 

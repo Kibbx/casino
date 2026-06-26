@@ -32,6 +32,7 @@ import lotteryRouter from "./lottery.js";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBankerOrOwner } from "../middleware/auth.js";
+import { getActivePlayers } from "../lib/player-activity.js";
 
 const SERVER_START = Date.now();
 
@@ -72,6 +73,16 @@ router.get("/slot-bet-limits", async (_req, res) => {
     fortuna:      parseSlotSteps(map["fortunaBetSteps"],      DEFAULT_SLOT_STEPS),
     westernSlots: parseSlotSteps(map["westernSlotsBetSteps"], DEFAULT_SLOT_STEPS),
   });
+});
+
+// ── Live player activity (public — no auth, usernames only) ──────────────────
+router.get("/live-activity", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  const players = getActivePlayers()
+    .filter(p => p.game !== "lobby")
+    .slice(0, 20)
+    .map(p => ({ username: p.username, game: p.game, status: p.status }));
+  res.json(players);
 });
 
 // ── Game password tokens (public — no auth, no passwords exposed) ─────────────
