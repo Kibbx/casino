@@ -94,7 +94,7 @@ function CountdownTimer({ endTime, color }: { endTime: string | null; color: str
 
   return (
     <span style={{
-      fontFamily: "monospace", fontWeight: 900, fontSize: 17,
+      fontFamily: "monospace", fontWeight: 900, fontSize: 15,
       color, letterSpacing: "0.04em",
       textShadow: `0 0 12px ${color}80`,
     }}>
@@ -153,11 +153,11 @@ function StatPanel({ label, value, icon: Icon, accent }: {
 }) {
   return (
     <div style={{
-      flex: 1, minWidth: 80,
-      padding: "10px 14px", borderRadius: 12,
+      flex: 1, minWidth: 72,
+      padding: "7px 11px", borderRadius: 10,
       background: "rgba(255,255,255,0.04)",
       border: "1px solid rgba(255,255,255,0.07)",
-      display: "flex", flexDirection: "column", gap: 4,
+      display: "flex", flexDirection: "column", gap: 3,
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
         <Icon size={11} style={{ color: accent, opacity: 0.8 }} />
@@ -165,7 +165,7 @@ function StatPanel({ label, value, icon: Icon, accent }: {
           {label}
         </span>
       </div>
-      <div style={{ fontSize: 17, fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>
+      <div style={{ fontSize: 15, fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>
         {value}
       </div>
     </div>
@@ -246,7 +246,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
         transform: hov ? "translateY(-3px) scale(1.003)" : "translateY(0) scale(1)",
         transition: "all 0.25s cubic-bezier(0.23, 1, 0.32, 1)",
         display: "flex", flexDirection: "row",
-        minHeight: 240,
+        height: 210,
       }}
     >
       {/* ── Left artwork ────────────────────────────────────────────── */}
@@ -286,8 +286,8 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
 
       {/* ── Right content ────────────────────────────────────────────── */}
       <div style={{
-        flex: 1, padding: "24px 28px 22px",
-        display: "flex", flexDirection: "column", gap: 14,
+        flex: 1, padding: "14px 22px 14px",
+        display: "flex", flexDirection: "column", gap: 9,
         position: "relative",
       }} onClick={e => e.stopPropagation()}>
 
@@ -316,7 +316,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
             </span>
           </div>
           <h2 style={{
-            fontSize: "clamp(18px, 2.2vw, 26px)",
+            fontSize: "clamp(15px, 1.8vw, 21px)",
             fontWeight: 900, letterSpacing: "0.04em",
             textTransform: "uppercase", color: "#ffffff",
             lineHeight: 1.1, margin: 0,
@@ -382,7 +382,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
               onClick={handleView}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                width: "100%", maxWidth: 360, padding: "13px 24px", borderRadius: 10,
+                width: "100%", maxWidth: 360, padding: "10px 20px", borderRadius: 10,
                 background: `linear-gradient(135deg, ${theme.primary}cc, ${theme.secondary}88)`,
                 border: `1px solid ${theme.primary}88`,
                 color: "#fff", fontSize: 12, fontWeight: 900,
@@ -399,7 +399,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
               disabled={busy}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                width: "100%", maxWidth: 360, padding: "13px 24px", borderRadius: 10,
+                width: "100%", maxWidth: 360, padding: "10px 20px", borderRadius: 10,
                 background: hov
                   ? `linear-gradient(135deg, ${theme.primary}, ${theme.secondary})`
                   : `linear-gradient(135deg, ${theme.primary}22, ${theme.secondary}11)`,
@@ -419,7 +419,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
               onClick={handleView}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-                width: "100%", maxWidth: 360, padding: "13px 24px", borderRadius: 10,
+                width: "100%", maxWidth: 360, padding: "10px 20px", borderRadius: 10,
                 background: `linear-gradient(135deg, ${theme.primary}18, ${theme.secondary}0a)`,
                 border: `1px solid ${theme.primary}44`,
                 color: "rgba(255,255,255,0.7)", fontSize: 12, fontWeight: 900,
@@ -434,7 +434,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
               disabled
               style={{
                 display: "flex", alignItems: "center", justifyContent: "center",
-                width: "100%", maxWidth: 360, padding: "13px 24px", borderRadius: 10,
+                width: "100%", maxWidth: 360, padding: "10px 20px", borderRadius: 10,
                 background: "rgba(255,255,255,0.04)",
                 border: "1px solid rgba(255,255,255,0.08)",
                 color: "rgba(255,255,255,0.25)", fontSize: 12, fontWeight: 900,
@@ -527,7 +527,7 @@ export function TournamentsPage() {
       padding: "0 0 48px",
     }}>
       {/* ── Page header ─────────────────────────────────────────── */}
-      <div style={{ padding: "36px 32px 28px", maxWidth: 1164, margin: "0 auto" }}>
+      <div style={{ padding: "18px 32px 12px", maxWidth: 1164, margin: "0 auto" }}>
         <motion.div
           initial={{ opacity: 0, y: -16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -578,7 +578,7 @@ export function TournamentsPage() {
       <div style={{
         maxWidth: 1164, margin: "0 auto",
         padding: "0 32px",
-        display: "flex", flexDirection: "column", gap: 20,
+        display: "flex", flexDirection: "column", gap: 10,
       }}>
         {loading && (
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0", gap: 12 }}>
