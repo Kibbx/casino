@@ -1,0 +1,118 @@
+Fix the sportsbook parlay validation logic.
+
+### Current Issue
+
+When users try to add both moneyline sides from the same game into a parlay, the bet slip displays:
+
+```txt
+Some of your selections cannot be parlayed.
+```
+
+and prevents the parlay from being created.
+
+Example:
+
+```txt
+Dodgers ML
+Yankees ML
+```
+
+or
+
+```txt
+Warriors ML
+Celtics ML
+```
+
+Both selections are added to the slip, but the parlay validation rejects them.
+
+### Required Change
+
+For this application, opposing moneyline selections from the same game should be allowed in parlays.
+
+Remove or disable the validation rule that generates:
+
+```txt
+Some of your selections cannot be parlayed.
+```
+
+for same-game moneyline selections.
+
+### Find and Remove Logic Like
+
+```ts
+hasConflictingSelections()
+hasSameGameSelections()
+hasInvalidParlaySelections()
+validateParlaySelections()
+```
+
+or checks similar to:
+
+```ts
+selection.eventId === otherSelection.eventId
+```
+
+```ts
+sameGameSelections.length > 1
+```
+
+```ts
+conflictingMarkets.includes(...)
+```
+
+```ts
+return {
+  valid: false,
+  error: "Some of your selections cannot be parlayed."
+}
+```
+
+### New Behavior
+
+The following should be valid:
+
+```txt
+Dodgers ML
+Yankees ML
+```
+
+```txt
+Warriors ML
+Celtics ML
+```
+
+```txt
+Norway ML
+France ML
+```
+
+The bet slip should:
+
+* Build the parlay normally
+* Calculate combined odds
+* Allow wager entry
+* Allow bet placement
+* Submit successfully
+
+### Error Handling
+
+Keep the error message only for truly invalid situations such as:
+
+* Missing selections
+* Invalid odds data
+* Suspended markets
+* Closed events
+* Duplicate identical selections
+
+Do not show the error simply because two selections belong to the same event.
+
+### Deliverable
+
+Update the parlay validation system so same-game opposing moneyline selections no longer trigger:
+
+```txt
+Some of your selections cannot be parlayed.
+```
+
+and can be wagered and submitted as a normal parlay.
