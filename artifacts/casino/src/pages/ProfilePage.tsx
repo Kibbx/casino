@@ -379,31 +379,32 @@ export function ProfilePage() {
           {stats.map((s) => (
             <div
               key={s.label}
-              className="rounded-xl flex flex-row items-center gap-3"
+              className="rounded-xl flex flex-col items-center justify-center gap-2"
               style={{
                 background: "#0c0a0a",
                 border: `1px solid ${s.color}22`,
-                padding: "12px 14px",
+                padding: "18px 14px",
                 boxShadow: `inset 0 0 28px ${s.color}07`,
+                textAlign: "center",
               }}
             >
               {/* Neon icon */}
               <div style={{
                 width: 54, height: 54, borderRadius: "50%", flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 26,
                 background: `radial-gradient(circle, ${s.color}20 0%, transparent 70%)`,
                 border: `1px solid ${s.color}33`,
                 boxShadow: `0 0 14px ${s.color}22`,
+                color: s.color,
               }}>
                 {s.icon}
               </div>
               {/* Content */}
-              <div className="flex flex-col min-w-0 items-center text-center flex-1">
+              <div className="flex flex-col items-center">
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
                   {s.label}
                 </p>
-                <p className="font-black tabular-nums leading-none w-full text-center"
+                <p className="font-black tabular-nums leading-none"
                   style={{
                     fontFamily: "'Orbitron', monospace",
                     fontSize: "clamp(16px, 1.8vw, 26px)",
@@ -427,44 +428,43 @@ export function ProfilePage() {
             const cdLabel    = fmtCooldown(rb?.nextClaimAt ?? null);
             return (
               <div
-                className="rounded-xl flex flex-col"
+                className="rounded-xl flex flex-col items-center justify-center gap-2"
                 style={{
                   background: "#0c0a0a",
                   border: "1px solid rgba(34,197,94,0.22)",
-                  padding: "12px 14px",
+                  padding: "18px 14px",
                   boxShadow: "inset 0 0 28px rgba(34,197,94,0.04)",
+                  textAlign: "center",
                 }}
               >
-                <div className="flex flex-row items-center gap-3 flex-1">
-                  {/* Neon icon */}
-                  <div style={{
-                    width: 54, height: 54, borderRadius: "50%", flexShrink: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 26,
-                    background: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
-                    border: "1px solid rgba(34,197,94,0.33)",
-                    boxShadow: "0 0 14px rgba(34,197,94,0.22)",
-                  }}>
-                    <Percent size={22} />
-                  </div>
-                  {/* Content */}
-                  <div className="flex flex-col min-w-0 items-center text-center flex-1">
-                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
-                      Rakeback
-                    </p>
-                    <p className="font-black tabular-nums leading-none w-full text-center"
-                      style={{
-                        fontFamily: "'Orbitron', monospace",
-                        fontSize: "clamp(16px, 1.8vw, 26px)",
-                        color: "#22c55e",
-                        textShadow: "0 0 12px rgba(34,197,94,0.55)",
-                      }}>
-                      {fmt(claimable)}
-                    </p>
-                    <p style={{ fontSize: 11, marginTop: 3, color: "rgba(255,255,255,0.22)" }}>
-                      claimable now · 3% back
-                    </p>
-                  </div>
+                {/* Neon icon */}
+                <div style={{
+                  width: 54, height: 54, borderRadius: "50%", flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  background: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
+                  border: "1px solid rgba(34,197,94,0.33)",
+                  boxShadow: "0 0 14px rgba(34,197,94,0.22)",
+                  color: "#22c55e",
+                }}>
+                  <Percent size={22} />
+                </div>
+                {/* Content */}
+                <div className="flex flex-col items-center">
+                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
+                    Rakeback
+                  </p>
+                  <p className="font-black tabular-nums leading-none"
+                    style={{
+                      fontFamily: "'Orbitron', monospace",
+                      fontSize: "clamp(16px, 1.8vw, 26px)",
+                      color: "#22c55e",
+                      textShadow: "0 0 12px rgba(34,197,94,0.55)",
+                    }}>
+                    {fmt(claimable)}
+                  </p>
+                  <p style={{ fontSize: 11, marginTop: 3, color: "rgba(255,255,255,0.22)" }}>
+                    claimable now · 3% back
+                  </p>
                 </div>
 
                 {rbClaimMsg && (
