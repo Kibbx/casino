@@ -41,7 +41,7 @@ import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
-import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
+import { getRecentlyPlayed, addRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -132,27 +132,9 @@ interface LiveActivityItem {
   tokenId?: string;
 }
 
-// Maps server-reported game strings → LIVE_GAME_POOL gameKey
-const SERVER_GAME_TO_KEY: Record<string, string> = {
-  "blackjack":    "blackjack",
-  "roulette":     "roulette",
-  "baccarat":     "baccarat",
-  "poker":        "poker",
-  "high-low":     "highlow",
-  "highlow":      "highlow",
-  "slots":        "slots",
-  "fortuna":      "slots",
-  "rome-slots":   "rome_slots",
-  "western-slots":"western_slots",
-  "mines":        "mines",
-  "mob-tower":    "mob_tower",
-  "mobtower":     "mob_tower",
-  "horse-racing": "horse",
-  "bingo":        "bingo",
-  "lottery":      "lottery",
-  "cases":        "cases",
-  "keno":         "keno",
-};
+const MOCK_ONLINE_USERS = ["Jonah", "Maya", "Ace", "Rico", "Nova", "Blaze", "Kai", "Luna"];
+
+function getRandomItem<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
 const LIVE_GAME_POOL: Array<{ gameKey: string; route: string; launchKey?: string; tokenId?: string }> = [
   { gameKey: "blackjack",    route: "/tablegames",    launchKey: "blackjack" },
@@ -286,35 +268,18 @@ export function Lobby() {
     setRecentlyPlayed(getRecentlyPlayed());
   }, [activeNav]);
 
-  // ── Live Activity — real players from server, polled every 10 s ──
+  // ── Live Activity — mock feed, stable interval, never resets ────
   useEffect(() => {
-    if (activeNav !== "home") return;
-
-    async function fetchLiveActivity() {
-      try {
-        const r = await fetch(`${BASE}/api/live-activity`);
-        if (!r.ok) return;
-        const data: Array<{ username: string; game: string; status: string }> = await r.json();
-        const seen = new Set<string>();
-        const items: LiveActivityItem[] = [];
-        for (const { username, game } of data) {
-          const gameKey   = SERVER_GAME_TO_KEY[game];
-          if (!gameKey) continue;
-          const poolEntry = LIVE_GAME_POOL.find(g => g.gameKey === gameKey);
-          if (!poolEntry) continue;
-          if (seen.has(gameKey)) continue;
-          seen.add(gameKey);
-          items.push(buildLiveItem(poolEntry, username));
-          if (items.length === 4) break;
-        }
-        if (items.length > 0) setLiveActivity(items);
-      } catch { /* keep previous state */ }
-    }
-
-    fetchLiveActivity();
-    const interval = setInterval(fetchLiveActivity, 10_000);
+    const interval = setInterval(() => {
+      const poolEntry = getRandomItem(LIVE_GAME_POOL);
+      const user      = getRandomItem(MOCK_ONLINE_USERS);
+      const newItem   = buildLiveItem(poolEntry, user);
+      setLiveActivity(prev =>
+        [newItem, ...prev.filter(x => x.gameKey !== newItem.gameKey)].slice(0, 4)
+      );
+    }, 5000);
     return () => clearInterval(interval);
-  }, [activeNav]);
+  }, []);
 
 
   useEffect(() => {
@@ -627,6 +592,21 @@ export function Lobby() {
                         key={item.id}
                         game={item}
                         onPlay={() => {
+                          const cfg = GAME_CFG[item.gameKey] ?? GAME_CFG.blackjack;
+                          addRecentlyPlayed({
+                            id: item.gameKey,
+                            game: {
+                              id: item.gameKey,
+                              name: item.name,
+                              description: cfg.description,
+                              gradient: cfg.gradient,
+                              neonClass: cfg.neonClass,
+                              neonColor: cfg.neonColor,
+                            },
+                            route: item.route,
+                            tokenId: item.tokenId,
+                          });
+                          setRecentlyPlayed(getRecentlyPlayed());
                           if (item.launchKey) {
                             const gameDef = GAMES[item.launchKey];
                             if (gameDef) { enter(gameDef); return; }

@@ -1,0 +1,236 @@
+Fix the Live Activity section so it behaves like a real feed of other online users currently playing games.
+
+Context:
+The app already has game sections like Table Games, Mini Games, Slots, and Poker. Recently Played tracks the current user’s selected games. Live Activity should be separate and should show mock activity from other users, not the current user.
+
+Goal:
+Live Activity should display up to 4 cards representing games that other online users are actively playing. It should update automatically every few seconds, reuse the existing card design, and clicking one of those live cards should still let the current user join/play that game.
+
+Detailed requirements:
+
+1. Create one master games array
+   Use the same game objects that power the Table Games, Mini Games, Slots, and Poker pages. Every game object should have a stable id.
+
+Example fields:
+
+* id
+* title
+* section
+* category
+* description
+* badge
+* status
+* players
+* maxPlayers
+* buyIn
+* actionLabel
+* themeColor
+
+Do not create separate incompatible card objects for Live Activity. Live Activity should reference games from this master array.
+
+2. Create mock online users
+
+Create a mock users array:
+
+const mockOnlineUsers = [
+"Jonah",
+"Maya",
+"Ace",
+"Rico",
+"Nova",
+"Blaze",
+"Kai",
+"Luna"
+];
+
+3. Live Activity state should be separate from Recently Played
+
+Do not store Live Activity in recentlyPlayed.
+Do not read Live Activity from localStorage.
+Do not overwrite Recently Played when Live Activity updates.
+
+Use separate state:
+
+const [recentlyPlayed, setRecentlyPlayed] = useState([]);
+const [liveActivity, setLiveActivity] = useState([]);
+
+4. Seed Live Activity on page load
+
+When the app first loads, Live Activity should not be empty.
+
+Create 3 or 4 initial mock activity items from random games.
+
+Each activity item should look like this:
+
+{
+activityId: crypto.randomUUID(),
+gameId: game.id,
+activeUser: userName,
+activityLabel: `${userName} is playing`,
+startedAt: Date.now(),
+game: game
+}
+
+If crypto.randomUUID is unavailable, use:
+
+`${game.id}-${Date.now()}-${Math.random()}`
+
+5. Update Live Activity automatically
+
+Use useEffect with setInterval.
+
+Every 4–6 seconds:
+
+* Pick a random game from the master games array.
+* Pick a random mock user.
+* Create a new activity item.
+* Add it to the front of liveActivity.
+* Remove older duplicate game entries.
+* Keep only the latest 4 items.
+
+Important:
+The interval must use a functional setState so it never uses stale state.
+
+Example logic:
+
+setLiveActivity(prev => {
+const newActivity = createRandomActivity();
+
+const withoutSameGame = prev.filter(
+item => item.gameId !== newActivity.gameId
+);
+
+return [newActivity, ...withoutSameGame].slice(0, 4);
+});
+
+6. Do not reset the interval repeatedly
+
+The Live Activity useEffect should have a stable dependency array.
+
+Bad:
+useEffect(() => {
+const interval = setInterval(...);
+}, [liveActivity]);
+
+Good:
+useEffect(() => {
+seedLiveActivity();
+const interval = setInterval(() => {
+setLiveActivity(prev => {
+const newActivity = createRandomActivity();
+const withoutSameGame = prev.filter(
+item => item.gameId !== newActivity.gameId
+);
+return [newActivity, ...withoutSameGame].slice(0, 4);
+});
+}, 5000);
+
+return () => clearInterval(interval);
+}, []);
+
+7. Render Live Activity from liveActivity state
+
+The Live Activity section must map over liveActivity, not a hardcoded roulette object.
+
+Example:
+
+{liveActivity.map(activity => (
+<GameCard
+key={activity.activityId}
+game={activity.game}
+status="ACTIVE"
+activityLabel={activity.activityLabel}
+onAction={() => handleLiveActivitySelect(activity)}
+/>
+))}
+
+8. Show user activity text on each card
+
+Each Live Activity card should display one of these lines near the player/pot info:
+
+`${activeUser} is playing`
+
+or:
+
+`${activeUser} joined ${game.title}`
+
+Example visible card text:
+
+* “Maya is playing”
+* “Rico joined High Roller”
+* “3 users online”
+
+9. Clicking a Live Activity card should work
+
+When the current user clicks Join Table, Play Now, Start Climb, or Open Case on a Live Activity card:
+
+* Open the correct existing modal for that game.
+* Also add that game to Recently Played, because now the current user interacted with it.
+
+Example:
+
+function handleLiveActivitySelect(activity) {
+openGameModal(activity.game);
+addToRecentlyPlayed(activity.game);
+}
+
+10. Fix common bugs
+
+Make sure none of these happen:
+
+* Live Activity only shows Roulette.
+* Live Activity disappears after switching sections.
+* Live Activity overwrites Recently Played.
+* Live Activity duplicates the same game multiple times.
+* The interval creates multiple timers.
+* Cards render blank because Live Activity objects do not match GameCard props.
+* The page crashes because activity.game is undefined.
+* Clicking a live card does nothing.
+* Clicking a live card adds the activity object instead of the actual game object to Recently Played.
+
+11. Recommended helper functions
+
+Add these helpers:
+
+function getRandomItem(array) {
+return array[Math.floor(Math.random() * array.length)];
+}
+
+function createLiveActivity(games, users) {
+const game = getRandomItem(games);
+const user = getRandomItem(users);
+
+return {
+activityId: `${game.id}-${Date.now()}-${Math.random()}`,
+gameId: game.id,
+activeUser: user,
+activityLabel: `${user} is playing`,
+startedAt: Date.now(),
+game
+};
+}
+
+function addToRecentlyPlayed(game) {
+setRecentlyPlayed(prev => {
+const withoutDuplicate = prev.filter(item => item.id !== game.id);
+const next = [game, ...withoutDuplicate].slice(0, 4);
+localStorage.setItem("recentlyPlayed", JSON.stringify(next));
+return next;
+});
+}
+
+12. Expected final behavior
+
+After the fix:
+
+* Home page shows Recently Played from the current user’s selections.
+* Home page shows Live Activity from mock online users.
+* Live Activity starts with several cards immediately.
+* Every 5 seconds, a new mock user/game appears at the front.
+* The feed remains capped at 4 cards.
+* Live Activity uses real game data from Table Games, Mini Games, Slots, and Poker.
+* Clicking a Live Activity card opens the correct game modal and adds that game to Recently Played.
+* The app compiles without errors.
+* The neon casino styling remains unchanged.
+
+Only modify the state/data/rendering logic necessary for Live Activity and its connection to the existing GameCard/modal behavior. Do not redesign the page.
