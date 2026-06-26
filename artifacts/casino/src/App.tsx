@@ -22,8 +22,6 @@ import BankerDashboard from "@/pages/banker";
 import PokerLobby from "@/pages/poker-lobby";
 import CasesPage from "@/pages/cases";
 import MyRewardsPage from "@/pages/my-rewards";
-import { RewardsPage } from "@/pages/RewardsPage";
-import { ChallengesPage } from "@/pages/ChallengesPage";
 import ProfilePage from "@/pages/profile";
 import MinesPage from "@/pages/mines";
 import KenoPage from "@/pages/keno";
@@ -109,8 +107,6 @@ function Router() {
       <Route path="/poker" component={PokerLobby} />
       <Route path="/cases" component={CasesPage} />
       <Route path="/my-rewards" component={MyRewardsPage} />
-      <Route path="/rewards" component={RewardsPage} />
-      <Route path="/challenges" component={ChallengesPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/blackjack" component={Blackjack} />
       <Route path="/slots" component={Lobby} />

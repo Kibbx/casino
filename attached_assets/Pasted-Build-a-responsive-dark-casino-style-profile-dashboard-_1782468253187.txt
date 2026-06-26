@@ -1,0 +1,58 @@
+Build a responsive dark casino-style profile dashboard UI using React + Tailwind CSS.
+
+Recreate the design/layout only. Do not copy any names, numbers, dates, balances, or exact data from the reference image. Use realistic placeholder data instead.
+
+Design requirements:
+
+* Full-screen dark interface with a black/near-black background.
+* Fixed left sidebar navigation, about 180px wide.
+* Top header bar with:
+
+  * brand/logo area on the left
+  * small audio/slider control
+  * two-tab switcher
+  * centered glowing search bar
+  * right-side status cards for rank, chips/balance, user avatar/profile
+* Main content area offset to the right of the sidebar.
+* Centered page title with glowing horizontal divider lines on both sides.
+* Profile/stat dashboard layout:
+
+  * left profile card with avatar/icon, badge, account detail rows, and a primary action button
+  * right side: 2-column or 3-column grid of stat cards
+  * each stat card should have rounded corners, subtle border, dark gradient background, neon glow accent, icon circle, title, large value text, and small unit label
+* Use distinct neon accent colors per card: cyan, orange, yellow, purple, green, teal.
+* Below cards, add an “Activity Breakdown” section:
+
+  * wide rounded table/card
+  * rows with label, small multiplier pill, positive/negative amount columns
+  * green for positive values, red for negative values
+* Add a large highlighted bottom banner/card for “Biggest Single Win” style achievement, but use placeholder text and values.
+* Typography should feel arcade/casino/sci-fi:
+
+  * uppercase headings
+  * wide letter spacing
+  * bold condensed font if available via Google Fonts
+* UI styling:
+
+  * glossy glassmorphism cards
+  * subtle gradients
+  * thin neon borders
+  * soft shadows/glows
+  * rounded corners
+  * consistent spacing
+* Make it responsive:
+
+  * desktop matches the reference layout
+  * tablet collapses stat cards into 2 columns
+  * mobile hides/collapses sidebar and stacks all cards vertically
+* Use placeholder data only, such as “Player Name,” “Member Since,” “Total Played,” “Total Won,” etc.
+* Include clean reusable components:
+
+  * Sidebar
+  * TopBar
+  * ProfileCard
+  * StatCard
+  * ActivityTable
+  * AchievementBanner
+* Do not use copyrighted logos or exact asset copies. Use icons from lucide-react or simple CSS/icon placeholders.
+* Deliver a polished single-page app with production-quality spacing, shadows, and hover states.
