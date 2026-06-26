@@ -616,8 +616,8 @@ function NumberPickerPanel({
   const min = settings?.numberMin ?? 1;
   const max = settings?.numberMax ?? 20;
   const cost = settings?.ticketCost ?? 0;
-  const [mode, setMode] = useState<"own" | "random" | null>(null);
   const [picked, setPicked] = useState<number[]>([]);
+  const [hovered, setHovered] = useState<number | null>(null);
   const allNums = Array.from({ length: max - min + 1 }, (_, i) => i + min);
 
   function quickPick() {
@@ -627,7 +627,6 @@ function NumberPickerPanel({
       [pool[i], pool[j]] = [pool[j], pool[i]];
     }
     setPicked(pool.slice(0, required).sort((a, b) => a - b));
-    setMode("random");
   }
 
   function toggle(n: number) {
@@ -642,111 +641,131 @@ function NumberPickerPanel({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -10 }}
+      initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -6 }}
-      transition={{ duration: 0.2 }}
+      exit={{ opacity: 0, y: -4 }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
       style={{
-        background: "linear-gradient(160deg,#0c0a1a 0%,#08060f 100%)",
-        border: "1px solid rgba(139,92,246,0.3)",
+        background: "linear-gradient(160deg,#0e0b06 0%,#0a0804 100%)",
+        border: "1px solid rgba(245,197,24,0.2)",
         borderRadius: 16, overflow: "hidden",
-        boxShadow: "0 0 40px rgba(139,92,246,0.08)",
+        boxShadow: "0 0 40px rgba(245,197,24,0.04)",
       }}
     >
-      {/* Header */}
+      {/* Header — matches WeeklyMegaDraw */}
       <div style={{
-        background: "rgba(139,92,246,0.08)", borderBottom: "1px solid rgba(139,92,246,0.18)",
-        padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: "rgba(245,197,24,0.05)",
+        borderBottom: "1px solid rgba(245,197,24,0.1)",
+        padding: "10px 16px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
-        <span style={{ fontFamily: "Rajdhani,sans-serif", fontWeight: 900, fontSize: 15, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>
-          Choose Your Numbers
-        </span>
-        <button onClick={onCancel} style={{ background: "none", border: "none", color: "rgba(255,255,255,0.3)", cursor: "pointer", fontSize: 18, lineHeight: 1, padding: 0 }}>✕</button>
+        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+          <span style={{
+            fontFamily: "Rajdhani,sans-serif", fontWeight: 900, fontSize: 13,
+            letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
+          }}>
+            Your Numbers
+          </span>
+          <span style={{ fontSize: 10, color: "rgba(245,197,24,0.5)", fontWeight: 700, letterSpacing: "0.06em" }}>
+            {picked.length} / {required}
+          </span>
+        </div>
+        <button
+          onClick={onCancel}
+          style={{
+            background: "none", border: "none", color: "rgba(255,255,255,0.2)",
+            cursor: "pointer", fontSize: 15, lineHeight: 1, padding: "2px 4px",
+            transition: "color 0.15s",
+          }}
+        >✕</button>
       </div>
 
-      <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+      <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
 
-        {/* Mode selector — shown until a mode is picked */}
-        {!mode && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {([
-              { key: "own", icon: "🎯", label: "Pick My Own", sub: "Choose your lucky numbers" },
-              { key: "random", icon: "⚡", label: "Quick Pick", sub: "Auto-generate numbers" },
-            ] as const).map(({ key, icon, label, sub }) => (
+        {/* 5×4 compact number grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 5 }}>
+          {allNums.map(n => {
+            const sel = picked.includes(n);
+            const disabled = !sel && picked.length >= required;
+            const isHov = hovered === n && !disabled && !sel;
+            return (
               <button
-                key={key}
-                onClick={() => { if (key === "random") { quickPick(); } else { setMode("own"); } }}
+                key={n}
+                onClick={() => toggle(n)}
+                disabled={disabled}
+                onMouseEnter={() => !disabled && setHovered(n)}
+                onMouseLeave={() => setHovered(null)}
                 style={{
-                  background: "rgba(139,92,246,0.06)", border: "1px solid rgba(139,92,246,0.22)",
-                  borderRadius: 12, padding: "16px 10px", cursor: "pointer",
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                  aspectRatio: "1",
+                  borderRadius: "50%",
+                  background: sel
+                    ? "linear-gradient(145deg,#f5c518 0%,#d4a800 100%)"
+                    : isHov
+                      ? "rgba(245,197,24,0.07)"
+                      : "rgba(255,255,255,0.03)",
+                  border: sel
+                    ? "1.5px solid rgba(245,197,24,0.85)"
+                    : isHov
+                      ? "1.5px solid rgba(245,197,24,0.45)"
+                      : "1.5px solid rgba(255,255,255,0.09)",
+                  color: sel
+                    ? "#0a0804"
+                    : disabled
+                      ? "rgba(255,255,255,0.13)"
+                      : isHov
+                        ? "#f5c518"
+                        : "rgba(255,255,255,0.5)",
+                  fontWeight: sel ? 900 : 700,
+                  fontSize: 11,
+                  cursor: disabled ? "not-allowed" : "pointer",
+                  boxShadow: sel
+                    ? "0 0 10px rgba(245,197,24,0.35), inset 0 1px 0 rgba(255,255,255,0.2)"
+                    : isHov
+                      ? "0 0 6px rgba(245,197,24,0.12)"
+                      : "none",
+                  transition: "all 0.15s ease",
+                  userSelect: "none",
                 }}
-              >
-                <span style={{ fontSize: 26 }}>{icon}</span>
-                <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>{label}</span>
-                <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 10 }}>{sub}</span>
-              </button>
-            ))}
-          </div>
-        )}
+              >{n}</button>
+            );
+          })}
+        </div>
 
-        {/* Number grid for "pick own" mode */}
-        {mode === "own" && (
-          <>
-            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", letterSpacing: "0.15em", margin: 0 }}>
-              Select {required} numbers · {picked.length}/{required} chosen
-            </p>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 7 }}>
-              {allNums.map(n => {
-                const sel = picked.includes(n);
-                const disabled = !sel && picked.length >= required;
-                return (
-                  <button
-                    key={n}
-                    onClick={() => toggle(n)}
-                    disabled={disabled}
-                    style={{
-                      aspectRatio: "1", borderRadius: "50%",
-                      background: sel ? "rgba(245,197,24,0.18)" : "rgba(255,255,255,0.04)",
-                      border: `1.5px solid ${sel ? "rgba(245,197,24,0.6)" : "rgba(255,255,255,0.1)"}`,
-                      color: sel ? "#f5c518" : disabled ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.65)",
-                      fontWeight: 800, fontSize: 12, cursor: disabled ? "default" : "pointer",
-                      boxShadow: sel ? "0 0 10px rgba(245,197,24,0.2)" : "none",
-                      transition: "all 0.12s",
-                    }}
-                  >{n}</button>
-                );
-              })}
-            </div>
-          </>
-        )}
-
-        {/* Selected numbers display */}
-        {mode && (
-          <div>
-            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 10 }}>
-              {mode === "random" ? "Your Quick Pick" : "Your Numbers"}
-            </p>
-            <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-              {Array.from({ length: required }).map((_, i) => {
-                const n = picked[i];
-                return (
-                  <div key={i} style={{
-                    width: 44, height: 44, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                    background: n !== undefined ? "rgba(245,197,24,0.15)" : "rgba(255,255,255,0.04)",
-                    border: `2px solid ${n !== undefined ? "rgba(245,197,24,0.55)" : "rgba(255,255,255,0.1)"}`,
-                    color: n !== undefined ? "#f5c518" : "rgba(255,255,255,0.15)",
-                    fontWeight: 900, fontSize: 16,
-                    boxShadow: n !== undefined ? "0 0 16px rgba(245,197,24,0.25)" : "none",
-                    transition: "all 0.15s",
-                  }}>
-                    {n !== undefined ? n : "?"}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        {/* Selected numbers preview row */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: 5, padding: "6px 0",
+          borderTop: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+        }}>
+          {Array.from({ length: required }).map((_, i) => {
+            const n = picked[i];
+            return (
+              <div key={i} style={{
+                width: 28, height: 28, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: n !== undefined
+                  ? "linear-gradient(145deg,#f5c518 0%,#d4a800 100%)"
+                  : "rgba(255,255,255,0.03)",
+                border: `1.5px solid ${n !== undefined ? "rgba(245,197,24,0.75)" : "rgba(255,255,255,0.08)"}`,
+                color: n !== undefined ? "#0a0804" : "rgba(255,255,255,0.1)",
+                fontWeight: 900, fontSize: 10,
+                boxShadow: n !== undefined ? "0 0 8px rgba(245,197,24,0.3)" : "none",
+                transition: "all 0.18s ease",
+              }}>
+                {n !== undefined ? n : "·"}
+              </div>
+            );
+          })}
+          {picked.length > 0 && picked.length < required && (
+            <span style={{
+              fontSize: 9, color: "rgba(255,255,255,0.22)",
+              letterSpacing: "0.1em", textTransform: "uppercase", marginLeft: 4,
+            }}>
+              {required - picked.length} more
+            </span>
+          )}
+        </div>
 
         {/* Buy message */}
         <AnimatePresence>
@@ -754,49 +773,61 @@ function NumberPickerPanel({
             <motion.div
               initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
               style={{
-                padding: "8px 14px", borderRadius: 8, fontSize: 12, fontWeight: 700, textAlign: "center",
-                background: buyMsg.ok ? "rgba(34,197,94,0.1)" : "rgba(239,68,68,0.1)",
-                border: `1px solid ${buyMsg.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+                padding: "6px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, textAlign: "center",
+                background: buyMsg.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+                border: `1px solid ${buyMsg.ok ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
                 color: buyMsg.ok ? "#22c55e" : "#f87171",
               }}
             >{buyMsg.text}</motion.div>
           )}
         </AnimatePresence>
 
-        {/* Action buttons */}
-        <div style={{ display: "flex", gap: 8 }}>
+        {/* Action row: Quick Pick | Clear | Purchase */}
+        <div style={{ display: "flex", gap: 5 }}>
           <button
             onClick={quickPick}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(245,197,24,0.3)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.6)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.09)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.35)"; }}
             style={{
-              flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 11,
-              background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.3)", color: "#818cf8",
-              letterSpacing: "0.06em", textTransform: "uppercase",
+              flex: 1, padding: "7px 0", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 10,
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.09)",
+              color: "rgba(255,255,255,0.35)", letterSpacing: "0.05em", textTransform: "uppercase",
+              transition: "all 0.15s",
             }}
-          >⚡ Quick Pick</button>
-          {mode && (
-            <button
-              onClick={() => { setPicked([]); if (mode === "random") setMode("own"); }}
-              style={{
-                flex: 1, padding: "9px 0", borderRadius: 8, cursor: "pointer", fontWeight: 700, fontSize: 11,
-                background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)",
-                letterSpacing: "0.06em", textTransform: "uppercase",
-              }}
-            >Clear</button>
-          )}
+          >⚡ Quick</button>
+          <button
+            onClick={() => setPicked([])}
+            disabled={picked.length === 0}
+            onMouseEnter={e => { if (picked.length > 0) { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.18)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.45)"; } }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLButtonElement).style.color = picked.length === 0 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.28)"; }}
+            style={{
+              flex: 1, padding: "7px 0", borderRadius: 8,
+              cursor: picked.length === 0 ? "not-allowed" : "pointer", fontWeight: 700, fontSize: 10,
+              background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)",
+              color: picked.length === 0 ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.28)",
+              letterSpacing: "0.05em", textTransform: "uppercase",
+              transition: "all 0.15s",
+            }}
+          >Clear</button>
           <button
             onClick={() => ready && !buying && salesOpen && onConfirm(picked)}
             disabled={!ready || buying || !salesOpen}
+            onMouseEnter={e => { if (ready && salesOpen) { (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 0 20px rgba(245,197,24,0.15)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(245,197,24,0.55)"; } }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.boxShadow = ready && salesOpen ? "0 0 12px rgba(245,197,24,0.07)" : "none"; (e.currentTarget as HTMLButtonElement).style.borderColor = ready && salesOpen ? "rgba(245,197,24,0.38)" : "rgba(255,255,255,0.07)"; }}
             style={{
-              flex: 2, padding: "9px 0", borderRadius: 8, fontWeight: 800, fontSize: 11,
-              letterSpacing: "0.08em", textTransform: "uppercase",
-              background: ready && salesOpen ? "rgba(245,197,24,0.15)" : "rgba(255,255,255,0.04)",
-              border: `1px solid ${ready && salesOpen ? "rgba(245,197,24,0.4)" : "rgba(255,255,255,0.08)"}`,
-              color: ready && salesOpen ? "#f5c518" : "rgba(255,255,255,0.2)",
+              flex: 2, padding: "7px 0", borderRadius: 8, fontWeight: 800, fontSize: 10,
+              letterSpacing: "0.07em", textTransform: "uppercase",
+              background: ready && salesOpen
+                ? "rgba(245,197,24,0.1)"
+                : "rgba(255,255,255,0.02)",
+              border: `1px solid ${ready && salesOpen ? "rgba(245,197,24,0.38)" : "rgba(255,255,255,0.07)"}`,
+              color: ready && salesOpen ? "#f5c518" : "rgba(255,255,255,0.15)",
               cursor: ready && !buying && salesOpen ? "pointer" : "not-allowed",
               transition: "all 0.15s",
+              boxShadow: ready && salesOpen ? "0 0 12px rgba(245,197,24,0.07)" : "none",
             }}
           >
-            {buying ? "Purchasing…" : ready ? `Confirm · ${fmt(cost)} chips` : `Pick ${required - picked.length} more`}
+            {buying ? "Buying…" : ready ? `Buy · ${fmt(cost)}` : `${required - picked.length} to go`}
           </button>
         </div>
       </div>
