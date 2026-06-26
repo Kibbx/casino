@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { CatalogCard, CatalogGame, CardGrid } from "./shared";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import {
@@ -202,82 +202,70 @@ const NAME_TO_GAME: Record<string, string> = {
   "Bingo": "bingo", "Lottery": "lottery", "Slots Tournament": "slots",
 };
 
-/* ─── Recently Played Card — hub-page style ───────────────────── */
+/* ─── Per-game catalog config (gradient + neon + description) ─── */
+const GAME_CFG: Record<string, Pick<CatalogGame, "gradient" | "neonClass" | "neonColor" | "description">> = {
+  blackjack:     { gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)", neonClass: "neon-green",  neonColor: "#39ff14", description: "Beat the dealer to 21. Classic table game with live competition." },
+  roulette:      { gradient: "linear-gradient(135deg, #1a0505 0%, #2e0808 60%, #4a1010 100%)", neonClass: "neon-red",    neonColor: "#ff3131", description: "Spin the wheel. Bet on numbers, colors, or ranges in this iconic game." },
+  baccarat:      { gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", description: "Bet on Player, Banker, or Tie. High-limit prestige at every hand." },
+  poker:         { gradient: "linear-gradient(135deg, #1a0505 0%, #2e0808 60%, #4a1010 100%)", neonClass: "neon-red",    neonColor: "#ef4444", description: "Texas Hold'em with live players and real chips on the line." },
+  slots:         { gradient: "linear-gradient(135deg, #0d0020 0%, #1a0035 60%, #280050 100%)", neonClass: "neon-purple", neonColor: "#a855f7", description: "Spin the reels of fortune and uncover massive wins." },
+  rome_slots:    { gradient: "linear-gradient(135deg, #1a0a00 0%, #2e1500 60%, #4a2200 100%)", neonClass: "neon-orange", neonColor: "#f97316", description: "Spin to conquer Rome — classic reels with an epic theme." },
+  western_slots: { gradient: "linear-gradient(135deg, #0a1a08 0%, #122810 60%, #1a3a16 100%)", neonClass: "neon-green",  neonColor: "#22c55e", description: "Saddle up for big wins in the wild west with Deadwood Dollars." },
+  mines:         { gradient: "linear-gradient(135deg, #0a1a10 0%, #122a18 60%, #1a4024 100%)", neonClass: "neon-green",  neonColor: "#39ff14", description: "Uncover gems while dodging hidden mines. Cash out before it's too late." },
+  mob_tower:     { gradient: "linear-gradient(135deg, #1a0800 0%, #2e1200 60%, #4a1e00 100%)", neonClass: "neon-orange", neonColor: "#f97316", description: "Climb the tower, dodge the mobsters. Each floor multiplies your bet." },
+  fortune:       { gradient: "linear-gradient(135deg, #0d0020 0%, #1a0035 60%, #280050 100%)", neonClass: "neon-purple", neonColor: "#a855f7", description: "Spin the fortune wheel for instant prizes and massive multipliers." },
+  highlow:       { gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)", neonClass: "neon-blue",   neonColor: "#06b6d4", description: "Predict whether the next card is higher or lower than the dealer's." },
+  horse:         { gradient: "linear-gradient(135deg, #1a0f05 0%, #2e1e08 60%, #4a3010 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", description: "Bet on your horse and watch the race unfold in real time." },
+  bingo:         { gradient: "linear-gradient(135deg, #0d1a20 0%, #122535 60%, #1a3545 100%)", neonClass: "neon-blue",   neonColor: "#06b6d4", description: "Match your card numbers and shout bingo to win big." },
+  lottery:       { gradient: "linear-gradient(135deg, #1a0010 0%, #2e0020 60%, #4a0030 100%)", neonClass: "neon-pink",   neonColor: "#ec4899", description: "Pick your lucky numbers and try your luck at the jackpot." },
+  tournament:    { gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", description: "Compete in timed slot tournaments for prizes and glory." },
+};
+const DEFAULT_CFG = GAME_CFG.blackjack;
+
+/* ─── Recently Played Card ────────────────────────────────────── */
 function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) {
+  const gameKey = NAME_TO_GAME[game.name] ?? "blackjack";
+  const cfg = GAME_CFG[gameKey] ?? DEFAULT_CFG;
   const won = game.won;
   const accent = won ? "#4ade80" : "#ef4444";
-  const pillBg = won ? "rgba(74,222,128,0.18)" : "rgba(239,68,68,0.18)";
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      onClick={onPlay}
-      className="group relative rounded-2xl overflow-hidden cursor-pointer focus:outline-none"
-      style={{ width: 200, height: 280, background: "#050a0f", flexShrink: 0 }}
-    >
-      <img src={game.image} alt={game.name} className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
-      {/* Status dot */}
-      <div className="absolute top-2 left-2">
-        <span className="w-2 h-2 rounded-full inline-block" style={{ background: accent }} />
-      </div>
-      {/* WON / LOST badge */}
-      <div className="absolute top-2 right-2">
-        <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.16em", color: accent, background: pillBg, border: `1px solid ${accent}55`, borderRadius: 4, padding: "2px 8px", textTransform: "uppercase" as const }}>
-          {won ? "WON" : "LOST"}
-        </span>
-      </div>
-      {/* Bottom bar */}
-      <div className="absolute bottom-0 inset-x-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)" }}>
-        <p style={{ color: "#fff", fontWeight: 900, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.2, margin: 0 }}>{game.name}</p>
-        <p style={{ color: accent, fontSize: 12, marginTop: 3, fontVariantNumeric: "tabular-nums" }}>
-          {game.result !== "—" ? `${game.result} chips` : "No history"} · {game.lastPlayed}
-        </p>
-      </div>
-      {/* Hover overlay */}
-      <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0)", transition: "background 0.15s" }}
-        onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-        onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0)")} />
-    </motion.button>
-  );
+  const g: CatalogGame = {
+    id: String(game.id),
+    name: game.name,
+    description: cfg.description,
+    gradient: cfg.gradient,
+    neonClass: cfg.neonClass,
+    neonColor: cfg.neonColor,
+    badge: won ? "WON" : "LOST",
+    badgeColor: won ? "#166534" : "#7f1d1d",
+    players: game.lastPlayed !== "—" ? `⏱ ${game.lastPlayed}` : undefined,
+    betRange: game.result !== "—" ? `${game.result} chips` : undefined,
+    actionLabel: "Play Again",
+    statusLabel: won ? "WON" : "LOST",
+    statusColor: accent,
+  };
+  return <CatalogCard game={g} onClick={onPlay} />;
 }
 
-/* ─── Live Activity Card — hub-page style ─────────────────────── */
+/* ─── Live Activity Card ──────────────────────────────────────── */
 function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
+  const gameKey = NAME_TO_GAME[game.name] ?? "blackjack";
+  const cfg = GAME_CFG[gameKey] ?? DEFAULT_CFG;
   const isRaceLive = game.status === "Race Live";
-  const dotColor   = isRaceLive ? "#ef4444" : "#4ade80";
-  const subColor   = isRaceLive ? "rgba(248,113,113,0.9)" : "rgba(251,191,36,0.9)";
-  return (
-    <motion.button
-      initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-      onClick={onPlay}
-      className="group relative rounded-2xl overflow-hidden cursor-pointer focus:outline-none"
-      style={{ width: 200, height: 280, background: "#050a0f", flexShrink: 0 }}
-    >
-      <img src={game.image} alt={game.name} className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
-      {/* Status dot */}
-      <div className="absolute top-2 left-2">
-        <span className="w-2 h-2 rounded-full inline-block" style={{ background: dotColor }} />
-      </div>
-      {/* Player count badge */}
-      {game.players > 0 && (
-        <div className="absolute top-2 right-2">
-          <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: 10, letterSpacing: "0.16em", color: "rgba(251,191,36,0.9)", background: "rgba(0,0,0,0.65)", border: "1px solid rgba(251,191,36,0.35)", borderRadius: 4, padding: "2px 8px", textTransform: "uppercase" as const }}>
-            {game.players} ONLINE
-          </span>
-        </div>
-      )}
-      {/* Bottom bar */}
-      <div className="absolute bottom-0 inset-x-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)" }}>
-        <p style={{ color: "#fff", fontWeight: 900, fontSize: 15, textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.2, margin: 0 }}>{game.name}</p>
-        <p style={{ color: subColor, fontSize: 12, marginTop: 3 }}>
-          {isRaceLive ? "Race in Progress" : game.activeBets ? `${game.activeBets} wagered` : game.status}
-        </p>
-      </div>
-      {/* Hover overlay */}
-      <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0)", transition: "background 0.15s" }}
-        onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
-        onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0)")} />
-    </motion.button>
-  );
+  const statusColor = isRaceLive ? "#ef4444" : "#22c55e";
+  const g: CatalogGame = {
+    id: String(game.id),
+    name: game.name,
+    description: cfg.description,
+    gradient: cfg.gradient,
+    neonClass: cfg.neonClass,
+    neonColor: cfg.neonColor,
+    players: game.players > 0 ? `${game.players} online` : undefined,
+    betRange: game.activeBets || undefined,
+    actionLabel: isRaceLive ? "Watch Race" : "Join Now",
+    statusLabel: isRaceLive ? "LIVE" : game.status.toUpperCase(),
+    statusColor,
+  };
+  return <CatalogCard game={g} onClick={onPlay} />;
 }
 
 /* ─── Section header ──────────────────────────────────────────── */
@@ -692,21 +680,21 @@ export function Lobby() {
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
                 <section>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
-                  <div className="flex flex-wrap justify-center gap-5">
+                  <CardGrid>
                     {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g) => (
                       <RecentCard key={g.id} game={g}
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
-                  </div>
+                  </CardGrid>
                 </section>
                 <section>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
-                  <div className="flex flex-wrap justify-center gap-5">
+                  <CardGrid>
                     {liveActivity.slice(0, 4).map((g) => (
                       <LiveCard key={g.id} game={g}
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
-                  </div>
+                  </CardGrid>
                 </section>
               </div>
             </>
