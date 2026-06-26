@@ -88,7 +88,7 @@ const navGroups: NavGroup[] = [
     section: "Events",
     items: [
       { id: "tournaments",   label: "Tournaments",  icon: Trophy, route: "/tournaments" },
-      { id: "horse-racing", label: "Horse Racing", icon: Flag,  route: "/horse-racing"   },
+      { id: "horse-racing", label: "Horse Racing", icon: Flag,  route: "/horse-racing", launchKey: "horse" },
       { id: "lottery",      label: "Lottery",      icon: Zap,   route: "/lottery"        },
       { id: "bingo",        label: "Bingo",         icon: Gift,  route: "/bingo"          },
     ],
@@ -533,7 +533,7 @@ export function Lobby() {
                   return (
                     <div key={item.id} className="relative group/nav px-2">
                       <button
-                        onClick={item.disabled ? undefined : () => { if (item.tokenId) setAccessToken(item.tokenId, "open"); item.route ? setLocation(item.route) : navigate(item.id); }}
+                        onClick={item.disabled ? undefined : () => { if ((item as any).launchKey) { enter(GAMES[(item as any).launchKey]); return; } if (item.tokenId) setAccessToken(item.tokenId, "open"); item.route ? setLocation(item.route) : navigate(item.id); }}
                         onMouseEnter={() => setHoveredNav(item.id)}
                         onMouseLeave={() => setHoveredNav(null)}
                         className="relative w-full flex items-center rounded-lg py-[7px] transition-colors duration-150"
