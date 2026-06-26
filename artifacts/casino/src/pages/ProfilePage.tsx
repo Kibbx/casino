@@ -388,31 +388,31 @@ export function ProfilePage() {
             >
               {/* Neon icon */}
               <div style={{
-                width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                width: 54, height: 54, borderRadius: "50%", flexShrink: 0,
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 20,
+                fontSize: 26,
                 background: `radial-gradient(circle, ${s.color}20 0%, transparent 70%)`,
                 border: `1px solid ${s.color}33`,
-                boxShadow: `0 0 12px ${s.color}22`,
+                boxShadow: `0 0 14px ${s.color}22`,
               }}>
                 {s.icon}
               </div>
               {/* Content */}
               <div className="flex flex-col min-w-0">
-                <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.13em", marginBottom: 3 }}>
+                <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
                   {s.label}
                 </p>
                 <p className="font-black tabular-nums leading-none truncate"
                   style={{
                     fontFamily: "'Orbitron', monospace",
-                    fontSize: "clamp(12px, 1.4vw, 18px)",
+                    fontSize: "clamp(16px, 1.8vw, 26px)",
                     color: s.color,
-                    textShadow: `0 0 10px ${s.color}55`,
+                    textShadow: `0 0 12px ${s.color}55`,
                   }}>
                   {s.value}
                 </p>
                 {s.sub && (
-                  <p style={{ fontSize: 9, marginTop: 2, color: "rgba(255,255,255,0.2)" }}>{s.sub}</p>
+                  <p style={{ fontSize: 11, marginTop: 3, color: "rgba(255,255,255,0.22)" }}>{s.sub}</p>
                 )}
               </div>
             </div>
@@ -437,30 +437,30 @@ export function ProfilePage() {
                 <div className="flex flex-row items-center gap-3 flex-1">
                   {/* Neon icon */}
                   <div style={{
-                    width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+                    width: 54, height: 54, borderRadius: "50%", flexShrink: 0,
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 20,
+                    fontSize: 26,
                     background: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
                     border: "1px solid rgba(34,197,94,0.33)",
-                    boxShadow: "0 0 12px rgba(34,197,94,0.22)",
+                    boxShadow: "0 0 14px rgba(34,197,94,0.22)",
                   }}>
                     ♻️
                   </div>
                   {/* Content */}
                   <div className="flex flex-col min-w-0">
-                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.13em", marginBottom: 3 }}>
+                    <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
                       Rakeback
                     </p>
                     <p className="font-black tabular-nums leading-none"
                       style={{
                         fontFamily: "'Orbitron', monospace",
-                        fontSize: "clamp(12px, 1.4vw, 18px)",
+                        fontSize: "clamp(16px, 1.8vw, 26px)",
                         color: "#22c55e",
-                        textShadow: "0 0 10px rgba(34,197,94,0.55)",
+                        textShadow: "0 0 12px rgba(34,197,94,0.55)",
                       }}>
                       {fmt(claimable)}
                     </p>
-                    <p style={{ fontSize: 9, marginTop: 2, color: "rgba(255,255,255,0.2)" }}>
+                    <p style={{ fontSize: 11, marginTop: 3, color: "rgba(255,255,255,0.22)" }}>
                       claimable now · 3% back
                     </p>
                   </div>
