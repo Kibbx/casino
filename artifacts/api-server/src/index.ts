@@ -83,5 +83,5 @@ server.listen(port, async () => {
   startSportbetCleanupJob();
   setBlindBroadcastFn(broadcastBlindEvent);
   startEscalationLoop();
-  await startBotEngine();
+  // await startBotEngine(); // bots disabled
 });
