@@ -2039,6 +2039,122 @@ function BlackjackHandHistory({ bjTables }: { bjTables: any[] }) {
     return () => clearInterval(id);
   }, [fetchHands]);
 
+  // ── Bet Limits state ───────────────────────────────────────────────────────
+  const [sbMinBet, setSbMinBet] = useState("100");
+  const [sbMaxBet, setSbMaxBet] = useState("50000");
+  const [sbSettingsSaving, setSbSettingsSaving] = useState(false);
+  const [sbSettingsMsg, setSbSettingsMsg] = useState<{ text: string; ok: boolean } | null>(null);
+
+  function loadSbSettings() {
+    fetch(`${BASE_URL}/api/sportbets/settings`, { headers: { Authorization: `Bearer ${authToken}` } })
+      .then(r => r.json())
+      .then(d => { if (d.minBet !== undefined) { setSbMinBet(String(d.minBet)); setSbMaxBet(String(d.maxBet)); } })
+      .catch(() => {});
+  }
+
+  async function saveSbSettings() {
+    setSbSettingsSaving(true); setSbSettingsMsg(null);
+    try {
+      const r = await fetch(`${BASE_URL}/api/sportbets/settings`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ minBet: parseInt(sbMinBet) || 100, maxBet: parseInt(sbMaxBet) || 50000 }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      setSbMinBet(String(d.minBet)); setSbMaxBet(String(d.maxBet));
+      setSbSettingsMsg({ text: "Saved", ok: true });
+    } catch (err: any) { setSbSettingsMsg({ text: err.message || "Failed", ok: false }); }
+    setSbSettingsSaving(false);
+    setTimeout(() => setSbSettingsMsg(null), 3000);
+  }
+
+  useEffect(() => { loadSbSettings(); }, [authToken]);
+
+  // ── Sport Events state ────────────────────────────────────────────────────
+  const [sbEvents, setSbEvents] = useState<SBEvent[]>([]);
+  const [showEventsPanel, setShowEventsPanel] = useState(false);
+  const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
+  const [createLeague, setCreateLeague] = useState("");
+  const [createGameDate, setCreateGameDate] = useState("");
+  const [createRake, setCreateRake] = useState("0");
+  const [createOptions, setCreateOptions] = useState([{ label: "", odds: "" }, { label: "", odds: "" }]);
+  const [creatingEvent, setCreatingEvent] = useState(false);
+  const [createEventMsg, setCreateEventMsg] = useState<string | null>(null);
+  const [settlingId, setSettlingId] = useState<number | null>(null);
+  const [settleWinner, setSettleWinner] = useState<number | null>(null);
+
+  function datetimeLocalToEasternUTC(localStr: string): string {
+    if (!localStr) return localStr;
+    const [datePart, timePart = "00:00"] = localStr.split("T");
+    const [y, m, d] = datePart.split("-").map(Number);
+    const [h, min] = timePart.split(":").map(Number);
+    const probeUTC = new Date(Date.UTC(y, m - 1, d, h, min));
+    const nyHourStr = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", hour12: false })
+      .formatToParts(probeUTC).find(p => p.type === "hour")?.value ?? "0";
+    const nyHour = parseInt(nyHourStr);
+    let offsetH = h - nyHour;
+    if (offsetH > 12) offsetH -= 24;
+    if (offsetH < -12) offsetH += 24;
+    return new Date(Date.UTC(y, m - 1, d, h + offsetH, min)).toISOString();
+  }
+
+  function loadSbEvents() {
+    if (!authToken) return;
+    fetch(`${BASE_URL}/api/sportbets/events`, { headers: { Authorization: `Bearer ${authToken}` } })
+      .then(async r => { const d = await r.json(); if (Array.isArray(d)) setSbEvents(d); })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    if (!showEventsPanel) return;
+    loadSbEvents();
+    const iv = setInterval(loadSbEvents, 8000);
+    return () => clearInterval(iv);
+  }, [showEventsPanel, authToken]);
+
+  async function handleCreateEvent(e: React.FormEvent) {
+    e.preventDefault();
+    if (!createTitle.trim()) return;
+    setCreatingEvent(true); setCreateEventMsg(null);
+    try {
+      const r = await fetch(`${BASE_URL}/api/sportbets/events`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: createTitle, description: createDesc, league: createLeague,
+          gameDate: createGameDate ? datetimeLocalToEasternUTC(createGameDate) : null,
+          options: createOptions, rakePercent: parseInt(createRake) || 0,
+        }),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "Failed");
+      setCreateTitle(""); setCreateDesc(""); setCreateLeague(""); setCreateGameDate(""); setCreateRake("0");
+      setCreateOptions([{ label: "", odds: "" }, { label: "", odds: "" }]);
+      setShowCreateEvent(false); loadSbEvents();
+    } catch (err: any) { setCreateEventMsg(err.message || "Failed"); }
+    setCreatingEvent(false);
+  }
+
+  async function handleSetEventStatus(eventId: number, status: string, winnerId?: number) {
+    const body: any = { status };
+    if (winnerId) body.winnerId = winnerId;
+    await fetch(`${BASE_URL}/api/sportbets/events/${eventId}`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    setSettlingId(null); setSettleWinner(null); loadSbEvents();
+  }
+
+  async function handleDeleteEvent(id: number) {
+    if (!window.confirm("Delete this event?")) return;
+    await fetch(`${BASE_URL}/api/sportbets/events/${id}`, { method: "DELETE", headers: { Authorization: `Bearer ${authToken}` } });
+    loadSbEvents();
+  }
+
   const fmt = (n: number) => n.toLocaleString();
   const fmtTime = (s: string) => fmtETFull(s);
 
@@ -2060,6 +2176,191 @@ function BlackjackHandHistory({ bjTables }: { bjTables: any[] }) {
         >
           <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
         </button>
+      </div>
+
+      {/* Bet Limits */}
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "16px 18px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
+          <span style={{ fontSize: "14px" }}>⚙️</span>
+          <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "13px", color: "#e2e8f0", letterSpacing: "0.06em" }}>Bet Limits</span>
+        </div>
+        <div style={{ display: "flex", gap: "12px", alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Min Bet</label>
+            <input type="number" value={sbMinBet} onChange={e => setSbMinBet(e.target.value)}
+              style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ flex: "1 1 120px" }}>
+            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>Max Bet</label>
+            <input type="number" value={sbMaxBet} onChange={e => setSbMaxBet(e.target.value)}
+              style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <button onClick={saveSbSettings} disabled={sbSettingsSaving}
+            style={{ padding: "8px 22px", background: sbSettingsSaving ? "rgba(160,34,58,0.4)" : "#a0223a", border: "none", borderRadius: "9px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: sbSettingsSaving ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.05em" }}>
+            {sbSettingsSaving ? "Saving…" : "Save"}
+          </button>
+          {sbSettingsMsg && (
+            <span style={{ fontSize: "11px", fontWeight: 600, color: sbSettingsMsg.ok ? "#4ade80" : "#f87171" }}>{sbSettingsMsg.text}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Sport Events */}
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", overflow: "hidden" }}>
+        <button onClick={() => setShowEventsPanel(p => !p)}
+          style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 18px", background: "transparent", border: "none", cursor: "pointer" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={{ fontSize: "14px" }}>🏆</span>
+            <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "13px", color: "#e2e8f0", letterSpacing: "0.06em" }}>Sport Events</span>
+            {sbEvents.length > 0 && (
+              <span style={{ fontSize: "10px", fontWeight: 700, padding: "2px 7px", borderRadius: "10px", background: "rgba(255,255,255,0.08)", color: "#94a3b8" }}>{sbEvents.length}</span>
+            )}
+          </div>
+          <span style={{ fontSize: "11px", color: "#64748b" }}>{showEventsPanel ? "▲" : "▼"}</span>
+        </button>
+
+        {showEventsPanel && (
+          <div style={{ padding: "0 18px 18px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+
+            {/* Create event form */}
+            {showCreateEvent ? (
+              <form onSubmit={handleCreateEvent} style={{ paddingTop: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                <p style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>New Event</p>
+                <input value={createTitle} onChange={e => setCreateTitle(e.target.value)} placeholder="Event title (e.g. Chiefs vs Eagles)"
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <input value={createLeague} onChange={e => setCreateLeague(e.target.value)} placeholder="League (e.g. NFL, NBA, UFC)"
+                    style={{ flex: 1, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
+                  <div style={{ flex: 1, position: "relative" }}>
+                    <label style={{ fontSize: "9px", color: "#64748b", position: "absolute", top: "-14px", left: 0, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" }}>Game Date &amp; Time (EST)</label>
+                    <input type="datetime-local" value={createGameDate} onChange={e => setCreateGameDate(e.target.value)}
+                      style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box", colorScheme: "dark" }} />
+                  </div>
+                </div>
+                <input value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder="Description (optional)"
+                  style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <label style={{ fontSize: "12px", color: "#94a3b8", fontWeight: 600 }}>House Rake %</label>
+                  <input type="number" min={0} max={50} value={createRake} onChange={e => setCreateRake(e.target.value)}
+                    style={{ width: "70px", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
+                  <span style={{ fontSize: "11px", color: "#475569" }}>taken from winning pool before payouts</span>
+                </div>
+                <p style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", margin: "4px 0 0" }}>Options (minimum 2)</p>
+                {createOptions.map((opt, i) => (
+                  <div key={i} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                    <input value={opt.label} onChange={e => { const o = [...createOptions]; o[i] = { ...o[i], label: e.target.value }; setCreateOptions(o); }}
+                      placeholder={`Option ${i + 1} (e.g. ${i === 0 ? "Chiefs Win" : "Eagles Win"})`}
+                      style={{ flex: 3, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "12px", color: "#e2e8f0", outline: "none" }} />
+                    <input value={opt.odds} onChange={e => { const o = [...createOptions]; o[i] = { ...o[i], odds: e.target.value }; setCreateOptions(o); }}
+                      placeholder="Odds (e.g. 2.5)"
+                      style={{ flex: 1, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "12px", color: "#e2e8f0", outline: "none" }} />
+                    {createOptions.length > 2 && (
+                      <button type="button" onClick={() => setCreateOptions(createOptions.filter((_, j) => j !== i))}
+                        style={{ padding: "6px 10px", background: "transparent", border: "1px solid rgba(239,68,68,0.3)", borderRadius: "7px", fontSize: "12px", color: "#ef4444", cursor: "pointer" }}>✕</button>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={() => setCreateOptions([...createOptions, { label: "", odds: "" }])}
+                  style={{ fontSize: "11px", fontWeight: 700, color: "#a0223a", background: "transparent", border: "none", cursor: "pointer", textAlign: "left", padding: "2px 0" }}>
+                  ＋ Add Option
+                </button>
+                {createEventMsg && <p style={{ fontSize: "11px", color: "#f87171", margin: 0 }}>{createEventMsg}</p>}
+                <div style={{ display: "flex", gap: "10px", paddingTop: "4px" }}>
+                  <button type="submit" disabled={creatingEvent}
+                    style={{ padding: "10px 24px", background: "#a0223a", border: "none", borderRadius: "9px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: creatingEvent ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.08em", textTransform: "uppercase", opacity: creatingEvent ? 0.6 : 1 }}>
+                    {creatingEvent ? "Creating…" : "Create Event"}
+                  </button>
+                  <button type="button" onClick={() => { setShowCreateEvent(false); setCreateEventMsg(null); }}
+                    style={{ padding: "10px 18px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "9px", fontSize: "12px", fontWeight: 700, color: "#94a3b8", cursor: "pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button onClick={() => setShowCreateEvent(true)}
+                style={{ marginTop: "14px", padding: "8px 18px", background: "#a0223a", border: "none", borderRadius: "9px", fontSize: "11px", fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.06em" }}>
+                ＋ Create Event
+              </button>
+            )}
+
+            {/* Events list */}
+            {sbEvents.length > 0 && (
+              <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "8px" }}>
+                {sbEvents.map(ev => (
+                  <div key={ev.id} style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "10px", padding: "10px 14px" }}>
+                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "10px" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: "13px", fontWeight: 700, color: "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ev.title}</p>
+                        <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#475569" }}>
+                          {ev.league}{ev.gameDate ? ` · ${new Date(ev.gameDate).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""} · {ev.entries?.length ?? 0} entries · ${fmt(ev.totalWagered ?? 0)} wagered
+                        </p>
+                      </div>
+                      <span style={{ fontSize: "10px", fontWeight: 700, padding: "3px 9px", borderRadius: "20px", whiteSpace: "nowrap",
+                        background: ev.status === "open" ? "rgba(0,230,118,0.12)" : ev.status === "settled" ? "rgba(59,130,246,0.12)" : "rgba(255,255,255,0.07)",
+                        color: ev.status === "open" ? "#00E676" : ev.status === "settled" ? "#93c5fd" : "#94a3b8" }}>
+                        {ev.status}
+                      </span>
+                    </div>
+                    {/* Options */}
+                    <div style={{ marginTop: "8px", display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                      {(ev.options ?? []).map((opt: any) => (
+                        <span key={opt.id} style={{ fontSize: "10px", fontWeight: 600, padding: "3px 9px", borderRadius: "8px",
+                          background: ev.winnerId === opt.id ? "rgba(0,230,118,0.15)" : "rgba(255,255,255,0.05)",
+                          color: ev.winnerId === opt.id ? "#00E676" : "#94a3b8",
+                          border: `1px solid ${ev.winnerId === opt.id ? "rgba(0,230,118,0.3)" : "rgba(255,255,255,0.07)"}` }}>
+                          {opt.label} {opt.odds ? `(${opt.odds}x)` : ""}
+                          {ev.winnerId === opt.id ? " ✓ Winner" : ""}
+                        </span>
+                      ))}
+                    </div>
+                    {/* Actions */}
+                    {ev.status !== "settled" && (
+                      <div style={{ marginTop: "10px", display: "flex", flexWrap: "wrap", gap: "6px", alignItems: "center" }}>
+                        {ev.status === "open" ? (
+                          <button onClick={() => handleSetEventStatus(ev.id, "closed")}
+                            style={{ padding: "5px 12px", background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.3)", borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: "#f59e0b", cursor: "pointer" }}>
+                            Close Betting
+                          </button>
+                        ) : (
+                          <button onClick={() => handleSetEventStatus(ev.id, "open")}
+                            style={{ padding: "5px 12px", background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.25)", borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: "#00E676", cursor: "pointer" }}>
+                            Reopen
+                          </button>
+                        )}
+                        {settlingId === ev.id ? (
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                            <select value={settleWinner ?? ""} onChange={e => setSettleWinner(parseInt(e.target.value) || null)}
+                              style={{ background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "7px", padding: "5px 8px", fontSize: "11px", color: "#e2e8f0", outline: "none" }}>
+                              <option value="">Select winner…</option>
+                              {(ev.options ?? []).map((o: any) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                            </select>
+                            <button onClick={() => settleWinner && handleSetEventStatus(ev.id, "settled", settleWinner)} disabled={!settleWinner}
+                              style={{ padding: "5px 12px", background: "#a0223a", border: "none", borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: "#fff", cursor: settleWinner ? "pointer" : "not-allowed", opacity: settleWinner ? 1 : 0.5 }}>
+                              Confirm Settle
+                            </button>
+                            <button onClick={() => { setSettlingId(null); setSettleWinner(null); }}
+                              style={{ padding: "5px 10px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "7px", fontSize: "10px", color: "#64748b", cursor: "pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button onClick={() => setSettlingId(ev.id)}
+                            style={{ padding: "5px 12px", background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.3)", borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: "#93c5fd", cursor: "pointer" }}>
+                            Settle Event
+                          </button>
+                        )}
+                        <button onClick={() => handleDeleteEvent(ev.id)}
+                          style={{ padding: "5px 10px", background: "transparent", border: "1px solid rgba(239,68,68,0.25)", borderRadius: "7px", fontSize: "10px", fontWeight: 700, color: "#ef4444", cursor: "pointer", marginLeft: "auto" }}>
+                          🗑
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Create Game panel */}
