@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PageWrapper } from "./shared";
 import { useStore } from "../store";
 import {
-  ChevronDown, Trophy, Ticket, Coins, Users,
-  Info, Clock, TrendingUp,
+  ChevronDown, ChevronLeft, ChevronRight,
+  Trophy, Ticket, Coins, Users,
+  Info, Clock, TrendingUp, Calendar, Award,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -204,6 +205,8 @@ function NumbersPopup({ ticket, onClose }: { ticket: LotteryTicket; onClose: () 
   );
 }
 
+const PAGE_SIZE = 8;
+
 function YourTickets({
   tickets, settings, loading,
 }: {
@@ -211,10 +214,13 @@ function YourTickets({
 }) {
   const [ticketsOpen, setTicketsOpen] = useState(true);
   const [activeId, setActiveId] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const closePopup = useCallback(() => setActiveId(null), []);
 
   const totalSpent = tickets.reduce((s, t) => s + (Number(t.ticket_cost) || 0), 0);
-  const totalEntries = tickets.length;
+  const totalPages = Math.max(1, Math.ceil(tickets.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const pageTickets = tickets.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   function statusBadge(t: LotteryTicket) {
     const tier = t.result_tier;
@@ -227,7 +233,6 @@ function YourTickets({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* YOUR TICKETS accordion */}
       <div
         className="rounded-2xl overflow-hidden"
         style={{
@@ -256,13 +261,13 @@ function YourTickets({
               transition={{ duration: 0.25, ease: "easeInOut" }}
               style={{ overflow: "hidden" }}
             >
-              <div className="px-6 py-5 flex flex-col gap-5">
+              <div className="px-6 py-5 flex flex-col gap-4">
                 {/* Summary cards */}
                 <div className="grid grid-cols-3 gap-3">
                   {[
                     { icon: <Ticket size={20} />, label: "Your Tickets", value: tickets.length },
                     { icon: <Coins size={20} />, label: "Total Spent", value: fmt(totalSpent) },
-                    { icon: <Users size={20} />, label: "Total Entries", value: totalEntries },
+                    { icon: <Users size={20} />, label: "Total Entries", value: tickets.length },
                   ].map(({ icon, label, value }) => (
                     <div key={label} className="rounded-xl px-3 py-3 flex flex-col items-center gap-1.5 text-center"
                       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -292,7 +297,7 @@ function YourTickets({
                       ))}
                     </div>
                     <div className="flex flex-col gap-0.5">
-                      {tickets.map(t => {
+                      {pageTickets.map(t => {
                         const badge = statusBadge(t);
                         const isOpen = activeId === t.id;
                         return (
@@ -329,6 +334,56 @@ function YourTickets({
                         );
                       })}
                     </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between mt-3 pt-3"
+                        style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                        <button
+                          onClick={() => setPage(p => Math.max(1, p - 1))}
+                          disabled={safePage === 1}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
+                          style={{
+                            background: safePage === 1 ? "transparent" : "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: safePage === 1 ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.5)",
+                            cursor: safePage === 1 ? "default" : "pointer",
+                          }}
+                        >
+                          <ChevronLeft size={12} /> Prev
+                        </button>
+
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <button
+                              key={p}
+                              onClick={() => setPage(p)}
+                              className="w-6 h-6 rounded text-[10px] font-black transition-all"
+                              style={{
+                                background: p === safePage ? "rgba(245,197,24,0.18)" : "transparent",
+                                border: `1px solid ${p === safePage ? "rgba(245,197,24,0.45)" : "rgba(255,255,255,0.08)"}`,
+                                color: p === safePage ? "#f5c518" : "rgba(255,255,255,0.35)",
+                                cursor: "pointer",
+                              }}
+                            >{p}</button>
+                          ))}
+                        </div>
+
+                        <button
+                          onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                          disabled={safePage === totalPages}
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors"
+                          style={{
+                            background: safePage === totalPages ? "transparent" : "rgba(255,255,255,0.05)",
+                            border: "1px solid rgba(255,255,255,0.08)",
+                            color: safePage === totalPages ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.5)",
+                            cursor: safePage === totalPages ? "default" : "pointer",
+                          }}
+                        >
+                          Next <ChevronRight size={12} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -345,7 +400,206 @@ function YourTickets({
           )}
         </AnimatePresence>
       </div>
+    </div>
+  );
+}
 
+/* ── Previous Results ────────────────────────────────────────── */
+interface PastDraw {
+  id: number; drawTime: string;
+  winningNumbers: number[];
+  jackpot: number; consolation: number;
+  jackpotRolledOver: boolean; consolationRolledIntoJackpot: boolean;
+  myTickets: Array<{ id: number; result_tier: string | null; numbers: string }>;
+}
+
+function WinBall({ n, size = 36 }: { n: number; size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: "rgba(245,197,24,0.14)",
+      border: "2px solid rgba(245,197,24,0.55)",
+      color: "#f5c518", fontWeight: 900,
+      fontSize: size * 0.38,
+      boxShadow: "0 0 14px rgba(245,197,24,0.28)",
+      flexShrink: 0,
+    }}>{n}</div>
+  );
+}
+
+function PreviousResults({ sessionToken }: { sessionToken: string | null }) {
+  const [open, setOpen] = useState(false);
+  const [draws, setDraws] = useState<PastDraw[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  async function load() {
+    if (loaded || !sessionToken) return;
+    setLoading(true);
+    try {
+      const r = await fetch(`${BASE}/api/lottery/history`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      if (r.ok) {
+        const d = await r.json();
+        setDraws(Array.isArray(d) ? d : []);
+        setLoaded(true);
+      }
+    } catch {}
+    setLoading(false);
+  }
+
+  function handleToggle() {
+    setOpen(o => {
+      if (!o) load();
+      return !o;
+    });
+  }
+
+  return (
+    <div
+      className="rounded-2xl overflow-hidden"
+      style={{
+        background: "linear-gradient(160deg,#0b0a10 0%,#080710 100%)",
+        border: "1px solid rgba(139,92,246,0.2)",
+        boxShadow: "0 0 32px rgba(139,92,246,0.04)",
+      }}
+    >
+      {/* Toggle header */}
+      <button
+        className="w-full px-6 py-4 flex items-center justify-between transition-colors hover:bg-white/[0.02]"
+        style={{ borderBottom: open ? "1px solid rgba(139,92,246,0.15)" : "none" }}
+        onClick={handleToggle}
+      >
+        <div className="flex items-center gap-3">
+          <Award size={18} style={{ color: "#8b5cf6" }} />
+          <span className="font-rajdhani font-black text-base uppercase tracking-widest text-white">
+            {open ? "Hide Previous Results" : "Show Previous Results"}
+          </span>
+        </div>
+        <motion.span animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.2 }}>
+          <ChevronDown size={18} style={{ color: "rgba(255,255,255,0.35)" }} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="prev-body"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            style={{ overflow: "hidden" }}
+          >
+            <div className="px-6 py-5">
+              {loading && (
+                <div className="text-center py-8" style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>
+                  Loading results…
+                </div>
+              )}
+              {!loading && draws.length === 0 && (
+                <div className="text-center py-8 flex flex-col items-center gap-2">
+                  <Calendar size={28} style={{ color: "rgba(255,255,255,0.1)" }} />
+                  <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>No completed draws yet</p>
+                </div>
+              )}
+              {!loading && draws.length > 0 && (
+                <div className="flex flex-col gap-4">
+                  {draws.map(d => {
+                    const hasWin = d.myTickets.some(t => t.result_tier === "jackpot" || t.result_tier === "consolation");
+                    const hasJackpotWin = d.myTickets.some(t => t.result_tier === "jackpot");
+                    return (
+                      <div key={d.id}
+                        className="rounded-xl p-4"
+                        style={{
+                          background: hasWin ? "rgba(245,197,24,0.04)" : "rgba(255,255,255,0.025)",
+                          border: `1px solid ${hasWin ? "rgba(245,197,24,0.2)" : "rgba(255,255,255,0.07)"}`,
+                        }}
+                      >
+                        {/* Draw header */}
+                        <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                          <div>
+                            <p className="text-xs font-black uppercase tracking-widest mb-0.5"
+                              style={{ color: "#8b5cf6" }}>
+                              Draw #{d.id}
+                            </p>
+                            <div className="flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>
+                              <Calendar size={11} />
+                              <span className="text-[11px]">{fmtDrawLabel(d.drawTime)}</span>
+                            </div>
+                          </div>
+
+                          {/* Result badges */}
+                          <div className="flex flex-wrap gap-1.5">
+                            {d.jackpotRolledOver && (
+                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                                style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.25)" }}>
+                                🔄 Jackpot Rolled Over
+                              </span>
+                            )}
+                            {d.consolationRolledIntoJackpot && (
+                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                                style={{ background: "rgba(139,92,246,0.12)", color: "#a78bfa", border: "1px solid rgba(139,92,246,0.25)" }}>
+                                ↑ Consolation → Jackpot
+                              </span>
+                            )}
+                            {hasJackpotWin && (
+                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                                style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.3)" }}>
+                                🏆 You Won!
+                              </span>
+                            )}
+                            {!hasJackpotWin && hasWin && (
+                              <span className="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider"
+                                style={{ background: "rgba(34,197,94,0.12)", color: "#22c55e", border: "1px solid rgba(34,197,94,0.25)" }}>
+                                🎉 Consolation Win
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Winning numbers */}
+                        <div>
+                          <p className="text-[9px] uppercase tracking-[0.18em] mb-2"
+                            style={{ color: "rgba(255,255,255,0.3)" }}>Winning Numbers</p>
+                          {d.winningNumbers.length === 0 ? (
+                            <p className="text-xs italic" style={{ color: "rgba(255,255,255,0.2)" }}>Not drawn</p>
+                          ) : (
+                            <div className="flex gap-2 flex-wrap">
+                              {d.winningNumbers.map((n, i) => <WinBall key={i} n={n} />)}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Prize summary */}
+                        <div className="flex gap-3 mt-3">
+                          {[
+                            { label: "Jackpot", value: `${fmt(d.jackpot)} chips`, color: "#f5c518" },
+                            { label: "Consolation", value: `${fmt(d.consolation)} chips`, color: "#a78bfa" },
+                          ].map(({ label, value, color }) => (
+                            <div key={label} className="flex-1 rounded-lg px-3 py-2"
+                              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                              <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>{label}</p>
+                              <p className="text-xs font-black" style={{ color }}>{value}</p>
+                            </div>
+                          ))}
+                          <div className="flex-1 rounded-lg px-3 py-2"
+                            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                            <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>Your Tickets</p>
+                            <p className="text-xs font-black text-white">{d.myTickets.length}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -632,38 +886,41 @@ export function LotteryPage() {
 
   return (
     <PageWrapper title="Lottery" breadcrumb="Events / Lottery" accentColor="#f5c518">
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 24,
-          maxWidth: 1100,
-          margin: "0 auto",
-          width: "100%",
-          alignItems: "start",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <WeeklyMegaDraw
-            draw={draw} settings={settings} now={now}
-            onOpenPicker={() => setShowPicker(o => !o)}
-            pickerOpen={showPicker}
-          />
-          <AnimatePresence>
-            {showPicker && (
-              <NumberPickerPanel
-                key="picker"
-                settings={settings}
-                salesOpen={salesOpen}
-                onConfirm={handleBuy}
-                onCancel={() => setShowPicker(false)}
-                buying={buying}
-                buyMsg={buyMsg}
-              />
-            )}
-          </AnimatePresence>
+      <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1100, margin: "0 auto", width: "100%" }}>
+        {/* Main 2-col: draw + tickets */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: 24,
+            alignItems: "start",
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <WeeklyMegaDraw
+              draw={draw} settings={settings} now={now}
+              onOpenPicker={() => setShowPicker(o => !o)}
+              pickerOpen={showPicker}
+            />
+            <AnimatePresence>
+              {showPicker && (
+                <NumberPickerPanel
+                  key="picker"
+                  settings={settings}
+                  salesOpen={salesOpen}
+                  onConfirm={handleBuy}
+                  onCancel={() => setShowPicker(false)}
+                  buying={buying}
+                  buyMsg={buyMsg}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+          <YourTickets tickets={tickets} settings={settings} loading={ticketsLoading} />
         </div>
-        <YourTickets tickets={tickets} settings={settings} loading={ticketsLoading} />
+
+        {/* Full-width previous results */}
+        <PreviousResults sessionToken={sessionToken} />
       </div>
     </PageWrapper>
   );
