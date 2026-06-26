@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { useStore } from "../store";
-import { fmtETDateTimeFull } from "../utils/timezone";
 import { PageWrapper, SubHeader } from "./shared";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -43,7 +42,9 @@ function isPokerTx(t: { type: string; description?: string | null }) {
 
 function fmt(n: number) { return n.toLocaleString(); }
 function fmtDate(iso: string) {
-  try { return fmtETDateTimeFull(iso); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  } catch { return iso; }
 }
 function creditLabel(score: number) {
   if (score >= 750) return { label: "EXCELLENT", color: "#22c55e" };
