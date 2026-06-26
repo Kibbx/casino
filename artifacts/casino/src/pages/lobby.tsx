@@ -641,19 +641,15 @@ export function Lobby() {
           {activeNav === "marketplace"   && <MarketplacePage />}
           {activeNav === "profile"       && <ProfilePage />}
           {activeNav === "staff"         && <StaffPage />}
-          {activeNav === "mkt-home"      && <MktHomePage />}
-          {activeNav === "mkt-trending"  && <MktTrendingPage />}
-          {activeNav === "mkt-inventory" && <MktInventoryPage />}
-          {activeNav === "mkt-auctions"  && <MktAuctionsPage />}
-          {activeNav === "mkt-sales"          && <MktRecentSalesPage />}
-          {activeNav === "mkt-trading"        && <MktTradingPage />}
-          {/* sidebar nav-id aliases — keeps sidebar IDs canonical */}
-          {activeNav === "mkt-trades"         && <MktTradingPage />}
-          {activeNav === "mkt-sales-history"  && <MktRecentSalesPage />}
-          {activeNav === "mkt-item-listings"  && <MktComingSoon title="Item Listings" />}
-          {activeNav === "mkt-profile"        && <MktProfilePage />}
-          {activeNav === "mkt-shops"          && <MktShopsPage />}
-          {activeNav === "mkt-stall-settings" && <MktShopBuilderPage onDeleted={() => setActiveNav("mkt-shops")} />}
+          {activeNav === "mkt-home"          && <MktHomePage />}
+          {activeNav === "mkt-item-listings"  && <MktComingSoon title="Item Listings"  />}
+          {activeNav === "mkt-trades"         && <MktComingSoon title="Trades"         />}
+          {activeNav === "mkt-sales-history"  && <MktComingSoon title="Sales History"  />}
+          {activeNav === "mkt-stall-settings" && <MktComingSoon title="Stall Settings" />}
+          {activeNav === "mkt-trending"       && <MktComingSoon title="Trending"       />}
+          {activeNav === "mkt-shops"          && <MktComingSoon title="Shops"          />}
+          {activeNav === "mkt-inventory"      && <MktComingSoon title="Inventory"      />}
+          {activeNav === "mkt-profile"        && <MktComingSoon title="Profile"        />}
         </main>
       </div>
 
