@@ -197,12 +197,14 @@ export function Lobby() {
         if (!r.ok) return;
         const data: Array<{ username: string; game: string }> = await r.json();
         const seen = new Set<string>();
-        const deduped = data.filter(({ game }) => {
-          if (!ACTIVITY_MAP[game]) return false;
-          if (seen.has(game)) return false;
-          seen.add(game);
-          return true;
-        }).slice(0, 4);
+        const deduped = data
+          .filter(({ username }) => username !== playerUsername)
+          .filter(({ game }) => {
+            if (!ACTIVITY_MAP[game]) return false;
+            if (seen.has(game)) return false;
+            seen.add(game);
+            return true;
+          }).slice(0, 4);
         setLiveActivity(deduped);
       } catch { /* keep previous state */ }
     }
