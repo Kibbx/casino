@@ -666,12 +666,23 @@ function NumberPickerPanel({
 
       <div style={{ padding: "12px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
 
-        {/* 5×4 compact number grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 5 }}>
+        {/* Compact flex-wrap chip grid */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "flex-start" }}>
           {allNums.map(n => {
             const sel = picked.includes(n);
             const disabled = !sel && picked.length >= required;
             const isHov = hovered === n && !disabled && !sel;
+            // colour band per number range
+            const chipColor =
+              n <= 5  ? "#f5c518" :   // gold
+              n <= 10 ? "#f97316" :   // orange
+              n <= 15 ? "#a78bfa" :   // purple
+                        "#2dd4bf";    // teal
+            const chipRgb =
+              n <= 5  ? "245,197,24" :
+              n <= 10 ? "249,115,22" :
+              n <= 15 ? "167,139,250" :
+                        "45,212,191";
             return (
               <button
                 key={n}
@@ -680,35 +691,38 @@ function NumberPickerPanel({
                 onMouseEnter={() => !disabled && setHovered(n)}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  aspectRatio: "1",
+                  width: 36, height: 36,
                   borderRadius: "50%",
+                  flexShrink: 0,
                   background: sel
-                    ? "linear-gradient(145deg,#f5c518 0%,#d4a800 100%)"
+                    ? `linear-gradient(145deg,${chipColor} 0%,${chipColor}cc 100%)`
                     : isHov
-                      ? "rgba(245,197,24,0.07)"
+                      ? `rgba(${chipRgb},0.1)`
                       : "rgba(255,255,255,0.03)",
                   border: sel
-                    ? "1.5px solid rgba(245,197,24,0.85)"
+                    ? `2px solid ${chipColor}`
                     : isHov
-                      ? "1.5px solid rgba(245,197,24,0.45)"
-                      : "1.5px solid rgba(255,255,255,0.09)",
+                      ? `2px solid rgba(${chipRgb},0.7)`
+                      : `2px solid rgba(${chipRgb},0.28)`,
                   color: sel
                     ? "#0a0804"
                     : disabled
-                      ? "rgba(255,255,255,0.13)"
+                      ? "rgba(255,255,255,0.12)"
                       : isHov
-                        ? "#f5c518"
-                        : "rgba(255,255,255,0.5)",
-                  fontWeight: sel ? 900 : 700,
-                  fontSize: 11,
+                        ? chipColor
+                        : `rgba(${chipRgb},0.75)`,
+                  fontWeight: 800,
+                  fontSize: 12,
                   cursor: disabled ? "not-allowed" : "pointer",
                   boxShadow: sel
-                    ? "0 0 10px rgba(245,197,24,0.35), inset 0 1px 0 rgba(255,255,255,0.2)"
+                    ? `0 0 12px rgba(${chipRgb},0.5), inset 0 1px 0 rgba(255,255,255,0.25)`
                     : isHov
-                      ? "0 0 6px rgba(245,197,24,0.12)"
+                      ? `0 0 8px rgba(${chipRgb},0.3)`
                       : "none",
                   transition: "all 0.15s ease",
                   userSelect: "none",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  lineHeight: 1,
                 }}
               >{n}</button>
             );
