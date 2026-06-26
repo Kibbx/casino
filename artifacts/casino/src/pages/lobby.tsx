@@ -46,29 +46,29 @@ type NavItem  = { id: string; label: string; icon: React.ElementType; expandable
 type NavGroup = { section?: string; items: NavItem[] };
 
 const marketNavGroups: NavGroup[] = [
-  { items: [{ id: "mkt-home", label: "Home", icon: Home }] },
+  { items: [{ id: "mkt-home", label: "Home", icon: Home, route: "/market" }] },
   {
     section: "Seller Dashboard",
     items: [
-      { id: "mkt-item-listings",  label: "Item Listings",  icon: Tag           },
-      { id: "mkt-trades",         label: "Trades",         icon: ArrowLeftRight },
-      { id: "mkt-sales-history",  label: "Sales History",  icon: ListOrdered   },
-      { id: "mkt-stall-settings", label: "Stall Settings", icon: Settings      },
+      { id: "mkt-item-listings",  label: "Item Listings",  icon: Tag,            route: "/market/item-listings"  },
+      { id: "mkt-trades",         label: "Trades",         icon: ArrowLeftRight,  route: "/market/trades"         },
+      { id: "mkt-sales-history",  label: "Sales History",  icon: ListOrdered,     route: "/market/sales-history"  },
+      { id: "mkt-stall-settings", label: "Stall Settings", icon: Settings,        route: "/market/stall-settings" },
     ],
   },
   {
     section: "Marketplace",
     items: [
-      { id: "mkt-trending",  label: "Trending",  icon: TrendingUp },
-      { id: "mkt-shops",     label: "Shops",     icon: Store      },
-      { id: "mkt-inventory", label: "Inventory", icon: Package    },
+      { id: "mkt-trending",  label: "Trending",  icon: TrendingUp, route: "/market/trending"  },
+      { id: "mkt-shops",     label: "Shops",     icon: Store,      route: "/market/shops"     },
+      { id: "mkt-inventory", label: "Inventory", icon: Package,    route: "/market/inventory" },
     ],
   },
   {
     section: "Account",
     items: [
-      { id: "mkt-profile", label: "Profile", icon: User  },
-      { id: "staff", label: "Staff", icon: Crown, route: "/banker", staffOnly: true },
+      { id: "mkt-profile", label: "Profile", icon: User,  route: "/market/profile" },
+      { id: "staff",       label: "Staff",   icon: Crown, route: "/banker", staffOnly: true },
     ],
   },
 ];
@@ -351,19 +351,31 @@ export function Lobby() {
 
   useEffect(() => {
     const routeToNav: Record<string, string> = {
-      "/lobby":         "home",
-      "/tablegames":    "table-games",
-      "/sportsbook":    "sportsbook",
-      "/minigames":     "mini-games",
-      "/tournaments":   "tournaments",
-      "/lottery":       "lottery",
-      "/poker-tables":  "poker",
-      "/slots":         "slots",
-      "/horse-racing":  "horse-racing",
-      "/leaderboards":  "leaderboards",
+      "/lobby":                   "home",
+      "/tablegames":              "table-games",
+      "/sportsbook":              "sportsbook",
+      "/minigames":               "mini-games",
+      "/tournaments":             "tournaments",
+      "/lottery":                 "lottery",
+      "/poker-tables":            "poker",
+      "/slots":                   "slots",
+      "/horse-racing":            "horse-racing",
+      "/leaderboards":            "leaderboards",
+      "/market":                  "mkt-home",
+      "/market/item-listings":    "mkt-item-listings",
+      "/market/trades":           "mkt-trades",
+      "/market/sales-history":    "mkt-sales-history",
+      "/market/stall-settings":   "mkt-stall-settings",
+      "/market/trending":         "mkt-trending",
+      "/market/shops":            "mkt-shops",
+      "/market/inventory":        "mkt-inventory",
+      "/market/profile":          "mkt-profile",
     };
     const mapped = routeToNav[location];
-    if (mapped) setActiveNav(mapped);
+    if (mapped) {
+      setActiveNav(mapped);
+      if (mapped.startsWith("mkt-")) setAppMode("marketplace");
+    }
   }, [location]);
 
   function handleMaintenanceRedirect() {
@@ -392,7 +404,13 @@ export function Lobby() {
       return;
     }
     setAppMode(mode);
-    setActiveNav(mode === "casino" ? "home" : "mkt-home");
+    if (mode === "casino") {
+      setActiveNav("home");
+      setLocation("/lobby");
+    } else {
+      setActiveNav("mkt-home");
+      setLocation("/market");
+    }
   }
 
   function handleLogout() {

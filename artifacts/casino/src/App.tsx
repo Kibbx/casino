@@ -131,6 +131,15 @@ function Router() {
       <Route path="/live-events" component={LiveEventsPage} />
       <Route path="/banker/login" component={BankerLogin} />
       <Route path="/banker" component={BankerDashboard} />
+      <Route path="/market" component={Lobby} />
+      <Route path="/market/item-listings" component={Lobby} />
+      <Route path="/market/trades" component={Lobby} />
+      <Route path="/market/sales-history" component={Lobby} />
+      <Route path="/market/stall-settings" component={Lobby} />
+      <Route path="/market/trending" component={Lobby} />
+      <Route path="/market/shops" component={Lobby} />
+      <Route path="/market/inventory" component={Lobby} />
+      <Route path="/market/profile" component={Lobby} />
       <Route path="/page-preview/:key" component={PagePreview} />
       <Route component={NotFound} />
     </Switch>
