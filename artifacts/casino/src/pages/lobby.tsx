@@ -428,6 +428,8 @@ export function Lobby() {
     setLocation("/blackjack");
   };
 
+  const openTables    = bjTables.filter(t => t.isOpen);
+  const visibleRecent = recentGames.slice(0, Math.max(0, 4 - openTables.length));
 
   useEffect(() => {
     const routeToNav: Record<string, string> = {
@@ -717,13 +719,13 @@ export function Lobby() {
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
                 <div>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
-                  {bjTables.filter(t => t.isOpen).length > 0 || recentGames.length > 0 ? (
+                  {openTables.length > 0 || visibleRecent.length > 0 ? (
                     <CardGrid>
-                      {bjTables.filter(t => t.isOpen).map((table, i) => (
+                      {openTables.map((table, i) => (
                         <BJTableCard key={table.id} table={table} delay={`${-i}s`}
                           onClick={() => table.hasPassword ? setPendingBJTable(table) : joinBJTable(table, null)} />
                       ))}
-                      {recentGames.map((g) => (
+                      {visibleRecent.map((g) => (
                         <RecentCard key={g.id} game={g}
                           onPlay={() => {
                             if (g.launchData?.tableId !== undefined) {
