@@ -98,7 +98,7 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "rewards",      label: "Rewards",      icon: Star    },
       { id: "challenges",   label: "Challenges",   icon: Target     },
-      { id: "leaderboards", label: "Leaderboards", icon: BarChart2  },
+      { id: "leaderboards", label: "Leaderboards", icon: BarChart2, route: "/leaderboards" },
     ],
   },
   {
@@ -359,6 +359,7 @@ export function Lobby() {
       "/poker-tables":  "poker",
       "/slots":         "slots",
       "/horse-racing":  "horse-racing",
+      "/leaderboards":  "leaderboards",
     };
     const mapped = routeToNav[location];
     if (mapped) setActiveNav(mapped);
