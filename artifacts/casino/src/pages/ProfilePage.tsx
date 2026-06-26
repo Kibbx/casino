@@ -209,22 +209,6 @@ export function ProfilePage() {
             })}
           </div>
 
-          {/* Edit button */}
-          <div className="px-5 pb-5">
-            <button
-              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-              style={{
-                background: "rgba(232,64,10,0.10)",
-                color: "#e8400a",
-                border: "1px solid rgba(232,64,10,0.40)",
-                letterSpacing: "0.1em",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,64,10,0.18)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "rgba(232,64,10,0.10)")}
-            >
-              Edit Profile
-            </button>
-          </div>
         </div>
 
         {/* Stat cards — 2 × 3 */}
