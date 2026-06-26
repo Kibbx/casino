@@ -36,6 +36,20 @@ interface Transaction {
   createdAt: string;
 }
 
+const TX_LABELS: Record<string, string> = {
+  deposit: "Chip Deposit", withdrawal: "Withdrawal", bonus: "Bonus Gift", gift: "Staff Gift",
+  loss: "Bet", win: "Win", poker_win: "Poker Win", rake: "Rake", buyin: "Buy-in",
+  cashout: "Cash Out", tournament_win: "Tournament Win",
+  slots: "Slots", blackjack: "Blackjack", roulette: "Roulette", crash: "Crash",
+  horse_race: "Horse Racing", poker: "Poker", sport_bet: "Sports Bet", baccarat: "Baccarat",
+  tournament_slots: "Slots Tournament", transfer_sent: "Transfer Sent", transfer_received: "Transfer Received",
+  loan_issued: "Loan Issued", loan_repayment: "Loan Repayment",
+  "fortuna-bet": "Fortuna Bet", "fortuna-win": "Fortuna Win", "fortuna-bonus-buy": "Fortuna Bonus",
+  "rome-slots-bet": "Rome Slots Bet", "rome-slots-win": "Rome Slots Win",
+  "western-slots-bet": "Western Slots Bet", "western-slots-win": "Western Slots Win",
+  highlow_bet: "High-Low Bet", rakeback: "Rakeback",
+};
+
 const WAGER_TYPES = new Set([
   "loss", "fortuna-bet", "fortuna-bonus-buy", "rome-slots-bet",
   "western-slots-bet", "highlow_bet", "baccarat", "sport_bet",
@@ -222,11 +236,16 @@ export function ProfilePage() {
                               color: netResult >= 0 ? "#22c55e" : "#ef4444" },
   ];
 
-  const activity = [
-    { label: "Bet",                count: `${betCount}x`, value: `-${fmt(totalWagered)} chips`, positive: false },
-    { label: "Win",                count: `${winCount}x`, value: `+${fmt(totalWon)} chips`,     positive: true  },
-    { label: "Biggest Single Win", count: "—",            value: `+${fmt(biggestWin)} chips`,   positive: true  },
-  ];
+  // Per-type activity breakdown (mirrors old profile overview tab)
+  const byType: Record<string, { spent: number; received: number; count: number }> = {};
+  for (const t of txs) {
+    if (!byType[t.type]) byType[t.type] = { spent: 0, received: 0, count: 0 };
+    byType[t.type].count++;
+    if (WIN_TYPES.has(t.type)) byType[t.type].received += t.amount;
+    else byType[t.type].spent += t.amount;
+  }
+  const activityEntries = Object.entries(byType)
+    .sort((a, b) => (b[1].spent + b[1].received) - (a[1].spent + a[1].received));
 
   return (
     <PageWrapper title="Profile" breadcrumb="Account / Profile" accentColor="#9ca3af">
@@ -417,48 +436,90 @@ export function ProfilePage() {
       </div>
 
       {/* ── Recent Activity ──────────────────────────────────────── */}
-      <SubHeader label="Recent Activity" />
+      <SubHeader label="Activity Breakdown" />
       <div className="rounded-2xl overflow-hidden"
         style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
-        {activity.map((row, i) => (
-          <div
-            key={i}
-            className="flex items-center px-5 py-3.5 gap-4 transition-colors duration-100"
-            style={{ borderBottom: i < activity.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}
-            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.025)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
-          >
-            <span className="font-rajdhani font-bold text-sm"
-              style={{ color: "rgba(255,255,255,0.78)", minWidth: 150 }}>
-              {row.label}
-            </span>
-            <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                color: "rgba(255,255,255,0.38)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                minWidth: 32, textAlign: "center",
-              }}>
-              {row.count}
-            </span>
-            <span className="flex-1" />
-            <span className="text-sm font-black tabular-nums"
-              style={{ color: row.positive ? "#22c55e" : "#ef4444", minWidth: 140, textAlign: "right" }}>
-              {row.value}
-            </span>
-            <span className="text-[9px] font-black uppercase px-2.5 py-1 rounded-full"
-              style={{
-                color: row.positive ? "#22c55e" : "#ef4444",
-                background: row.positive ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-                border: `1px solid ${row.positive ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
-                letterSpacing: "0.08em",
-                minWidth: 40, textAlign: "center",
-              }}>
-              {row.positive ? "WIN" : "LOSS"}
+        {activityEntries.length === 0 ? (
+          <div className="flex items-center justify-center py-10">
+            <span className="text-sm" style={{ color: "rgba(255,255,255,0.25)" }}>
+              No game history yet. Hit the tables!
             </span>
           </div>
-        ))}
+        ) : activityEntries.map(([type, s], i) => {
+          const net = s.received - s.spent;
+          return (
+            <div
+              key={type}
+              className="flex items-center px-5 py-3 gap-4 transition-colors duration-100"
+              style={{ borderBottom: i < activityEntries.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.025)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
+            >
+              {/* Type label */}
+              <span className="font-rajdhani font-bold text-sm shrink-0"
+                style={{ color: "rgba(255,255,255,0.78)", minWidth: 140 }}>
+                {TX_LABELS[type] ?? type}
+              </span>
+              {/* Count pill */}
+              <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full shrink-0"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.38)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  minWidth: 32, textAlign: "center",
+                }}>
+                {s.count}×
+              </span>
+              <span className="flex-1" />
+              {/* Spent */}
+              {s.spent > 0 && (
+                <span className="text-[11px] font-bold tabular-nums shrink-0"
+                  style={{ color: "rgba(239,68,68,0.7)", minWidth: 90, textAlign: "right" }}>
+                  −{fmt(s.spent)}
+                </span>
+              )}
+              {/* Received */}
+              {s.received > 0 && (
+                <span className="text-[11px] font-bold tabular-nums shrink-0"
+                  style={{ color: "rgba(34,197,94,0.7)", minWidth: 90, textAlign: "right" }}>
+                  +{fmt(s.received)}
+                </span>
+              )}
+              {/* Net */}
+              <span className="text-sm font-black tabular-nums shrink-0"
+                style={{ color: net >= 0 ? "#22c55e" : "#ef4444", minWidth: 100, textAlign: "right" }}>
+                {net >= 0 ? "+" : ""}{fmt(net)}
+              </span>
+            </div>
+          );
+        })}
       </div>
+
+      {/* Biggest single win highlight */}
+      {biggestWin > 0 && (
+        <div className="mt-3 rounded-xl flex items-center gap-3 px-5 py-4"
+          style={{
+            background: "rgba(245,197,24,0.06)",
+            border: "1px solid rgba(245,197,24,0.22)",
+          }}>
+          <span style={{ fontSize: 18 }}>⭐</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[10px] uppercase tracking-widest font-bold"
+              style={{ color: "#f5c518", letterSpacing: "0.12em" }}>
+              Biggest Single Win
+            </span>
+            <span className="font-black tabular-nums"
+              style={{
+                fontFamily: "'Orbitron', monospace",
+                fontSize: "clamp(14px, 2vw, 22px)",
+                color: "#f5c518",
+                textShadow: "0 0 14px rgba(245,197,24,0.5)",
+              }}>
+              +{fmt(biggestWin)} chips
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── Security / Change PIN modal ─────────────────────────── */}
       {showSecurity && (
