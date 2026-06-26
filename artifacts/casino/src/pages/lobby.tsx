@@ -528,6 +528,7 @@ export function Lobby() {
                   const hovered = item.id === hoveredNav;
                   const lit     = active || hovered;
                   const Icon    = item.icon;
+                  const isStaffItem = item.id === "staff";
                   return (
                     <div key={item.id} className="relative group/nav px-2">
                       <button
@@ -540,33 +541,37 @@ export function Lobby() {
                           paddingLeft: collapsed ? 0 : 10,
                           justifyContent: collapsed ? "center" : "flex-start",
                           background: active
-                            ? "rgba(232,64,10,0.12)"
-                            : hovered ? "rgba(232,64,10,0.07)" : undefined,
+                            ? (isStaffItem ? "rgba(212,170,0,0.12)" : "rgba(232,64,10,0.12)")
+                            : hovered ? (isStaffItem ? "rgba(212,170,0,0.08)" : "rgba(232,64,10,0.07)") : undefined,
                         }}
                       >
                         {active && !collapsed && (
                           <span
                             className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] rounded-r-full"
-                            style={{ background: "#e8400a", boxShadow: "0 0 6px #e8400a" }}
+                            style={{ background: isStaffItem ? "#d4aa00" : "#e8400a", boxShadow: isStaffItem ? "0 0 6px #d4aa00" : "0 0 6px #e8400a" }}
                           />
                         )}
                         <Icon
                           size={16}
                           style={{
                             flexShrink: 0,
-                            color: lit ? "#e8400a" : "rgba(255,255,255,0.35)",
+                            color: isStaffItem
+                              ? (lit ? "#f5c518" : "#c9960a")
+                              : (lit ? "#e8400a" : "rgba(255,255,255,0.35)"),
                             transition: "color 0.15s",
+                            filter: isStaffItem ? "drop-shadow(0 0 4px rgba(212,170,0,0.6))" : undefined,
                           }}
                         />
                         {!collapsed && (
                           <span
                             className="flex-1 text-left text-[13px] whitespace-nowrap overflow-hidden"
                             style={{
-                              fontWeight: active ? 600 : 500,
-                              color: active
-                                ? "#ffffff"
-                                : hovered ? "rgba(232,64,10,0.95)" : "rgba(255,255,255,0.50)",
+                              fontWeight: isStaffItem ? 700 : (active ? 600 : 500),
+                              color: isStaffItem
+                                ? (active ? "#f5c518" : hovered ? "#ffe066" : "#c9960a")
+                                : (active ? "#ffffff" : hovered ? "rgba(232,64,10,0.95)" : "rgba(255,255,255,0.50)"),
                               transition: "color 0.15s",
+                              textShadow: isStaffItem ? "0 0 8px rgba(212,170,0,0.4)" : undefined,
                             }}
                           >
                             {item.label}
