@@ -579,7 +579,6 @@ export function TournamentsPage() {
           />
         ))}
 
-        {!loading && !error && lobbyEnabled && <FeatureStrip />}
       </div>
 
       <style>{`
