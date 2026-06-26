@@ -715,21 +715,14 @@ export function Lobby() {
                 <div className="absolute top-[55%] left-1/3 w-[700px] h-[300px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(ellipse, #e8400a 0%, transparent 70%)", filter: "blur(50px)" }} />
               </div>
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
-                {bjTables.filter(t => t.isOpen).length > 0 && (
-                  <div>
-                    <SectionHeader label="Blackjack Tables" dotColor="#39ff14" />
+                <div>
+                  <SectionHeader label="Recently Played" dotColor="#d946ef" />
+                  {bjTables.filter(t => t.isOpen).length > 0 || recentGames.length > 0 ? (
                     <CardGrid>
                       {bjTables.filter(t => t.isOpen).map((table, i) => (
                         <BJTableCard key={table.id} table={table} delay={`${-i}s`}
                           onClick={() => table.hasPassword ? setPendingBJTable(table) : joinBJTable(table, null)} />
                       ))}
-                    </CardGrid>
-                  </div>
-                )}
-                <div>
-                  <SectionHeader label="Recently Played" dotColor="#d946ef" />
-                  {recentGames.length > 0 ? (
-                    <CardGrid>
                       {recentGames.map((g) => (
                         <RecentCard key={g.id} game={g}
                           onPlay={() => {
