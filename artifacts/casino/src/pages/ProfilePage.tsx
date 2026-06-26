@@ -233,7 +233,7 @@ export function ProfilePage() {
   const currentRtp = totalWagered > 0 ? (totalWon / totalWagered * 100) : 0;
 
   const stats: { label: string; value: string; sub?: string; icon: React.ReactNode; color: string }[] = [
-    { label: "Current RTP",   value: currentRtp.toFixed(2) + "%",                         icon: <Activity size={22} />,   color: "#06b6d4" },
+    { label: "RTP",   value: currentRtp.toFixed(2) + "%",                         icon: <Activity size={22} />,   color: "#06b6d4" },
     { label: "Total Wagered", value: fmt(totalWagered),  sub: "chips",                    icon: <Coins size={22} />,      color: "#f97316" },
     { label: "Total Won",     value: fmt(totalWon),      sub: "chips",                    icon: <Trophy size={22} />,     color: "#f5c518" },
     { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",                 icon: <Star size={22} />,       color: "#a855f7" },
