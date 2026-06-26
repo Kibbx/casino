@@ -11711,48 +11711,22 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
       </div>
 
       {/* Auto-Delete Settled Bets */}
-      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "16px 18px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "14px" }}>
-          <span style={{ fontSize: "14px" }}>🗑️</span>
-          <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "13px", color: "#e2e8f0", letterSpacing: "0.06em" }}>Auto-Delete Settled Bets</span>
+      <div style={{ background: "rgba(15,10,18,0.9)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "14px", padding: "12px 18px", display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+        <span style={{ fontSize: "13px" }}>🗑️</span>
+        <span style={{ fontFamily: "Oswald, sans-serif", fontWeight: 700, fontSize: "12px", color: "#94a3b8", letterSpacing: "0.06em", flex: "0 0 auto" }}>Auto-Delete Settled Bets</span>
+        <button onClick={() => setSbAutoDelete(v => !v)} style={{ padding: "4px 14px", borderRadius: "7px", fontSize: "11px", fontWeight: 700, cursor: "pointer", border: "none", fontFamily: "Oswald, sans-serif", background: sbAutoDelete ? "#166534" : "#3b0707", color: sbAutoDelete ? "#4ade80" : "#f87171" }}>
+          {sbAutoDelete ? "ON" : "OFF"}
+        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+          <label style={{ fontSize: "10px", color: "#64748b", fontWeight: 600 }}>Retention (min)</label>
+          <input type="number" min="1" max="1440" value={sbRetentionMins} onChange={e => setSbRetentionMins(e.target.value)}
+            style={{ width: "64px", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "7px", padding: "4px 8px", fontSize: "12px", color: "#e2e8f0", outline: "none" }} />
         </div>
-        <p style={{ fontSize: "11px", color: "#64748b", marginBottom: "14px", lineHeight: "1.5" }}>
-          Automatically remove fully resolved slips (Won / Lost / Voided / Cashed Out) after the retention period.
-          Financial stats are preserved in the transactions table — only the slip record is deleted.
-        </p>
-        <div style={{ display: "flex", gap: "16px", alignItems: "flex-end", flexWrap: "wrap" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Auto Delete</label>
-            <button
-              onClick={() => setSbAutoDelete(v => !v)}
-              style={{
-                padding: "5px 16px", borderRadius: "8px", fontSize: "12px", fontWeight: 700, cursor: "pointer", border: "none", fontFamily: "Oswald, sans-serif", letterSpacing: "0.05em",
-                background: sbAutoDelete ? "#166534" : "#3b0707", color: sbAutoDelete ? "#4ade80" : "#f87171",
-              }}>
-              {sbAutoDelete ? "ON" : "OFF"}
-            </button>
-          </div>
-          <div style={{ flex: "0 0 160px" }}>
-            <label style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, display: "block", marginBottom: "4px" }}>
-              Retention (minutes)
-            </label>
-            <input
-              type="number" min="1" max="1440" value={sbRetentionMins}
-              onChange={e => setSbRetentionMins(e.target.value)}
-              style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "8px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }}
-            />
-          </div>
-          <button onClick={saveCleanupSettings} disabled={sbCleanupSaving}
-            style={{ padding: "8px 22px", background: sbCleanupSaving ? "rgba(160,34,58,0.4)" : "#a0223a", border: "none", borderRadius: "9px", fontSize: "12px", fontWeight: 700, color: "#fff", cursor: sbCleanupSaving ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif", letterSpacing: "0.05em" }}>
-            {sbCleanupSaving ? "Saving…" : "Save"}
-          </button>
-          {sbCleanupMsg && (
-            <span style={{ fontSize: "11px", fontWeight: 600, color: sbCleanupMsg.ok ? "#4ade80" : "#f87171" }}>{sbCleanupMsg.text}</span>
-          )}
-        </div>
-        <p style={{ fontSize: "10px", color: "#475569", marginTop: "12px" }}>
-          🔒 Pending slips are never deleted. Cleanup runs every 5 minutes. Every deletion is logged to the server console with full audit details.
-        </p>
+        <button onClick={saveCleanupSettings} disabled={sbCleanupSaving}
+          style={{ padding: "4px 14px", background: sbCleanupSaving ? "rgba(160,34,58,0.4)" : "#a0223a", border: "none", borderRadius: "7px", fontSize: "11px", fontWeight: 700, color: "#fff", cursor: sbCleanupSaving ? "not-allowed" : "pointer", fontFamily: "Oswald, sans-serif" }}>
+          {sbCleanupSaving ? "…" : "Save"}
+        </button>
+        {sbCleanupMsg && <span style={{ fontSize: "11px", fontWeight: 600, color: sbCleanupMsg.ok ? "#4ade80" : "#f87171" }}>{sbCleanupMsg.text}</span>}
       </div>
 
       {/* Sport Events */}
