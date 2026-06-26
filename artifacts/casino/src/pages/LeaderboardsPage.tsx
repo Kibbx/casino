@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { PageWrapper } from "./shared";
 import { useStore } from "../store";
 
@@ -23,15 +23,6 @@ type RankedEntry = ApiEntry & {
   prevRank: number | null;
   trendDelta: number | null;
 };
-
-type Tab = "winnings" | "winrate" | "games";
-
-/* ── Constants ─────────────────────────────────────────────────────────────── */
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: "winnings", label: "Total Winnings", icon: "💰" },
-  { id: "winrate",  label: "Win Rate",        icon: "🎯" },
-  { id: "games",    label: "Games Played",    icon: "🎮" },
-];
 
 const TIER_STYLE: Record<string, { color: string; bg: string; border: string; glow: string }> = {
   Diamond:  { color: "#7dd3fc", bg: "rgba(125,211,252,0.12)", border: "rgba(125,211,252,0.35)", glow: "rgba(125,211,252,0.2)"  },
@@ -63,21 +54,19 @@ function getInitials(name: string): string {
   return name.split(/\s+/).map(w => w[0] ?? "").join("").slice(0, 2).toUpperCase();
 }
 
-function snapshotKey(tab: Tab): string {
-  return `lb_snapshot_${tab}`;
-}
+const SNAPSHOT_KEY = "lb_snapshot";
 
-function loadSnapshot(tab: Tab): Record<number, number> {
+function loadSnapshot(): Record<number, number> {
   try {
-    const raw = localStorage.getItem(snapshotKey(tab));
+    const raw = localStorage.getItem(SNAPSHOT_KEY);
     return raw ? JSON.parse(raw) : {};
   } catch { return {}; }
 }
 
-function saveSnapshot(tab: Tab, entries: RankedEntry[]): void {
+function saveSnapshot(entries: RankedEntry[]): void {
   const map: Record<number, number> = {};
   for (const e of entries) map[e.id] = e.rank;
-  try { localStorage.setItem(snapshotKey(tab), JSON.stringify(map)); } catch {}
+  try { localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(map)); } catch {}
 }
 
 /* ── Sub-components ─────────────────────────────────────────────────────────── */
@@ -131,14 +120,11 @@ function RankCell({ rank }: { rank: number }) {
 /* ── Main component ─────────────────────────────────────────────────────────── */
 export function LeaderboardsPage() {
   const { sessionToken, playerId, playerUsername } = useStore();
-  const [activeTab, setActiveTab]   = useState<Tab>("winnings");
-  const [data, setData]             = useState<ApiEntry[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
-  const [hovered, setHovered]       = useState<number | null>(null);
-  const [tabTransition, setTabTransition] = useState(false);
-  const prevTabRef = useRef<Tab>(activeTab);
-  const initialSnapshotSaved = useRef<Set<Tab>>(new Set());
+  const [data, setData]       = useState<ApiEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const snapshotSaved = useRef(false);
 
   /* fetch */
   useEffect(() => {
@@ -153,40 +139,24 @@ export function LeaderboardsPage() {
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load"); setLoading(false); });
   }, [sessionToken]);
 
-  /* tab change with transition */
-  const handleTabChange = useCallback((tab: Tab) => {
-    if (tab === activeTab) return;
-    setTabTransition(true);
-    setTimeout(() => {
-      setActiveTab(tab);
-      setTabTransition(false);
-    }, 150);
-  }, [activeTab]);
-
-  /* sorted + ranked + trend */
+  /* sorted + ranked + trend — always by total winnings */
   const ranked = useMemo((): RankedEntry[] => {
-    const copy = [...data];
-    if (activeTab === "winnings") copy.sort((a, b) => b.totalWon  - a.totalWon);
-    if (activeTab === "winrate")  copy.sort((a, b) => b.winRate   - a.winRate);
-    if (activeTab === "games")    copy.sort((a, b) => b.games     - a.games);
-
-    const snapshot = loadSnapshot(activeTab);
-
+    const copy = [...data].sort((a, b) => b.totalWon - a.totalWon);
+    const snapshot = loadSnapshot();
     return copy.map((entry, i) => {
       const rank = i + 1;
       const prevRank = snapshot[entry.id] ?? null;
       const trendDelta = prevRank !== null ? prevRank - rank : null;
       return { ...entry, rank, prevRank, trendDelta };
     });
-  }, [data, activeTab]);
+  }, [data]);
 
-  /* save snapshot once per tab after data loaded */
+  /* save snapshot once after first load */
   useEffect(() => {
-    if (ranked.length === 0) return;
-    if (initialSnapshotSaved.current.has(activeTab)) return;
-    initialSnapshotSaved.current.add(activeTab);
-    setTimeout(() => saveSnapshot(activeTab, ranked), 2000);
-  }, [ranked, activeTab]);
+    if (ranked.length === 0 || snapshotSaved.current) return;
+    snapshotSaved.current = true;
+    setTimeout(() => saveSnapshot(ranked), 2000);
+  }, [ranked]);
 
   const myEntry  = ranked.find(e => e.id === playerId || e.username === playerUsername);
   const myRank   = myEntry?.rank ?? null;
@@ -195,33 +165,6 @@ export function LeaderboardsPage() {
 
   return (
     <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7">
-
-      {/* ── Tabs ───────────────────────────────────────────────────────── */}
-      <div className="flex gap-2 mb-5 flex-wrap">
-        {TABS.map(tab => {
-          const active = tab.id === activeTab;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              style={{
-                display: "inline-flex", alignItems: "center", gap: 7,
-                padding: "9px 18px", borderRadius: 10, cursor: "pointer",
-                fontSize: 11, fontWeight: 900, letterSpacing: "0.08em", textTransform: "uppercase",
-                border: `1px solid ${active ? "rgba(168,85,247,0.55)" : "rgba(255,255,255,0.07)"}`,
-                background: active ? "rgba(168,85,247,0.15)" : "rgba(255,255,255,0.03)",
-                color:  active ? "#c084fc" : "rgba(255,255,255,0.38)",
-                boxShadow: active ? "0 0 20px rgba(168,85,247,0.22), inset 0 0 20px rgba(168,85,247,0.06)" : "none",
-                transform: active ? "translateY(-1px)" : "none",
-                transition: "all 0.18s ease",
-              }}
-            >
-              <span style={{ fontSize: 14 }}>{tab.icon}</span>
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
 
       {/* ── Your rank banner ───────────────────────────────────────────── */}
       {!loading && !error && myRank !== null && (
