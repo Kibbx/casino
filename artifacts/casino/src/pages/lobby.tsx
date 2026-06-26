@@ -121,7 +121,7 @@ interface Game {
   id: number; name: string; category: string; image: string;
   players: number; maxPlayers: number; activeBets: string; status: string;
 }
-type RecentGame = Game & { lastPlayed: string; result: string; won: boolean; cfgKey?: string };
+type RecentGame = Game & { lastPlayed: string; result: string; won: boolean; cfgKey?: string; launchData?: Record<string, unknown> };
 
 
 function buildRecentFromTracked(): RecentGame[] {
@@ -134,7 +134,7 @@ function buildRecentFromTracked(): RecentGame[] {
         id: 200 + i, name: d.name, category: d.category, image: d.image,
         players: 0, maxPlayers: 0, activeBets: "", status: "Completed",
         lastPlayed: timeSince(new Date(t.playedAt).toISOString()),
-        result: "—", won: false, cfgKey: t.key,
+        result: "—", won: false, cfgKey: t.key, launchData: t.launchData,
       };
     });
 }
@@ -687,7 +687,15 @@ export function Lobby() {
                     <CardGrid>
                       {recentGames.map((g) => (
                         <RecentCard key={g.id} game={g}
-                          onPlay={() => setLocation(CFG_KEY_TO_ROUTE[g.cfgKey ?? ""] ?? "/tablegames")} />
+                          onPlay={() => {
+                            if (g.launchData?.tableId !== undefined) {
+                              setAccessToken("blackjack", "open");
+                              sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: g.launchData.tableId, password: g.launchData.password ?? null }));
+                              setLocation("/blackjack");
+                            } else {
+                              setLocation(CFG_KEY_TO_ROUTE[g.cfgKey ?? ""] ?? "/tablegames");
+                            }
+                          }} />
                       ))}
                     </CardGrid>
                   ) : (

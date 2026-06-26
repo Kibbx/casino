@@ -240,7 +240,7 @@ export function TableGamesPage() {
   }, [fetchTables]);
 
   const joinTable = (table: BJTable, password: string | null) => {
-    trackRecentGame("blackjack", "Blackjack");
+    trackRecentGame("blackjack", "Blackjack", { tableId: table.id });
     setAccessToken("blackjack", "open");
     sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: table.id, password }));
     setLocation("/blackjack");

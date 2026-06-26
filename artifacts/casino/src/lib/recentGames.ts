@@ -15,12 +15,14 @@ export interface TrackedGame {
   name: string;
   /** Unix timestamp (ms) when the user last visited */
   playedAt: number;
+  /** Optional data needed to re-launch the game directly (e.g. { tableId, password }) */
+  launchData?: Record<string, unknown>;
 }
 
-export function trackRecentGame(key: string, name: string): void {
+export function trackRecentGame(key: string, name: string, launchData?: Record<string, unknown>): void {
   try {
     const current = getTrackedGames().filter(g => g.key !== key);
-    const updated: TrackedGame[] = [{ key, name, playedAt: Date.now() }, ...current].slice(0, MAX_ENTRIES);
+    const updated: TrackedGame[] = [{ key, name, playedAt: Date.now(), launchData }, ...current].slice(0, MAX_ENTRIES);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch {
     // localStorage unavailable (FiveM CEF sandbox) — silent no-op
