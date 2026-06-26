@@ -1390,6 +1390,18 @@ export async function runMigrations(): Promise<void> {
       sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS exclude_from_login_logs BOOLEAN NOT NULL DEFAULT false`,
     },
     {
+      name: "tournaments bigint chip columns",
+      sql: `
+        ALTER TABLE tournaments
+          ALTER COLUMN buy_in          TYPE BIGINT,
+          ALTER COLUMN starting_chips  TYPE BIGINT,
+          ALTER COLUMN prize_pool      TYPE BIGINT,
+          ALTER COLUMN base_prize_pool TYPE BIGINT,
+          ALTER COLUMN min_bet         TYPE BIGINT,
+          ALTER COLUMN max_bet         TYPE BIGINT
+      `,
+    },
+    {
       name: "players.wins column",
       sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS wins INTEGER NOT NULL DEFAULT 0`,
     },
