@@ -295,13 +295,14 @@ export function LeaderboardsPage() {
   const colLayout = "48px 1fr 72px 72px 96px 100px 68px";
 
   return (
-    <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7">
+    <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7" fillHeight>
 
       {/* ── Your rank banner ────────────────────────────────────────────── */}
       {!loading && !error && myRank !== null && (
         <div style={{
+          flexShrink: 0,
           display: "flex", alignItems: "center", gap: 10,
-          padding: "10px 16px", borderRadius: 12, marginBottom: 16,
+          padding: "10px 16px", borderRadius: 12, marginBottom: 10,
           background: "rgba(168,85,247,0.07)",
           border: "1px solid rgba(168,85,247,0.22)",
         }}>
@@ -339,11 +340,13 @@ export function LeaderboardsPage() {
       <div
         ref={tableRef}
         style={{
+          flex: 1, minHeight: 0,
           borderRadius: 16,
           border: "1px solid rgba(255,255,255,0.07)",
           background: "rgba(255,255,255,0.02)",
           backdropFilter: "blur(12px)",
           overflow: "hidden",
+          display: "flex", flexDirection: "column",
         }}
       >
         {/* Sticky header */}
@@ -368,7 +371,7 @@ export function LeaderboardsPage() {
 
         {/* Loading */}
         {loading && (
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "64px 0", gap: 12 }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
             <div style={{
               width: 20, height: 20, borderRadius: "50%",
               border: "2px solid transparent", borderTopColor: "#a855f7",
@@ -380,14 +383,14 @@ export function LeaderboardsPage() {
 
         {/* Error */}
         {error && (
-          <div style={{ padding: "48px 0", textAlign: "center", fontSize: 13, color: "rgba(255,100,100,0.55)" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,100,100,0.55)" }}>
             {error}
           </div>
         )}
 
         {/* Empty */}
         {!loading && !error && ranked.length === 0 && (
-          <div style={{ padding: "48px 0", textAlign: "center", fontSize: 13, color: "rgba(255,255,255,0.22)" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.22)" }}>
             No players yet
           </div>
         )}
@@ -401,6 +404,7 @@ export function LeaderboardsPage() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: pageDir * -12 }}
               transition={{ duration: 0.18, ease: "easeOut" }}
+              style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}
             >
               {paginated.map((entry, i) => {
                 const isMe  = entry.id === playerId || entry.username === playerUsername;
@@ -427,8 +431,9 @@ export function LeaderboardsPage() {
                     onMouseEnter={() => setHovered(entry.id)}
                     onMouseLeave={() => setHovered(null)}
                     style={{
+                      flex: 1,
                       display: "grid", gridTemplateColumns: colLayout,
-                      padding: "13px 20px", alignItems: "center",
+                      padding: "0 20px", alignItems: "center",
                       background: rowBg,
                       borderBottom: i < paginated.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
                       boxShadow: isMe ? "inset 3px 0 0 rgba(168,85,247,0.7)" : undefined,
