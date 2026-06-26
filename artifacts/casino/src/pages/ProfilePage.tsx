@@ -352,52 +352,37 @@ export function ProfilePage() {
           {(() => {
             const rb = rakeback;
             const claimable  = rb?.claimable ?? 0;
-            const wagered    = rb?.wageredReal ?? 0;
-            const wonBack    = rb?.wonReal ?? 0;
             const onCooldown = rb?.onCooldown ?? false;
             const cdLabel    = fmtCooldown(rb?.nextClaimAt ?? null);
-            const rows: [string, string][] = [
-              ["Wagered",      fmt(wagered) + " chips"],
-              ["Won Back",     fmt(wonBack) + " chips"],
-              ["Last Claimed", fmtDateTime(rb?.lastClaimed ?? null)],
-            ];
             return (
               <div
-                className="rounded-xl flex flex-col"
+                className="rounded-xl flex flex-col items-center justify-center"
                 style={{
                   background: "#0c0a0a",
                   border: "1px solid rgba(34,197,94,0.2)",
-                  padding: "18px 20px 14px",
+                  padding: "22px 20px 18px",
+                  textAlign: "center",
                 }}
               >
-                <p className="text-[10px] uppercase tracking-widest mb-2"
-                  style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.12em" }}>
+                <p className="text-[10px] uppercase tracking-widest"
+                  style={{ color: "rgba(255,255,255,0.28)", letterSpacing: "0.14em", marginBottom: 10 }}>
                   Rakeback
                 </p>
                 <p className="font-black tabular-nums leading-none"
                   style={{
                     fontFamily: "'Orbitron', monospace",
-                    fontSize: "clamp(16px, 2vw, 26px)",
+                    fontSize: "clamp(22px, 2.8vw, 36px)",
                     color: "#22c55e",
-                    textShadow: "0 0 16px rgba(34,197,94,0.55)",
+                    textShadow: "0 0 22px rgba(34,197,94,0.65)",
                   }}>
                   {fmt(claimable)}
                 </p>
-                <p className="text-[10px] mt-1.5" style={{ color: "rgba(255,255,255,0.22)" }}>
+                <p style={{ fontSize: 10, marginTop: 6, color: "rgba(255,255,255,0.28)", letterSpacing: "0.04em" }}>
                   claimable now · 3% back
                 </p>
 
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 4 }}>
-                  {rows.map(([k, v]) => (
-                    <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
-                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{k}</span>
-                      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.48)", fontWeight: 700, textAlign: "right" }}>{v}</span>
-                    </div>
-                  ))}
-                </div>
-
                 {rbClaimMsg && (
-                  <p style={{ fontSize: 10, marginTop: 6, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
+                  <p style={{ fontSize: 10, marginTop: 8, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
                     {rbClaimMsg.text}
                   </p>
                 )}
@@ -406,7 +391,7 @@ export function ProfilePage() {
                   onClick={handleClaimRakeback}
                   disabled={rbClaiming || onCooldown || claimable === 0}
                   style={{
-                    marginTop: 10, padding: "7px 0", borderRadius: 7,
+                    marginTop: 14, padding: "8px 0", borderRadius: 7,
                     background: (onCooldown || claimable === 0)
                       ? "rgba(255,255,255,0.04)"
                       : "rgba(34,197,94,0.15)",
