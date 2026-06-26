@@ -669,4 +669,45 @@ router.patch("/:playerId/username", requireBankerOrOwner, async (req, res) => {
   return res.json({ success: true, username: trimmed });
 });
 
+// ── Public leaderboard (requires player auth) ─────────────────────────────────
+router.get("/leaderboard", requirePlayer, async (_req, res) => {
+  const players = await db
+    .select({
+      id: playersTable.id,
+      username: playersTable.username,
+      chips: playersTable.chips,
+      handsPlayed: playersTable.handsPlayed,
+      avatarUrl: playersTable.avatarUrl,
+      staffRole: playersTable.staffRole,
+    })
+    .from(playersTable)
+    .where(sqlFn`${playersTable.isBot} = false`);
+
+  const playerIds = players.map(p => p.id);
+
+  // Lifetime deposits per player
+  const txRows = await db
+    .select({ playerId: transactionsTable.playerId, amount: transactionsTable.amount, type: transactionsTable.type })
+    .from(transactionsTable)
+    .where(inArray(transactionsTable.playerId, playerIds) as any);
+
+  const depositMap = new Map<number, number>();
+  for (const tx of txRows) {
+    if (tx.type !== "deposit" || tx.playerId == null) continue;
+    depositMap.set(tx.playerId, (depositMap.get(tx.playerId) ?? 0) + (tx.amount ?? 0));
+  }
+
+  const result = players.map(p => ({
+    id: p.id,
+    username: p.username,
+    chips: p.chips,
+    handsPlayed: p.handsPlayed,
+    lifetimeDeposits: depositMap.get(p.id) ?? 0,
+    avatarUrl: p.avatarUrl ?? null,
+    staffRole: p.staffRole ?? null,
+  }));
+
+  return res.json(result);
+});
+
 export default router;
