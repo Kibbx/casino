@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PageWrapper } from "./shared";
 import { useStore } from "../store";
@@ -43,7 +43,7 @@ interface Settings {
 }
 interface LotteryTicket {
   id: number; draw_id: number; status: string; ticket_cost: number;
-  purchased_at: string; result_tier: string | null;
+  purchased_at: string; result_tier: string | null; numbers: string;
 }
 
 /* ── Left card: Weekly Mega Draw ─────────────────────────────── */
@@ -195,12 +195,55 @@ function WeeklyMegaDraw({
 }
 
 /* ── Right card: Your Tickets ─────────────────────────────────── */
+function NumbersPopup({ ticket, onClose }: { ticket: LotteryTicket; onClose: () => void }) {
+  const nums: number[] = (() => { try { return JSON.parse(ticket.numbers || "[]"); } catch { return []; } })();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  return (
+    <div ref={ref} style={{
+      position: "absolute", zIndex: 50, left: 0, top: "calc(100% + 4px)",
+      background: "linear-gradient(135deg,#1a1200 0%,#110d00 100%)",
+      border: "1px solid rgba(245,197,24,0.35)",
+      borderRadius: 10, padding: "10px 14px",
+      boxShadow: "0 8px 32px rgba(0,0,0,0.7), 0 0 0 1px rgba(245,197,24,0.08)",
+      minWidth: 160,
+    }}>
+      <p style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(245,197,24,0.55)", marginBottom: 8 }}>
+        Ticket #{String(1000000 + ticket.id).slice(1)} · Numbers
+      </p>
+      {nums.length === 0 ? (
+        <p style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontStyle: "italic" }}>No numbers picked yet</p>
+      ) : (
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {nums.map((n, i) => (
+            <span key={i} style={{
+              width: 28, height: 28, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(245,197,24,0.12)", border: "1px solid rgba(245,197,24,0.4)",
+              color: "#f5c518", fontSize: 12, fontWeight: 800,
+            }}>{n}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function YourTickets({
   tickets, settings, loading,
 }: {
   tickets: LotteryTicket[]; settings: Settings | null; loading: boolean;
 }) {
   const [ticketsOpen, setTicketsOpen] = useState(true);
+  const [activeId, setActiveId] = useState<number | null>(null);
+  const closePopup = useCallback(() => setActiveId(null), []);
 
   const totalSpent = tickets.reduce((s, t) => s + (Number(t.ticket_cost) || 0), 0);
   const totalEntries = tickets.length;
@@ -283,13 +326,28 @@ function YourTickets({
                     <div className="flex flex-col gap-0.5">
                       {tickets.map(t => {
                         const badge = statusBadge(t);
+                        const isOpen = activeId === t.id;
                         return (
                           <div key={t.id}
                             className="grid grid-cols-4 gap-2 px-3 py-2.5 rounded-lg items-center transition-colors hover:bg-white/[0.03]"
                             style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-                            <span className="text-xs font-bold tabular-nums" style={{ color: "rgba(255,255,255,0.65)" }}>
-                              #{String(1000000 + t.id).slice(1)}
-                            </span>
+                            <button
+                              onClick={() => setActiveId(isOpen ? null : t.id)}
+                              style={{ background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left", position: "relative" }}
+                            >
+                              <span
+                                className="text-xs font-bold tabular-nums"
+                                style={{
+                                  color: isOpen ? "#f5c518" : "rgba(255,255,255,0.65)",
+                                  textDecoration: "underline", textDecorationStyle: "dotted",
+                                  textDecorationColor: "rgba(245,197,24,0.4)",
+                                  transition: "color 0.15s",
+                                }}
+                              >
+                                #{String(1000000 + t.id).slice(1)}
+                              </span>
+                              {isOpen && <NumbersPopup ticket={t} onClose={closePopup} />}
+                            </button>
                             <span className="text-xs font-semibold text-white">1</span>
                             <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
                               {fmtShortDate(t.purchased_at)}
@@ -311,7 +369,7 @@ function YourTickets({
                   style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
                   <Info size={14} style={{ color: "rgba(255,255,255,0.35)", flexShrink: 0, marginTop: 1 }} />
                   <p className="text-xs" style={{ color: "rgba(255,255,255,0.4)", lineHeight: 1.6 }}>
-                    Each ticket gives you one entry into the current draw.
+                    Click a ticket number to view its selected numbers.
                   </p>
                 </div>
               </div>
