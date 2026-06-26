@@ -398,11 +398,11 @@ export function ProfilePage() {
                 {s.icon}
               </div>
               {/* Content */}
-              <div className="flex flex-col min-w-0">
+              <div className="flex flex-col min-w-0 items-center text-center flex-1">
                 <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
                   {s.label}
                 </p>
-                <p className="font-black tabular-nums leading-none truncate"
+                <p className="font-black tabular-nums leading-none w-full text-center"
                   style={{
                     fontFamily: "'Orbitron', monospace",
                     fontSize: "clamp(16px, 1.8vw, 26px)",
@@ -447,11 +447,11 @@ export function ProfilePage() {
                     ♻️
                   </div>
                   {/* Content */}
-                  <div className="flex flex-col min-w-0">
+                  <div className="flex flex-col min-w-0 items-center text-center flex-1">
                     <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
                       Rakeback
                     </p>
-                    <p className="font-black tabular-nums leading-none"
+                    <p className="font-black tabular-nums leading-none w-full text-center"
                       style={{
                         fontFamily: "'Orbitron', monospace",
                         fontSize: "clamp(16px, 1.8vw, 26px)",
