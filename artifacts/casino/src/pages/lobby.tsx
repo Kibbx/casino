@@ -9,7 +9,7 @@ import {
   TrendingUp, Package, Gavel, History, ArrowLeftRight,
   Tag, Settings, ListOrdered, Store, AlertTriangle, Activity, Layers,
 } from "lucide-react";
-import { TableGamesPage }    from "./TableGamesPage";
+import { TableGamesPage, BJTable, BJTableCard, BJPasswordModal } from "./TableGamesPage";
 import { MiniGamesPage }     from "./MiniGamesPage";
 import { SlotsPage }         from "./SlotsPage";
 import { PokerPage }         from "./PokerPage";
@@ -41,7 +41,7 @@ import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY, FALLBACK_LIVE as LIVE_DEFAULTS } from "../lib/gamesData";
-import { getTrackedGames } from "../lib/recentGames";
+import { getTrackedGames, trackRecentGame } from "../lib/recentGames";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -316,6 +316,10 @@ export function Lobby() {
   const [recentGames,  setRecentGames]  = useState<RecentGame[]>(buildRecentFromTracked);
   const [liveActivity, setLiveActivity] = useState<Game[]>(FALLBACK_LIVE);
 
+  // ── Blackjack Tables — live data shown directly on home page ──
+  const [bjTables,       setBjTables]       = useState<BJTable[]>([]);
+  const [pendingBJTable, setPendingBJTable] = useState<BJTable | null>(null);
+
   useEffect(() => {
     if (activeNav !== "home") return;
 
@@ -401,6 +405,29 @@ export function Lobby() {
     const id = setInterval(fetchOnline, 5000);
     return () => { mounted = false; clearInterval(id); };
   }, [sessionToken, activeNav]);
+
+  // ── Blackjack Tables fetch ─────────────────────────────────────
+  useEffect(() => {
+    if (activeNav !== "home") return;
+    let mounted = true;
+    function fetchBJ() {
+      fetch(`${BASE}/api/blackjack/tables`)
+        .then(r => r.json())
+        .then(d => { if (mounted) setBjTables(Array.isArray(d) ? d : []); })
+        .catch(() => {});
+    }
+    fetchBJ();
+    const id = setInterval(fetchBJ, 10_000);
+    return () => { mounted = false; clearInterval(id); };
+  }, [activeNav]);
+
+  const joinBJTable = (table: BJTable, password: string | null) => {
+    trackRecentGame("blackjack", "Blackjack", { tableId: table.id });
+    setAccessToken("blackjack", "open");
+    sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: table.id, password }));
+    setLocation("/blackjack");
+  };
+
 
   useEffect(() => {
     const routeToNav: Record<string, string> = {
@@ -676,11 +703,29 @@ export function Lobby() {
         <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }} tabIndex={-1} onFocus={(e) => e.currentTarget.blur()}>
           {activeNav === "home" && (
             <>
+              {pendingBJTable && (
+                <BJPasswordModal
+                  table={pendingBJTable}
+                  onClose={() => setPendingBJTable(null)}
+                  onSuccess={pw => { joinBJTable(pendingBJTable, pw); setPendingBJTable(null); }}
+                />
+              )}
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
                 <div className="absolute top-0 left-1/4 w-[600px] h-[300px] rounded-full opacity-[0.03]" style={{ background: "radial-gradient(ellipse, #a855f7 0%, transparent 70%)", filter: "blur(40px)" }} />
                 <div className="absolute top-[55%] left-1/3 w-[700px] h-[300px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(ellipse, #e8400a 0%, transparent 70%)", filter: "blur(50px)" }} />
               </div>
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
+                {bjTables.filter(t => t.isOpen).length > 0 && (
+                  <div>
+                    <SectionHeader label="Blackjack Tables" dotColor="#39ff14" />
+                    <CardGrid>
+                      {bjTables.filter(t => t.isOpen).map((table, i) => (
+                        <BJTableCard key={table.id} table={table} delay={`${-i}s`}
+                          onClick={() => table.hasPassword ? setPendingBJTable(table) : joinBJTable(table, null)} />
+                      ))}
+                    </CardGrid>
+                  </div>
+                )}
                 <div>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
                   {recentGames.length > 0 ? (

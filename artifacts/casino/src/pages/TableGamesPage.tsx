@@ -7,7 +7,7 @@ import { trackRecentGame } from "../lib/recentGames";
 import { Lock } from "lucide-react";
 
 /* ─── Types ───────────────────────────────────────────────────────────── */
-interface BJTable {
+export interface BJTable {
   id: number;
   name: string;
   minBet: number;
@@ -29,7 +29,7 @@ const THEME_CFG = {
 
 
 /* ─── Dynamic Blackjack Table Card ───────────────────────────────────── */
-function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick: () => void; delay: string }) {
+export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick: () => void; delay: string }) {
   const [hov, setHov] = useState(false);
   const th = THEME_CFG[table.theme as keyof typeof THEME_CFG] ?? THEME_CFG.velvet;
   const fmtBet = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
@@ -133,7 +133,7 @@ function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick: () =>
 }
 
 /* ─── Password Modal ─────────────────────────────────────────────────── */
-function PasswordModal({ table, onClose, onSuccess }: {
+export function BJPasswordModal({ table, onClose, onSuccess }: {
   table: BJTable;
   onClose: () => void;
   onSuccess: (password: string) => void;
@@ -261,7 +261,7 @@ export function TableGamesPage() {
     <PageWrapper title="Table Games" breadcrumb="Casino / Table Games" accentColor="#39ff14">
       {/* Password modal */}
       {pendingTable && (
-        <PasswordModal
+        <BJPasswordModal
           table={pendingTable}
           onClose={() => setPendingTable(null)}
           onSuccess={pw => { joinTable(pendingTable, pw); setPendingTable(null); }}
