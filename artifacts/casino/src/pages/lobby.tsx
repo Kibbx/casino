@@ -598,11 +598,11 @@ export function Lobby() {
                         game={item}
                         onPlay={() => {
                           if (item.launchKey) {
-                            enter(item.launchKey);
-                          } else {
-                            if (item.tokenId) setAccessToken(item.tokenId, "open");
-                            setLocation(item.route);
+                            const gameDef = GAMES[item.launchKey];
+                            if (gameDef) { enter(gameDef); return; }
                           }
+                          if (item.tokenId) setAccessToken(item.tokenId, "open");
+                          setLocation(item.route);
                         }}
                       />
                     ))}
