@@ -1147,6 +1147,13 @@
   outline: none !important;
 }
 
+/* explicitly kill focus rings on semantic elements that Chromium makes
+   focusable when they have overflow:auto/scroll (scroll-focus feature) */
+main, nav, aside, section, article, header, footer, div {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
 /* suppress scrollbar tracks on root frame — older CEF renders 1px coloured
    lines even when scrollbar-width: none is set on child elements */
 html, body, #root {

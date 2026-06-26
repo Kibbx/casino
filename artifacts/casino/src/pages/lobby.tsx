@@ -583,7 +583,7 @@ export function Lobby() {
           className="shrink-0 flex flex-col overflow-x-hidden transition-[width] duration-300 ease-in-out z-10"
           style={{ width: collapsed ? "52px" : "170px", background: "#060404", borderRight: "1px solid rgba(255,255,255,0.07)" }}
         >
-          <nav className="flex flex-col py-3 overflow-y-auto overflow-x-hidden flex-1">
+          <nav className="flex flex-col py-3 overflow-y-auto overflow-x-hidden flex-1" tabIndex={-1} onFocus={(e) => e.currentTarget.blur()} style={{ outline: "none" }}>
             {(appMode === "casino" ? navGroups : marketNavGroups).map((group, gi) => (
               <div key={gi}>
                 {group.section && !collapsed && (
@@ -670,7 +670,7 @@ export function Lobby() {
         </aside>
 
         {/* ── Main ── */}
-        <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }}>
+        <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }} tabIndex={-1} onFocus={(e) => e.currentTarget.blur()}>
           {activeNav === "home" && (
             <>
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -678,7 +678,7 @@ export function Lobby() {
                 <div className="absolute top-[55%] left-1/3 w-[700px] h-[300px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(ellipse, #e8400a 0%, transparent 70%)", filter: "blur(50px)" }} />
               </div>
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
-                <section>
+                <div>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
                   <CardGrid>
                     {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g) => (
@@ -686,8 +686,8 @@ export function Lobby() {
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
                   </CardGrid>
-                </section>
-                <section>
+                </div>
+                <div>
                   <SectionHeader label="Live Activity" dotColor="#22c55e" />
                   <CardGrid>
                     {liveActivity.slice(0, 4).map((g) => (
@@ -695,7 +695,7 @@ export function Lobby() {
                         onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
                     ))}
                   </CardGrid>
-                </section>
+                </div>
               </div>
             </>
           )}
