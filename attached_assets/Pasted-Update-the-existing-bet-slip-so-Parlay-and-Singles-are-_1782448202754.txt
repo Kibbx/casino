@@ -1,0 +1,92 @@
+Update the existing bet slip so Parlay and Singles are fully separated into two different tab views.
+
+Goal
+
+Right now, the bet slip visually shows both Parlay and Singles, but they should behave as separate sections.
+
+Requirements
+Tabs
+Keep the two tabs:
+Parlay
+Singles
+Only one tab should be active at a time.
+The active tab should have:
+Bold/darker text
+Green underline
+Clicking each tab should switch the visible content.
+Parlay Tab
+
+When Parlay is active, show:
+
+Header: 2 Pick Parlay
+Combined parlay odds on the right: 6.17
+Cash Out button
+Both selections grouped together:
+Norway Moneyline
+Senegal Moneyline
+Quick wager buttons:
++$1
++$5
++$20
+Custom wager input
+Large wager CTA:
+Enter Wager Amount
+$20.00 pays $123.52
+
+The Parlay tab should treat the selections as one combined bet.
+
+Singles Tab
+
+When Singles is active, show each pick as its own individual bet card.
+
+Each single card should include:
+
+Event info
+Team name
+Market type: Moneyline
+Individual odds
+Remove button
+Its own wager controls:
++$1
++$5
++$20
+Custom wager input
+Its own payout estimate
+
+Example singles:
+
+Single 1
+Event: Norway vs France • Today 3:00 PM
+Pick: Norway
+Market: Moneyline
+Odds: use sample odds such as +150
+Single 2
+Event: Senegal vs Iraq • Today 3:00 PM
+Pick: Senegal
+Market: Moneyline
+Odds: use sample odds such as +110
+State Behavior
+Maintain separate state for:
+Active tab
+Parlay wager amount
+Each single wager amount
+Updating the Parlay wager should not affect Singles wagers.
+Updating one Single wager should not affect the other Single wager.
+Removing a pick should remove it from both Parlay and Singles views.
+If fewer than 2 picks remain, hide or disable the Parlay tab content and show:
+Add at least 2 selections to build a parlay.
+Styling
+
+Match the attached screenshot closely:
+
+White background
+Large bold typography
+Green active underline
+Light green quick-add buttons
+Rounded custom amount input
+Gray wager CTA block
+Pink outlined remove buttons
+Clean spacing between sections
+Deliverable
+
+Update the current BetSlip component so Parlay and Singles are separated logically, visually, and functionally.

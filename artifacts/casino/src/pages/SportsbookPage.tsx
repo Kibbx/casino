@@ -132,6 +132,10 @@ function calcPayout(wagerStr: string, odds: number): string | null {
   return (w + profit).toFixed(2);
 }
 
+function americanToDecimal(odds: number): number {
+  return odds >= 0 ? odds / 100 + 1 : 100 / Math.abs(odds) + 1;
+}
+
 function fmtTime(iso: string, live: boolean) {
   if (live) return "LIVE";
   const d = new Date(iso);
@@ -924,19 +928,34 @@ function BetSlip({
   onPlace: (wager: string) => void;
   onSelect?: (ev: SbEvent, side: "home" | "away") => void;
 }) {
-  const [wager, setWager] = useState("");
-  const wagerNum   = parseFloat(wager) || 0;
-  const totalPayout = entries.reduce((s, e) => {
-    const p = calcPayout(wager, e.odds);
-    return s + (p ? parseFloat(p) : 0);
-  }, 0);
+  const [activeTab,    setActiveTab]    = useState<"parlay" | "singles">("parlay");
+  const [parlayWager,  setParlayWager]  = useState("");
+  const [singleWagers, setSingleWagers] = useState<Record<string, string>>({});
 
-  /* Build popular-bet rows from real events; fallback to static stubs */
+  const key = (e: BetSlipEntry) => `${e.eventId}-${e.side}`;
+  const getSingleWager = (e: BetSlipEntry) => singleWagers[key(e)] ?? "";
+  const setSingleWager = (e: BetSlipEntry, val: string) =>
+    setSingleWagers(prev => ({ ...prev, [key(e)]: val }));
+  const addToSingle = (e: BetSlipEntry, amt: number) => {
+    const cur = parseFloat(getSingleWager(e)) || 0;
+    setSingleWager(e, String(cur + amt));
+  };
+  const addToParlay = (amt: number) => {
+    const cur = parseFloat(parlayWager) || 0;
+    setParlayWager(String(cur + amt));
+  };
+
+  /* Parlay combined odds (decimal product → display as ×N) */
+  const combinedDecimal = entries.reduce((p, e) => p * americanToDecimal(e.odds), 1);
+  const parlayWagerNum  = parseFloat(parlayWager) || 0;
+  const parlayPayout    = parlayWagerNum > 0 ? parlayWagerNum * combinedDecimal : 0;
+
+  /* Popular bet rows */
   const STATIC_POPULAR = [
     { key: "dodgers", label: "Dodgers ML", league: "MLB", odds: -130, ev: null as SbEvent | null, side: "home" as const },
     { key: "celtics", label: "Celtics ML",  league: "NBA", odds: -135, ev: null as SbEvent | null, side: "home" as const },
   ];
-  const realRows = popularEvents.slice(0, 2).map((ev) => {
+  const realRows = popularEvents.slice(0, 2).map(ev => {
     const isFav = Math.abs(ev.bestHomeOdds ?? 999) <= Math.abs(ev.bestAwayOdds ?? 999);
     const side: "home" | "away" = isFav ? "home" : "away";
     const team = isFav ? ev.homeTeam : ev.awayTeam;
@@ -945,10 +964,19 @@ function BetSlip({
   });
   const popularRows = realRows.length >= 2 ? realRows : STATIC_POPULAR;
 
+  /* Quick-add chip button */
+  const QuickBtn = ({ label, onClick }: { label: string; onClick: () => void }) => (
+    <button onClick={onClick}
+      className="flex-1 py-1.5 rounded-md text-[10px] font-black transition-opacity active:opacity-70"
+      style={{ background: "rgba(0,230,118,0.10)", border: "1px solid rgba(0,230,118,0.2)", color: "#00E676" }}>
+      {label}
+    </button>
+  );
+
   return (
     <div style={{ background: "#111217", border: "1px solid #2A2B32", borderRadius: 12, overflow: "hidden" }}>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-center justify-between px-3.5 py-2.5"
         style={{ background: "#241715", borderBottom: "2px solid #FF6A00" }}>
         <div className="flex items-center gap-2">
@@ -972,6 +1000,23 @@ function BetSlip({
         )}
       </div>
 
+      {/* ── Tabs (only when picks exist) ── */}
+      {entries.length > 0 && (
+        <div className="flex" style={{ borderBottom: "1px solid #2A2B32" }}>
+          {(["parlay", "singles"] as const).map(tab => (
+            <button key={tab} onClick={() => setActiveTab(tab)}
+              className="flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest transition-colors relative"
+              style={{ color: activeTab === tab ? "#fff" : "#8B8E98" }}>
+              {tab === "parlay" ? "Parlay" : "Singles"}
+              {activeTab === tab && (
+                <span className="absolute bottom-0 left-1/4 right-1/4 h-[2px] rounded-full"
+                  style={{ background: "#00E676" }} />
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Empty state ── */}
       {entries.length === 0 && (
         <>
@@ -982,9 +1027,8 @@ function BetSlip({
               Tap any odds to build your slip.
             </p>
           </div>
-
-          {/* Popular Bets card */}
-          <div className="mx-3 mb-4 overflow-hidden" style={{ background: "#17181E", border: "1px solid #2A2B32", borderRadius: 9 }}>
+          <div className="mx-3 mb-4 overflow-hidden"
+            style={{ background: "#17181E", border: "1px solid #2A2B32", borderRadius: 9 }}>
             <div className="px-3 py-2 flex items-center gap-1.5" style={{ borderBottom: "1px solid #2A2B32" }}>
               <TrendingUp size={10} style={{ color: "#FF6A00" }} />
               <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: "#FF6A00" }}>
@@ -992,15 +1036,12 @@ function BetSlip({
               </span>
             </div>
             {popularRows.map((row, i) => (
-              <button
-                key={row.key}
+              <button key={row.key}
                 onClick={() => row.ev && onSelect && onSelect(row.ev, row.side)}
                 disabled={!row.ev || !onSelect}
-                className="w-full flex items-center justify-between px-3 py-2.5 text-left transition-colors"
-                style={{
-                  borderBottom: i < popularRows.length - 1 ? "1px solid #2A2B32" : "none",
-                  cursor: row.ev && onSelect ? "pointer" : "default",
-                }}>
+                className="w-full flex items-center justify-between px-3 py-2.5 text-left"
+                style={{ borderBottom: i < popularRows.length - 1 ? "1px solid #2A2B32" : "none",
+                  cursor: row.ev && onSelect ? "pointer" : "default" }}>
                 <div className="min-w-0">
                   <p className="text-[10px] font-bold text-white truncate">{row.label}</p>
                   <p className="text-[8px] uppercase tracking-wide truncate" style={{ color: "#8B8E98" }}>
@@ -1017,77 +1058,182 @@ function BetSlip({
         </>
       )}
 
-      {/* ── Selections ── */}
-      {entries.length > 0 && (
-        <div className="flex flex-col gap-2 p-3">
-          {entries.map(e => (
-            <div key={`${e.eventId}-${e.side}`} className="rounded-lg p-3 relative"
-              style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
-              <button onClick={() => onRemove(e.eventId, e.side)}
-                className="absolute top-2 right-2 transition-opacity hover:opacity-60"
-                style={{ color: "#8B8E98" }}>
-                <X size={12} />
-              </button>
-              <p className="text-[11px] font-bold text-white pr-5 leading-snug">{e.teamName}</p>
-              <p className="text-[8px] mt-0.5 uppercase tracking-wide" style={{ color: "#8B8E98" }}>
-                ML · {e.matchup}
+      {/* ══════════════════════════════════════════
+          PARLAY TAB
+      ══════════════════════════════════════════ */}
+      {entries.length > 0 && activeTab === "parlay" && (
+        <div className="flex flex-col">
+          {entries.length < 2 ? (
+            <div className="flex flex-col items-center gap-2 px-5 py-8 text-center">
+              <TrendingUp size={22} style={{ color: "rgba(255,255,255,0.08)" }} />
+              <p className="text-[11px] font-bold text-white">Need 2+ picks for a parlay</p>
+              <p className="text-[9px]" style={{ color: "#8B8E98" }}>
+                Add at least 2 selections to build a parlay.
               </p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="text-[15px] font-black"
-                  style={{ color: e.odds >= 0 ? "#00E676" : "#FF6A00" }}>
-                  {fmtOdds(e.odds)}
-                </span>
-                <span className="text-[8px]" style={{ color: "#8B8E98" }}>
-                  {impliedPct(e.odds)} implied
-                </span>
-              </div>
             </div>
-          ))}
+          ) : (
+            <>
+              {/* Parlay summary row */}
+              <div className="flex items-center justify-between px-3.5 py-2.5"
+                style={{ borderBottom: "1px solid #2A2B32" }}>
+                <div>
+                  <p className="text-[12px] font-black text-white">{entries.length} Pick Parlay</p>
+                  <p className="text-[9px] mt-0.5" style={{ color: "#8B8E98" }}>
+                    Combined odds
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[16px] font-black" style={{ color: "#00E676" }}>
+                    {combinedDecimal.toFixed(2)}×
+                  </p>
+                  <button className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
+                    style={{ background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.2)", color: "#00E676" }}>
+                    Cash Out
+                  </button>
+                </div>
+              </div>
+
+              {/* Picks list */}
+              <div className="flex flex-col px-3 pt-2 gap-1.5">
+                {entries.map(e => (
+                  <div key={key(e)} className="flex items-center gap-2 py-1.5 px-2 rounded-lg"
+                    style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
+                    <button onClick={() => onRemove(e.eventId, e.side)}
+                      className="shrink-0 rounded-full p-0.5 transition-opacity hover:opacity-70"
+                      style={{ border: "1px solid rgba(255,106,0,0.4)", color: "#FF6A00" }}>
+                      <X size={9} />
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-white truncate">{e.teamName}</p>
+                      <p className="text-[8px] uppercase tracking-wide" style={{ color: "#8B8E98" }}>
+                        Moneyline
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-black shrink-0"
+                      style={{ color: e.odds >= 0 ? "#00E676" : "rgba(255,255,255,0.55)" }}>
+                      {fmtOdds(e.odds)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Wager controls */}
+              <div className="px-3 pt-3 pb-3 flex flex-col gap-2">
+                {/* Quick-add row */}
+                <div className="flex gap-1.5">
+                  <QuickBtn label="+$1"  onClick={() => addToParlay(1)}  />
+                  <QuickBtn label="+$5"  onClick={() => addToParlay(5)}  />
+                  <QuickBtn label="+$20" onClick={() => addToParlay(20)} />
+                  {/* Custom input */}
+                  <div className="flex-1 flex items-center px-2 rounded-md"
+                    style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
+                    <span className="text-[10px] font-black" style={{ color: "#8B8E98" }}>$</span>
+                    <input type="number" min={0} placeholder="0.00" value={parlayWager}
+                      onChange={ev => setParlayWager(ev.target.value)}
+                      className="w-full bg-transparent text-[11px] font-bold text-white outline-none pl-1"
+                      style={{ caretColor: "#00E676" }} />
+                  </div>
+                </div>
+
+                {/* CTA block */}
+                <button onClick={() => onPlace(parlayWager)}
+                  className="w-full rounded-xl py-3 flex flex-col items-center transition-opacity active:opacity-80"
+                  style={{ background: parlayWagerNum > 0
+                    ? "linear-gradient(135deg, #FF6A00, #cc5500)"
+                    : "#17181E",
+                    border: parlayWagerNum > 0 ? "none" : "1px solid #2A2B32",
+                    boxShadow: parlayWagerNum > 0 ? "0 0 18px rgba(255,106,0,0.3)" : "none" }}>
+                  <span className="text-[12px] font-black uppercase tracking-widest"
+                    style={{ color: parlayWagerNum > 0 ? "#fff" : "#8B8E98" }}>
+                    {parlayWagerNum > 0 ? "Place Parlay" : "Enter Wager Amount"}
+                  </span>
+                  {parlayWagerNum > 0 && (
+                    <span className="text-[9px] mt-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+                      ${parlayWager} pays ${parlayPayout.toFixed(2)}
+                    </span>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      {/* ── Wager + Place ── */}
-      {entries.length > 0 && (
-        <div className="px-3 pb-3 flex flex-col gap-2" style={{ borderTop: "1px solid #2A2B32" }}>
-          {/* Wager row */}
-          <div className="flex items-center gap-2 px-3 py-2.5 mt-2"
-            style={{ background: "#17181E", border: "1px solid #2A2B32", borderRadius: 8 }}>
-            <span className="text-[13px] font-black" style={{ color: "#8B8E98" }}>$</span>
-            <input
-              type="number" min={0} placeholder="0.00" value={wager}
-              onChange={ev => setWager(ev.target.value)}
-              className="flex-1 bg-transparent text-[13px] font-bold text-white outline-none"
-              style={{ caretColor: "#FF6A00" }}
-            />
-            {totalPayout > 0 && (
-              <span className="text-[10px] font-black shrink-0" style={{ color: "#00E676" }}>
-                → ${totalPayout.toFixed(0)}
-              </span>
-            )}
-          </div>
+      {/* ══════════════════════════════════════════
+          SINGLES TAB
+      ══════════════════════════════════════════ */}
+      {entries.length > 0 && activeTab === "singles" && (
+        <div className="flex flex-col gap-2 p-3">
+          {entries.map(e => {
+            const sw     = getSingleWager(e);
+            const swNum  = parseFloat(sw) || 0;
+            const payout = swNum > 0 ? swNum * americanToDecimal(e.odds) : 0;
+            return (
+              <div key={key(e)} className="rounded-xl overflow-hidden"
+                style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
+                {/* Pick header */}
+                <div className="flex items-start justify-between px-3 pt-2.5 pb-1.5"
+                  style={{ borderBottom: "1px solid #2A2B32" }}>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] uppercase tracking-wide truncate" style={{ color: "#8B8E98" }}>
+                      {e.matchup}
+                    </p>
+                    <p className="text-[11px] font-bold text-white mt-0.5">{e.teamName}</p>
+                    <p className="text-[8px] uppercase tracking-wide mt-0.5" style={{ color: "#8B8E98" }}>
+                      Moneyline
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                    <button onClick={() => onRemove(e.eventId, e.side)}
+                      className="rounded-full p-0.5 transition-opacity hover:opacity-70"
+                      style={{ border: "1px solid rgba(255,106,0,0.4)", color: "#FF6A00" }}>
+                      <X size={9} />
+                    </button>
+                    <span className="text-[13px] font-black"
+                      style={{ color: e.odds >= 0 ? "#00E676" : "rgba(255,255,255,0.6)" }}>
+                      {fmtOdds(e.odds)}
+                    </span>
+                  </div>
+                </div>
 
-          {/* Payout summary */}
-          {wagerNum > 0 && (
-            <div className="flex justify-between text-[9px] px-0.5">
-              <span style={{ color: "#8B8E98" }}>Est. payout</span>
-              <span className="font-bold" style={{ color: "#00E676" }}>${totalPayout.toFixed(2)}</span>
-            </div>
-          )}
+                {/* Wager controls */}
+                <div className="px-2.5 py-2 flex flex-col gap-1.5">
+                  <div className="flex gap-1">
+                    <QuickBtn label="+$1"  onClick={() => addToSingle(e, 1)}  />
+                    <QuickBtn label="+$5"  onClick={() => addToSingle(e, 5)}  />
+                    <QuickBtn label="+$20" onClick={() => addToSingle(e, 20)} />
+                    <div className="flex-1 flex items-center px-2 rounded-md"
+                      style={{ background: "#111217", border: "1px solid #2A2B32" }}>
+                      <span className="text-[10px] font-black" style={{ color: "#8B8E98" }}>$</span>
+                      <input type="number" min={0} placeholder="0" value={sw}
+                        onChange={ev => setSingleWager(e, ev.target.value)}
+                        className="w-full bg-transparent text-[10px] font-bold text-white outline-none pl-1"
+                        style={{ caretColor: "#00E676" }} />
+                    </div>
+                  </div>
 
-          <p className="text-[8px] text-center" style={{ color: "rgba(255,255,255,0.18)" }}>
-            Virtual chips only · No real-money wagering
-          </p>
-
-          {/* Place button */}
-          <button onClick={() => onPlace(wager)}
-            className="w-full py-2.5 rounded-lg font-orbitron text-[11px] font-black uppercase tracking-widest transition-opacity active:opacity-80"
-            style={{
-              background: "linear-gradient(135deg, #FF6A00, #cc5500)",
-              color: "#fff",
-              boxShadow: "0 0 18px rgba(255,106,0,0.35)",
-            }}>
-            Place {entries.length === 1 ? "Bet" : `${entries.length} Bets`}
-          </button>
+                  {/* Payout / Place row */}
+                  <button onClick={() => onPlace(sw)}
+                    className="w-full rounded-lg py-2 flex flex-col items-center transition-opacity active:opacity-80"
+                    style={{ background: swNum > 0
+                      ? "linear-gradient(135deg, #FF6A00, #cc5500)"
+                      : "#111217",
+                      border: swNum > 0 ? "none" : "1px solid #2A2B32",
+                      boxShadow: swNum > 0 ? "0 0 12px rgba(255,106,0,0.25)" : "none" }}>
+                    <span className="text-[10px] font-black uppercase tracking-wide"
+                      style={{ color: swNum > 0 ? "#fff" : "#8B8E98" }}>
+                      {swNum > 0 ? "Place Bet" : "Enter Wager"}
+                    </span>
+                    {swNum > 0 && (
+                      <span className="text-[8px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
+                        ${sw} pays ${payout.toFixed(2)}
+                      </span>
+                    )}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
