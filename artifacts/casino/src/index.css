@@ -1139,3 +1139,10 @@
 *::-webkit-scrollbar {
   display: none;
 }
+
+/* suppress all focus outlines (FiveM game overlay — no keyboard nav) */
+*:focus,
+*:focus-visible,
+*:focus-within {
+  outline: none !important;
+}
