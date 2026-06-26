@@ -41,6 +41,7 @@ import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 
 const IMGS = import.meta.env.BASE_URL;
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 /* ─── Nav ─────────────────────────────────────────────────────── */
 type NavItem  = { id: string; label: string; icon: React.ElementType; expandable?: boolean; route?: string; staffOnly?: boolean; disabled?: boolean; tokenId?: string };
