@@ -98,7 +98,7 @@ const navGroups: NavGroup[] = [
   {
     section: "The Hub",
     items: [
-      { id: "rewards",      label: "Rewards",      icon: Star    },
+      { id: "rewards",      label: "Rewards",      icon: Star,   route: "/rewards" },
       { id: "challenges",   label: "Challenges",   icon: Target  },
       { id: "leaderboards", label: "Leaderboards", icon: BarChart2, route: "/leaderboards" },
     ],
@@ -361,6 +361,7 @@ export function Lobby() {
       "/poker-tables":            "poker",
       "/slots":                   "slots",
       "/horse-racing":            "horse-racing",
+      "/rewards":                 "rewards",
       "/leaderboards":            "leaderboards",
       "/market":                  "mkt-home",
       "/market/item-listings":    "mkt-item-listings",
