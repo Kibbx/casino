@@ -222,6 +222,22 @@ const GAME_CFG: Record<string, Pick<CatalogGame, "gradient" | "neonClass" | "neo
 };
 const DEFAULT_CFG = GAME_CFG.blackjack;
 
+/* ─── Home page static catalog cards ────────────────────────────── */
+const HOME_CASINO_GAMES: CatalogGame[] = [
+  { id: "table-games", name: "Table Games",  description: "Blackjack, Roulette, Baccarat & more. Classic casino action at live tables.", gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)", neonClass: "neon-green",  neonColor: "#39ff14", badge: "LIVE",    badgeColor: "#22c55e", players: "24 playing", betRange: "$1 – $5,000",    actionLabel: "Browse Tables", statusLabel: "OPEN", statusColor: "#22c55e" },
+  { id: "mini-games",  name: "Mini Games",   description: "Mines, Keno, Mob Tower & more. Fast-paced solo games with instant payouts.", gradient: "linear-gradient(135deg, #1a0800 0%, #2e1200 60%, #4a1e00 100%)", neonClass: "neon-orange", neonColor: "#f97316", badge: "POPULAR", badgeColor: "#e8400a", players: "Solo",       betRange: "$0.10 – $1,000", actionLabel: "Play Now",     statusLabel: "OPEN", statusColor: "#f97316" },
+  { id: "slots",       name: "Slots",        description: "Fortuna, Deadwood Dollars & more. Spin the reels for massive jackpots.",     gradient: "linear-gradient(135deg, #0d0020 0%, #1a0035 60%, #280050 100%)", neonClass: "neon-purple", neonColor: "#a855f7",                                                players: "Solo",       betRange: "$50 – $1,000",   actionLabel: "Spin Now",     statusLabel: "OPEN", statusColor: "#a855f7" },
+  { id: "poker",       name: "Poker",        description: "Texas Hold'em with live players and real chips on the line.",                 gradient: "linear-gradient(135deg, #1a0505 0%, #2e0808 60%, #4a1010 100%)", neonClass: "neon-red",    neonColor: "#ef4444",                                                players: "2–9 players", betRange: "$10 – unlimited", actionLabel: "Find Table",   statusLabel: "LIVE", statusColor: "#ef4444" },
+  { id: "sportsbook",  name: "Sportsbook",   description: "Bet on live events and sports. Place your wagers on the action.",            gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)", neonClass: "neon-teal",   neonColor: "#06b6d4",                                                players: "Open",       betRange: "$1 – $10,000",   actionLabel: "Place Bet",    statusLabel: "LIVE", statusColor: "#06b6d4" },
+];
+
+const HOME_EVENTS_GAMES: CatalogGame[] = [
+  { id: "tournaments",  name: "Tournaments",  description: "Compete in timed slot tournaments for top prizes and glory.",    gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", badge: "FEATURED", badgeColor: "#7c3aed", players: "Open bracket", betRange: "Buy-in varies",  actionLabel: "Enter",      statusLabel: "OPEN", statusColor: "#fbbf24" },
+  { id: "horse-racing", name: "Horse Racing", description: "Bet on your horse and watch the race unfold in real time.",       gradient: "linear-gradient(135deg, #1a0f05 0%, #2e1e08 60%, #4a3010 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24",                                                  players: "Up to 8",     betRange: "$10 – $5,000",  actionLabel: "Race Now",   statusLabel: "LIVE", statusColor: "#22c55e" },
+  { id: "lottery",      name: "Lottery",      description: "Pick your lucky numbers and try your luck at the jackpot.",        gradient: "linear-gradient(135deg, #1a0010 0%, #2e0020 60%, #4a0030 100%)", neonClass: "neon-pink",   neonColor: "#ec4899",                                                  players: "Open",        betRange: "$1 – $100",     actionLabel: "Buy Ticket", statusLabel: "OPEN", statusColor: "#ec4899" },
+  { id: "bingo",        name: "Bingo",        description: "Match your card numbers and shout bingo to win big.",              gradient: "linear-gradient(135deg, #0d1a20 0%, #122535 60%, #1a3545 100%)", neonClass: "neon-teal",   neonColor: "#06b6d4",                                                  players: "Multiplayer", betRange: "$1 – $500",     actionLabel: "Join Game",  statusLabel: "OPEN", statusColor: "#06b6d4" },
+];
+
 /* ─── Recently Played Card ────────────────────────────────────── */
 function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) {
   const gameKey = NAME_TO_GAME[game.name] ?? "blackjack";
@@ -679,20 +695,20 @@ export function Lobby() {
               </div>
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
                 <section>
-                  <SectionHeader label="Recently Played" dotColor="#d946ef" />
+                  <SectionHeader label="Casino" dotColor="#39ff14" />
                   <CardGrid>
-                    {(recentGames.length > 0 ? recentGames : FALLBACK_RECENT).map((g) => (
-                      <RecentCard key={g.id} game={g}
-                        onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
+                    {HOME_CASINO_GAMES.map((g, i) => (
+                      <CatalogCard key={g.id} game={g} delay={`${-i}s`}
+                        onClick={() => navigate(g.id)} />
                     ))}
                   </CardGrid>
                 </section>
                 <section>
-                  <SectionHeader label="Live Activity" dotColor="#22c55e" />
+                  <SectionHeader label="Events" dotColor="#fbbf24" />
                   <CardGrid>
-                    {liveActivity.slice(0, 4).map((g) => (
-                      <LiveCard key={g.id} game={g}
-                        onPlay={() => { const def = GAMES[NAME_TO_GAME[g.name]]; if (def) enter(def); }} />
+                    {HOME_EVENTS_GAMES.map((g, i) => (
+                      <CatalogCard key={g.id} game={g} delay={`${-i}s`}
+                        onClick={() => g.id === "horse-racing" ? enter(GAMES["horse"]) : navigate(g.id)} />
                     ))}
                   </CardGrid>
                 </section>
