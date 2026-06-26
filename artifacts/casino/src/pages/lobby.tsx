@@ -9,7 +9,7 @@ import {
   TrendingUp, Package, Gavel, History, ArrowLeftRight,
   Tag, Settings, ListOrdered, Store, AlertTriangle, Activity, Layers,
 } from "lucide-react";
-import { TableGamesPage, BJTable, BJTableCard, BJPasswordModal } from "./TableGamesPage";
+import { TableGamesPage } from "./TableGamesPage";
 import { MiniGamesPage }     from "./MiniGamesPage";
 import { SlotsPage }         from "./SlotsPage";
 import { PokerPage }         from "./PokerPage";
@@ -41,7 +41,7 @@ import { MaintenanceOverlay } from "./MaintenanceOverlay";
 import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY, FALLBACK_LIVE as LIVE_DEFAULTS } from "../lib/gamesData";
-import { getTrackedGames, trackRecentGame } from "../lib/recentGames";
+import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -121,42 +121,10 @@ interface Game {
   id: number; name: string; category: string; image: string;
   players: number; maxPlayers: number; activeBets: string; status: string;
 }
-type RecentGame = Game & { lastPlayed: string; result: string; won: boolean; cfgKey?: string; launchData?: Record<string, unknown> };
-
-
-function buildRecentFromTracked(): RecentGame[] {
-  return getTrackedGames()
-    .filter(t => GAME_DISPLAY[t.key])
-    .slice(0, 4)
-    .map((t, i) => {
-      const d = GAME_DISPLAY[t.key];
-      return {
-        id: 200 + i, name: d.name, category: d.category, image: d.image,
-        players: 0, maxPlayers: 0, activeBets: "", status: "Completed",
-        lastPlayed: timeSince(new Date(t.playedAt).toISOString()),
-        result: "—", won: false, cfgKey: t.key, launchData: t.launchData,
-      };
-    });
-}
 
 const FALLBACK_LIVE = LIVE_DEFAULTS as unknown as Game[];
 
 function parseBets(s: string) { return parseInt(s.replace(/[$,]/g, ""), 10) || 0; }
-
-function txToGameKey(type: string): string | null {
-  if (type === "loss" || type === "win" || type === "blackjack") return "blackjack";
-  if (type === "roulette")                                        return "roulette";
-  if (type === "baccarat")                                        return "baccarat";
-  if (type === "poker_win" || type === "buyin" || type === "rake" || type === "cashout") return "poker";
-  if (type === "slots")                                           return "slots";
-  if (type.startsWith("rome-slots"))                              return "rome_slots";
-  if (type.startsWith("western-slots"))                           return "western_slots";
-  if (type.startsWith("fortuna"))                                 return "fortune";
-  if (type.startsWith("highlow"))                                 return "highlow";
-  if (type === "horse_race")                                      return "horse";
-  if (type.startsWith("tournament"))                              return "tournament";
-  return null;
-}
 
 function pageToGameKey(page: string): string | null {
   if (page === "blackjack")                                                    return "blackjack";
@@ -173,23 +141,6 @@ function pageToGameKey(page: string): string | null {
   if (page === "tournaments" || page === "tournament")                         return "tournament";
   return null;
 }
-
-function timeSince(iso: string): string {
-  const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (m < 1)  return "just now";
-  if (m < 60) return `${m} min ago`;
-  const h = Math.floor(m / 60);
-  return h < 24 ? `${h} hr ago` : `${Math.floor(h / 24)} days ago`;
-}
-
-/* lobby demo cards → real game registry keys (launched via the gated useGameLauncher) */
-const NAME_TO_GAME: Record<string, string> = {
-  "Blackjack": "blackjack", "Roulette": "roulette", "Baccarat": "baccarat",
-  "Poker": "poker", "Slots": "slots", "Rome Slots": "slots",
-  "Backalley Slots": "slots", "Mines": "mines", "Mob Tower": "mobtower",
-  "Fortune Spin": "slots", "High Low": "highlow", "Horse Racing": "horse",
-  "Bingo": "bingo", "Lottery": "lottery", "Slots Tournament": "slots",
-};
 
 /* GAME_DISPLAY / cfgKey → wouter route (where clicking a card should navigate) */
 const CFG_KEY_TO_ROUTE: Record<string, string> = {
@@ -210,32 +161,6 @@ const CFG_KEY_TO_ROUTE: Record<string, string> = {
   tournament:    "/tournaments",
 };
 
-const DEFAULT_CFG = GAME_CFG.blackjack;
-
-/* ─── Recently Played Card ────────────────────────────────────── */
-function RecentCard({ game, onPlay }: { game: RecentGame; onPlay: () => void }) {
-  const cfg = GAME_CFG[game.cfgKey ?? (NAME_TO_GAME[game.name] ?? "blackjack")] ?? DEFAULT_CFG;
-  const hasResult = game.result !== "—";
-  const won = game.won;
-  const accent = won ? "#4ade80" : "#ef4444";
-  const g: CatalogGame = {
-    id: String(game.id),
-    name: game.name,
-    description: cfg.description,
-    gradient: cfg.gradient,
-    neonClass: cfg.neonClass,
-    neonColor: cfg.neonColor,
-    badge:      hasResult ? (won ? "WON" : "LOST") : undefined,
-    badgeColor: hasResult ? (won ? "#166534" : "#7f1d1d") : undefined,
-    players: `⏱ ${game.lastPlayed}`,
-    betRange: hasResult ? `${game.result} chips` : undefined,
-    actionLabel: "Play Again",
-    statusLabel: hasResult ? (won ? "WON" : "LOST") : "PLAYED",
-    statusColor: hasResult ? accent : "#64748b",
-  };
-  return <CatalogCard game={g} onClick={onPlay} />;
-}
-
 /* ─── Live Activity Card ──────────────────────────────────────── */
 function liveCtaFor(name: string, status: string): string {
   if (status === "Race Live")                   return "Watch Race";
@@ -249,8 +174,8 @@ function liveCtaFor(name: string, status: string): string {
 }
 
 function LiveCard({ game, onPlay }: { game: Game; onPlay: () => void }) {
-  const gameKey = NAME_TO_GAME[game.name] ?? "blackjack";
-  const cfg = GAME_CFG[gameKey] ?? DEFAULT_CFG;
+  const gameKey = Object.keys(GAME_DISPLAY).find(k => GAME_DISPLAY[k]?.name === game.name) ?? "blackjack";
+  const cfg = GAME_CFG[gameKey] ?? GAME_CFG.blackjack;
   const isRaceLive = game.status === "Race Live";
   const isLiveDraw = game.status === "Live Draw";
   const statusColor = isRaceLive ? "#ef4444"
@@ -312,48 +237,14 @@ export function Lobby() {
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
 
-  // ── Recently Played — navigation-tracked + transaction-enriched ─
-  const [recentGames,  setRecentGames]  = useState<RecentGame[]>(buildRecentFromTracked);
+  // ── Recently Played — persisted to localStorage ───────────────
+  const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedEntry[]>(getRecentlyPlayed);
   const [liveActivity, setLiveActivity] = useState<Game[]>(FALLBACK_LIVE);
-
-  // ── Blackjack Tables — live data shown directly on home page ──
-  const [bjTables,       setBjTables]       = useState<BJTable[]>([]);
-  const [pendingBJTable, setPendingBJTable] = useState<BJTable | null>(null);
 
   useEffect(() => {
     if (activeNav !== "home") return;
-
-    // Always rebuild from navigation history (refreshes relative timestamps)
-    const baseList = buildRecentFromTracked();
-    setRecentGames(baseList);
-    if (!sessionToken || !playerId || baseList.length === 0) return;
-
-    // Enrich with win/loss data from transaction history
-    const TX_WAGER = new Set(["loss","fortuna-bet","fortuna-bonus-buy","rome-slots-bet","western-slots-bet","highlow_bet","baccarat","sport_bet"]);
-    const TX_WIN   = new Set(["win","tournament_win","fortuna-win","rome-slots-win","western-slots-win"]);
-    fetch(`${BASE}/api/players/${playerId}/transactions`, {
-      headers: { Authorization: `Bearer ${sessionToken}` },
-    })
-      .then(r => r.ok ? r.json() : Promise.reject())
-      .then((txs: any[]) => {
-        const enrichment: Record<string, { net: number }> = {};
-        for (const tx of txs) {
-          const key = txToGameKey(tx.type);
-          if (!key) continue;
-          if (!enrichment[key]) enrichment[key] = { net: 0 };
-          if (TX_WIN.has(tx.type))   enrichment[key].net += Number(tx.amount);
-          if (TX_WAGER.has(tx.type)) enrichment[key].net -= Number(tx.amount);
-        }
-        const enriched = baseList.map(g => {
-          const e = g.cfgKey ? enrichment[g.cfgKey] : null;
-          if (!e) return g;
-          const net = Math.round(e.net);
-          return { ...g, result: (net >= 0 ? "+" : "") + net.toLocaleString(), won: net >= 0 };
-        });
-        setRecentGames(enriched);
-      })
-      .catch(() => {});
-  }, [sessionToken, playerId, activeNav]);
+    setRecentlyPlayed(getRecentlyPlayed());
+  }, [activeNav]);
 
   // ── Live Activity — real online players, refreshed every 5 s ──
   useEffect(() => {
@@ -406,30 +297,6 @@ export function Lobby() {
     return () => { mounted = false; clearInterval(id); };
   }, [sessionToken, activeNav]);
 
-  // ── Blackjack Tables fetch ─────────────────────────────────────
-  useEffect(() => {
-    if (activeNav !== "home") return;
-    let mounted = true;
-    function fetchBJ() {
-      fetch(`${BASE}/api/blackjack/tables`)
-        .then(r => r.json())
-        .then(d => { if (mounted) setBjTables(Array.isArray(d) ? d : []); })
-        .catch(() => {});
-    }
-    fetchBJ();
-    const id = setInterval(fetchBJ, 10_000);
-    return () => { mounted = false; clearInterval(id); };
-  }, [activeNav]);
-
-  const joinBJTable = (table: BJTable, password: string | null) => {
-    trackRecentGame("blackjack", "Blackjack", { tableId: table.id });
-    setAccessToken("blackjack", "open");
-    sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: table.id, password }));
-    setLocation("/blackjack");
-  };
-
-  const openTables    = bjTables.filter(t => t.isOpen);
-  const visibleRecent = recentGames.slice(0, Math.max(0, 4 - openTables.length));
 
   useEffect(() => {
     const routeToNav: Record<string, string> = {
@@ -705,13 +572,6 @@ export function Lobby() {
         <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }} tabIndex={-1} onFocus={(e) => e.currentTarget.blur()}>
           {activeNav === "home" && (
             <>
-              {pendingBJTable && (
-                <BJPasswordModal
-                  table={pendingBJTable}
-                  onClose={() => setPendingBJTable(null)}
-                  onSuccess={pw => { joinBJTable(pendingBJTable, pw); setPendingBJTable(null); }}
-                />
-              )}
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
                 <div className="absolute top-0 left-1/4 w-[600px] h-[300px] rounded-full opacity-[0.03]" style={{ background: "radial-gradient(ellipse, #a855f7 0%, transparent 70%)", filter: "blur(40px)" }} />
                 <div className="absolute top-[55%] left-1/3 w-[700px] h-[300px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(ellipse, #e8400a 0%, transparent 70%)", filter: "blur(50px)" }} />
@@ -719,28 +579,24 @@ export function Lobby() {
               <div className="relative z-10 w-full max-w-[1280px] mx-auto px-6 pt-8 pb-12 flex flex-col gap-8">
                 <div>
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
-                  {openTables.length > 0 || visibleRecent.length > 0 ? (
+                  {recentlyPlayed.length > 0 ? (
                     <CardGrid>
-                      {openTables.map((table, i) => (
-                        <BJTableCard key={table.id} table={table} delay={`${-i}s`}
-                          onClick={() => table.hasPassword ? setPendingBJTable(table) : joinBJTable(table, null)} />
-                      ))}
-                      {visibleRecent.map((g) => (
-                        <RecentCard key={g.id} game={g}
-                          onPlay={() => {
-                            if (g.launchData?.tableId !== undefined) {
-                              setAccessToken("blackjack", "open");
-                              sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: g.launchData.tableId, password: g.launchData.password ?? null }));
-                              setLocation("/blackjack");
-                            } else {
-                              setLocation(CFG_KEY_TO_ROUTE[g.cfgKey ?? ""] ?? "/tablegames");
-                            }
-                          }} />
+                      {recentlyPlayed.map((entry) => (
+                        <CatalogCard key={entry.id} game={entry.game} onClick={() => {
+                          if (entry.launchData?.tableId !== undefined) {
+                            setAccessToken("blackjack", "open");
+                            sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: entry.launchData.tableId, password: entry.launchData.password ?? null }));
+                            setLocation("/blackjack");
+                          } else {
+                            if (entry.tokenId) setAccessToken(entry.tokenId, "open");
+                            setLocation(entry.route);
+                          }
+                        }} />
                       ))}
                     </CardGrid>
                   ) : (
                     <p className="text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.22)" }}>
-                      Visit a game to see it here.
+                      No recently played games yet. Pick a game to get started.
                     </p>
                   )}
                 </div>

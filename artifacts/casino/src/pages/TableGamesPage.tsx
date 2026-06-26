@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
-import { PageWrapper, CatalogCard, CardGrid } from "./shared";
+import { PageWrapper, CatalogCard, CardGrid, CatalogGame } from "./shared";
 import { tableGamesData } from "../lib/gamesData";
 import { setAccessToken } from "../lib/gamePasswordGuard";
 import { trackRecentGame } from "../lib/recentGames";
+import { addRecentlyPlayed } from "../lib/recentlyPlayed";
 import { Lock } from "lucide-react";
 
 /* ─── Types ───────────────────────────────────────────────────────────── */
@@ -26,6 +27,25 @@ const THEME_CFG = {
   gold:    { gradient: "linear-gradient(135deg, #1a1505 0%, #2e2208 60%, #4a380a 100%)", neonClass: "neon-yellow", neonColor: "#fbbf24", label: "High Roller" },
   diamond: { gradient: "linear-gradient(135deg, #050d1a 0%, #091625 60%, #0f2a45 100%)", neonClass: "neon-blue",   neonColor: "#06b6d4", label: "VIP" },
 } as const;
+
+function bjTableToGame(table: BJTable): CatalogGame {
+  const th = THEME_CFG[table.theme as keyof typeof THEME_CFG] ?? THEME_CFG.velvet;
+  const fmtBet = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
+  return {
+    id: `bj-table-${table.id}`,
+    name: table.name,
+    description: `${th.label} · Blackjack · ${table.numSeats} seats`,
+    gradient: th.gradient,
+    neonClass: th.neonClass,
+    neonColor: th.neonColor,
+    badge: table.hasPassword ? "PRIVATE" : "BLACKJACK",
+    players: `${table.seatedCount}/${table.numSeats}`,
+    betRange: `${fmtBet(table.minBet)} – ${fmtBet(table.maxBet)}`,
+    actionLabel: table.hasPassword ? "Join Private" : "Join Table",
+    statusLabel: "OPEN",
+    statusColor: "#22c55e",
+  };
+}
 
 
 /* ─── Dynamic Blackjack Table Card ───────────────────────────────────── */
@@ -240,6 +260,12 @@ export function TableGamesPage() {
   }, [fetchTables]);
 
   const joinTable = (table: BJTable, password: string | null) => {
+    addRecentlyPlayed({
+      id: `bj-table-${table.id}`,
+      game: bjTableToGame(table),
+      route: "/blackjack",
+      launchData: { tableId: table.id, password },
+    });
     trackRecentGame("blackjack", "Blackjack", { tableId: table.id });
     setAccessToken("blackjack", "open");
     sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: table.id, password }));
@@ -292,6 +318,7 @@ export function TableGamesPage() {
         {/* Static games */}
         {tableGamesData.map((g, i) => (
           <CatalogCard key={g.id} game={g} delay={`${-(openTables.length + i)}s`} onClick={() => {
+            addRecentlyPlayed({ id: g.id, game: g, route: g.route, tokenId: g.tokenId });
             trackRecentGame(g.lobbyKey ?? g.id, g.name);
             if (g.tokenId) setAccessToken(g.tokenId, "open");
             setLocation(g.route);

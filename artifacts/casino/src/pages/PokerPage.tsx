@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { PageWrapper, CatalogCard, CatalogGame, CardGrid } from "./shared";
 import { useStore } from "../store";
+import { addRecentlyPlayed } from "../lib/recentlyPlayed";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -98,6 +99,11 @@ export function PokerPage() {
   }, [fetchTables]);
 
   function joinTable(table: PokerTable) {
+    addRecentlyPlayed({
+      id: `poker-table-${table.id}`,
+      game: tableToGame(table),
+      route: `/table/${table.id}`,
+    });
     setLocation(`/table/${table.id}`);
   }
 
