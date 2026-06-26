@@ -126,18 +126,15 @@ export function LeaderboardsPage() {
   const [hovered, setHovered] = useState<number | null>(null);
   const snapshotSaved = useRef(false);
 
-  /* fetch */
+  /* fetch — no auth required, leaderboard is public */
   useEffect(() => {
-    if (!sessionToken) return;
     setLoading(true);
     setError(null);
-    fetch(`${BASE}/api/players/leaderboard`, {
-      headers: { Authorization: `Bearer ${sessionToken}` },
-    })
+    fetch(`${BASE}/api/players/leaderboard`)
       .then(r => r.ok ? r.json() : r.json().then((e: any) => Promise.reject(e?.error ?? "Failed")))
       .then((rows: ApiEntry[]) => { setData(rows); setLoading(false); })
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load"); setLoading(false); });
-  }, [sessionToken]);
+  }, []);
 
   /* sorted + ranked + trend — always by total winnings */
   const ranked = useMemo((): RankedEntry[] => {

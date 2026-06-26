@@ -297,6 +297,52 @@ router.post("/change-pin", requirePlayer, async (req, res) => {
   return res.json({ success: true });
 });
 
+// ── Public leaderboard — must be before /:playerId wildcard ──────────────────
+router.get("/leaderboard", async (_req, res) => {
+  const players = await db
+    .select({
+      id: playersTable.id,
+      username: playersTable.username,
+      chips: playersTable.chips,
+      handsPlayed: playersTable.handsPlayed,
+      wins: playersTable.wins,
+      totalWon: playersTable.totalWon,
+      avatarUrl: playersTable.avatarUrl,
+      staffRole: playersTable.staffRole,
+    })
+    .from(playersTable)
+    .where(sqlFn`${playersTable.isBot} = false`);
+
+  function getTier(chips: number): string {
+    if (chips >= 1_000_000) return "Diamond";
+    if (chips >= 500_000)   return "Platinum";
+    if (chips >= 200_000)   return "Gold";
+    if (chips >= 50_000)    return "Silver";
+    return "Bronze";
+  }
+
+  const result = players.map(p => {
+    const wins = (p.wins as number) ?? 0;
+    const games = p.handsPlayed ?? 0;
+    const winRate = games > 0 ? Math.round((wins / games) * 100) : 0;
+    const totalWon = (p.totalWon as number) ?? 0;
+    return {
+      id: p.id,
+      username: p.username,
+      games,
+      wins,
+      winRate,
+      totalWon,
+      chips: p.chips,
+      tier: getTier(p.chips),
+      avatarUrl: p.avatarUrl ?? null,
+      staffRole: p.staffRole ?? null,
+    };
+  });
+
+  return res.json(result);
+});
+
 // Get single player by ID — own session or banker
 router.get("/:playerId", requireAuth, async (req, res) => {
   const id = parseInt(req.params.playerId as string);
@@ -667,52 +713,6 @@ router.patch("/:playerId/username", requireBankerOrOwner, async (req, res) => {
   if (existing && existing.id !== id) return res.status(400).json({ error: "That name is already taken by another player." });
   await db.update(playersTable).set({ username: trimmed }).where(eq(playersTable.id, id));
   return res.json({ success: true, username: trimmed });
-});
-
-// ── Public leaderboard (requires player auth) ─────────────────────────────────
-router.get("/leaderboard", requirePlayer, async (_req, res) => {
-  const players = await db
-    .select({
-      id: playersTable.id,
-      username: playersTable.username,
-      chips: playersTable.chips,
-      handsPlayed: playersTable.handsPlayed,
-      wins: playersTable.wins,
-      totalWon: playersTable.totalWon,
-      avatarUrl: playersTable.avatarUrl,
-      staffRole: playersTable.staffRole,
-    })
-    .from(playersTable)
-    .where(sqlFn`${playersTable.isBot} = false`);
-
-  function getTier(chips: number): string {
-    if (chips >= 1_000_000) return "Diamond";
-    if (chips >= 500_000)   return "Platinum";
-    if (chips >= 200_000)   return "Gold";
-    if (chips >= 50_000)    return "Silver";
-    return "Bronze";
-  }
-
-  const result = players.map(p => {
-    const wins = (p.wins as number) ?? 0;
-    const games = p.handsPlayed ?? 0;
-    const winRate = games > 0 ? Math.round((wins / games) * 100) : 0;
-    const totalWon = (p.totalWon as number) ?? 0;
-    return {
-      id: p.id,
-      username: p.username,
-      games,
-      wins,
-      winRate,
-      totalWon,
-      chips: p.chips,
-      tier: getTier(p.chips),
-      avatarUrl: p.avatarUrl ?? null,
-      staffRole: p.staffRole ?? null,
-    };
-  });
-
-  return res.json(result);
 });
 
 export default router;
