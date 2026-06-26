@@ -76,6 +76,90 @@ for (const [sport, keys] of Object.entries(SPORT_TO_KEYS)) {
   for (const key of keys) SPORT_KEY_TO_SPORT[key] = sport;
 }
 
+/* ── Decimal → American odds conversion ─────────────────────────────────── */
+
+function decimalToAmerican(dec: number): number {
+  if (isNaN(dec) || dec <= 1) return -110;
+  if (dec >= 2.0) return Math.round((dec - 1) * 100);
+  return Math.round(-100 / (dec - 1));
+}
+
+/* ── Sport name → sportKey mapping (for staff events) ───────────────────── */
+
+const STAFF_SPORT_TO_KEY: Record<string, string> = {
+  "NFL":                "americanfootball_nfl",
+  "NBA":                "basketball_nba",
+  "MLB":                "baseball_mlb",
+  "NHL":                "icehockey_nhl",
+  "UFC":                "mma_mixed_martial_arts",
+  "Soccer":             "soccer_usa_mls",
+  "Boxing":             "boxing_boxing",
+  "Tennis":             "tennis_atp_us_open",
+  "Golf":               "golf_pga_championship_winner",
+  "College Football":   "americanfootball_ncaaf",
+  "College Basketball": "basketball_ncaab",
+};
+
+/* ── Staff events (sport_bet_events) — always fetched fresh, no cache ────── */
+// These appear on the player sportsbook immediately after creation.
+// status=open  → visible + bettable odds
+// status=closed → visible but odds disabled (null)
+// status=settled/void → hidden from sportsbook
+
+async function getStaffEvents(): Promise<SbEvent[]> {
+  try {
+    const rows = await db.execute(sql`
+      SELECT
+        e.id, e.title, e.league, e.sport, e.game_date, e.status,
+        json_agg(json_build_object('label', o.label, 'odds', o.odds) ORDER BY o.id ASC) AS options
+      FROM sport_bet_events e
+      JOIN sport_bet_event_options o ON o.event_id = e.id
+      WHERE e.status IN ('open', 'closed')
+      GROUP BY e.id, e.title, e.league, e.sport, e.game_date, e.status
+      HAVING COUNT(o.id) >= 2
+      ORDER BY e.game_date ASC NULLS LAST, e.id ASC
+    `);
+
+    return (rows.rows as any[]).map(r => {
+      const opts    = r.options as Array<{ label: string; odds: string }>;
+      const home    = opts[0];
+      const away    = opts[1];
+      const sport   = r.sport || r.league || "Other";
+      const sportKey = STAFF_SPORT_TO_KEY[sport] ?? "other";
+      const isOpen  = r.status === "open";
+      const homeOdds = isOpen ? decimalToAmerican(parseFloat(home.odds)) : null;
+      const awayOdds = isOpen ? decimalToAmerican(parseFloat(away.odds)) : null;
+
+      return {
+        id: `staff-${r.id}`,
+        sportKey,
+        sport,
+        league: r.league || sport,
+        homeTeam: home.label,
+        awayTeam: away.label,
+        commenceTime: r.game_date
+          ? new Date(r.game_date as string).toISOString()
+          : new Date().toISOString(),
+        live: false,
+        bestHomeOdds: homeOdds,
+        bestAwayOdds: awayOdds,
+        bestHomeBook: "staff",
+        bestAwayBook: "staff",
+        eventName: r.title,
+      } satisfies SbEvent;
+    });
+  } catch (e) {
+    console.error("[sportsbook] getStaffEvents error:", e);
+    return [];
+  }
+}
+
+function filterStaffForSport(events: SbEvent[], sport: string): SbEvent[] {
+  if (sport === "all") return events;
+  if (sport === "Live") return []; // staff events are never live
+  return events.filter(e => e.sport === sport);
+}
+
 /* ── Manual events helpers ──────────────────────────────────────────────── */
 
 async function getManualEvents(): Promise<SbEvent[]> {
@@ -235,15 +319,19 @@ router.get("/odds", async (req, res) => {
   const sport    = ((req.query.sport as string) ?? "all").trim();
   const cacheKey = sport;
 
+  // Staff events and manual events are always fetched fresh (bypass cache)
+  // so that newly created or updated staff events appear immediately.
+  const [staffAll, manualAll] = await Promise.all([getStaffEvents(), getManualEvents()]);
+  const staff  = filterStaffForSport(staffAll, sport);
+  const manual = filterManualForSport(manualAll, sport);
+
   const hit = cache.get(cacheKey);
   if (hit && hit.expiresAt > Date.now()) {
-    return res.json({ events: hit.events, cached: true, fetchedAt: hit.fetchedAt });
+    // Cache hit for external API events — prepend fresh staff + manual events
+    return res.json({ events: [...staff, ...manual, ...hit.events], cached: true, fetchedAt: hit.fetchedAt });
   }
 
   const apiKey = process.env.ODDS_API_KEY;
-
-  const manualAll = await getManualEvents();
-  const manual    = filterManualForSport(manualAll, sport);
 
   if (!apiKey) {
     const all      = makeMockEvents();
@@ -252,9 +340,10 @@ router.get("/odds", async (req, res) => {
       : sport === "Live"
         ? all.filter(e => e.live)
         : all.filter(e => e.sport === sport);
-    const merged    = [...manual, ...filtered];
+    const merged    = [...staff, ...manual, ...filtered];
     const fetchedAt = new Date().toISOString();
-    cache.set(cacheKey, { events: merged, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
+    // Cache only the mock/API portion, not staff events
+    cache.set(cacheKey, { events: filtered, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
     return res.json({ events: merged, cached: false, fetchedAt });
   }
 
@@ -265,14 +354,15 @@ router.get("/odds", async (req, res) => {
         : (SPORT_TO_KEYS[sport] ?? []);
 
     if (sportKeys.length === 0) {
-      return res.json({ events: manual, cached: false, fetchedAt: new Date().toISOString() });
+      return res.json({ events: [...staff, ...manual], cached: false, fetchedAt: new Date().toISOString() });
     }
 
     const apiEvents = await fetchFromOddsApi(sportKeys);
     const filtered  = sport === "Live" ? apiEvents.filter(e => e.live) : apiEvents;
-    const merged    = [...manual, ...filtered];
+    const merged    = [...staff, ...manual, ...filtered];
     const fetchedAt = new Date().toISOString();
-    cache.set(cacheKey, { events: merged, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
+    // Cache only the API portion, not staff events
+    cache.set(cacheKey, { events: filtered, fetchedAt, expiresAt: Date.now() + CACHE_TTL_MS });
     return res.json({ events: merged, cached: false, fetchedAt });
   } catch (err) {
     const msg = (err as Error).message;

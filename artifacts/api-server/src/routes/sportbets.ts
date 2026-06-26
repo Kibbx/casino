@@ -508,7 +508,7 @@ router.get("/events", requireSportbetsOrAbove, async (_req, res) => {
 
 router.post("/events", requireSportbetsOrAbove, async (req, res) => {
   const session = (req as any).bankerSession;
-  const { title, description, league, gameDate, options, rakePercent } = req.body;
+  const { title, description, league, sport, gameDate, options, rakePercent } = req.body;
 
   if (!title?.trim()) return res.status(400).json({ error: "Title is required" });
   if (!Array.isArray(options) || options.length < 2) return res.status(400).json({ error: "At least 2 options required" });
@@ -519,10 +519,11 @@ router.post("/events", requireSportbetsOrAbove, async (req, res) => {
 
   const rake = Math.max(0, Math.min(100, parseInt(rakePercent ?? "0") || 0));
   const gameDateVal = gameDate ? new Date(gameDate) : null;
+  const sportVal = sport?.trim() || null;
 
   const [event] = await db
     .insert(sportBetEventsTable)
-    .values({ title: title.trim(), description: description?.trim() || "", league: league?.trim() || "", gameDate: gameDateVal, rakePercent: rake, createdBy: session.username } as any)
+    .values({ title: title.trim(), description: description?.trim() || "", league: league?.trim() || "", gameDate: gameDateVal, rakePercent: rake, createdBy: session.username, sport: sportVal } as any)
     .returning();
 
   const insertedOptions = await db

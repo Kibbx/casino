@@ -1,0 +1,56 @@
+Update the sportsbook event creation flow so events created in the Staff/Admin “Sport Events” tab automatically appear on the public Sportsbook page.
+
+Goal:
+When staff creates a sports event, it should immediately show as a sportsbook card in the player-facing sportsbook UI, including odds, sport category, matchup, and betting options.
+
+Requirements:
+1. Connect created staff events to the sportsbook event feed.
+2. Created events should appear on the Sportsbook page without manual database edits.
+3. Support these fields:
+   - Sport/category: NFL, NBA, MLB, NHL, UFC, Soccer, Boxing, Tennis, Golf, College Football, College Basketball
+   - League
+   - Team/player 1
+   - Team/player 2
+   - Start time
+   - Moneyline odds for both sides
+   - Optional spread
+   - Optional total
+   - Status: Open, Closed, Settled, Void
+4. Display new events in the correct sport tab/filter.
+5. Match the existing sportsbook card design shown on the player page.
+6. Allow players to click the odds and add the selection to the bet slip.
+7. Respect event status:
+   - Open = visible and bettable
+   - Closed = visible but odds disabled
+   - Settled = hidden from active sportsbook cards
+   - Void = hidden from active sportsbook cards
+8. The sportsbook page should refresh smoothly after event creation:
+   - Use existing API/state management if available
+   - Otherwise add polling or refetch after creation
+   - Avoid full page reloads if possible
+9. Staff actions should sync with the sportsbook:
+   - Close Betting disables the odds
+   - Settle Event grades linked bets
+   - Delete Event removes it only if no wagers exist
+10. Store all event data in one shared source of truth so the staff dashboard and sportsbook page never get out of sync.
+
+Implementation hints:
+Search the codebase for:
+- Sport Events
+- Create Event
+- sportsbook
+- events
+- odds
+- bet slip
+- event card
+- getEvents
+- createEvent
+- sportsEvents
+- staff dashboard
+
+Testing:
+- Create a new NFL event in the staff tab
+- Confirm it appears on the Sportsbook page under NFL
+- Click odds and confirm it adds to the bet slip
+- Close betting and confirm odds become disabled
+- Settle the event and confirm it disappears from active sportsbook listings

@@ -1443,6 +1443,10 @@ export async function runMigrations(): Promise<void> {
       `,
     },
     {
+      name: "sport_bet_events.sport column",
+      sql: `ALTER TABLE sport_bet_events ADD COLUMN IF NOT EXISTS sport TEXT`,
+    },
+    {
       name: "settings seed: sbAutoDeleteEnabled",
       sql: `INSERT INTO settings (key, value) VALUES ('sbAutoDeleteEnabled', 'true') ON CONFLICT (key) DO NOTHING`,
     },

@@ -11516,6 +11516,7 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
   const [showCreateEvent, setShowCreateEvent] = useState(false);
   const [createTitle, setCreateTitle] = useState("");
   const [createDesc, setCreateDesc] = useState("");
+  const [createSport, setCreateSport] = useState("NFL");
   const [createLeague, setCreateLeague] = useState("");
   const [createGameDate, setCreateGameDate] = useState("");
   const [createRake, setCreateRake] = useState("0");
@@ -11563,14 +11564,14 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
         method: "POST",
         headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: createTitle, description: createDesc, league: createLeague,
+          title: createTitle, description: createDesc, sport: createSport, league: createLeague || createSport,
           gameDate: createGameDate ? datetimeLocalToEasternUTC(createGameDate) : null,
           options: createOptions, rakePercent: parseInt(createRake) || 0,
         }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Failed");
-      setCreateTitle(""); setCreateDesc(""); setCreateLeague(""); setCreateGameDate(""); setCreateRake("0");
+      setCreateTitle(""); setCreateDesc(""); setCreateSport("NFL"); setCreateLeague(""); setCreateGameDate(""); setCreateRake("0");
       setCreateOptions([{ label: "", odds: "" }, { label: "", odds: "" }]);
       setShowCreateEvent(false); loadSbEvents();
     } catch (err: any) { setCreateEventMsg(err.message || "Failed"); }
@@ -11748,16 +11749,28 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
             {showCreateEvent ? (
               <form onSubmit={handleCreateEvent} style={{ paddingTop: "16px", display: "flex", flexDirection: "column", gap: "10px" }}>
                 <p style={{ fontSize: "10px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", margin: 0 }}>New Event</p>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: "9px", color: "#64748b", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Sport Category</label>
+                    <select value={createSport} onChange={e => { setCreateSport(e.target.value); setCreateLeague(""); }}
+                      style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", cursor: "pointer" }}>
+                      {["NFL","NBA","MLB","NHL","UFC","Soccer","Boxing","Tennis","Golf","College Football","College Basketball"].map(s => (
+                        <option key={s} value={s} style={{ background: "#1e293b" }}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ fontSize: "9px", color: "#64748b", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>League / Sub-label (optional)</label>
+                    <input value={createLeague} onChange={e => setCreateLeague(e.target.value)} placeholder={`e.g. ${createSport === "Soccer" ? "EPL, MLS" : createSport === "College Football" ? "NCAAF" : createSport}`}
+                      style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box" }} />
+                  </div>
+                </div>
                 <input value={createTitle} onChange={e => setCreateTitle(e.target.value)} placeholder="Event title (e.g. Chiefs vs Eagles)"
                   style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <input value={createLeague} onChange={e => setCreateLeague(e.target.value)} placeholder="League (e.g. NFL, NBA, UFC)"
-                    style={{ flex: 1, background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
-                  <div style={{ flex: 1, position: "relative" }}>
-                    <label style={{ fontSize: "9px", color: "#64748b", position: "absolute", top: "-14px", left: 0, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" }}>Game Date &amp; Time (EST)</label>
-                    <input type="datetime-local" value={createGameDate} onChange={e => setCreateGameDate(e.target.value)}
-                      style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box", colorScheme: "dark" }} />
-                  </div>
+                <div style={{ position: "relative" }}>
+                  <label style={{ fontSize: "9px", color: "#64748b", display: "block", marginBottom: "4px", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase" }}>Game Date &amp; Time (EST)</label>
+                  <input type="datetime-local" value={createGameDate} onChange={e => setCreateGameDate(e.target.value)}
+                    style={{ width: "100%", background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", boxSizing: "border-box", colorScheme: "dark" }} />
                 </div>
                 <input value={createDesc} onChange={e => setCreateDesc(e.target.value)} placeholder="Description (optional)"
                   style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none" }} />
