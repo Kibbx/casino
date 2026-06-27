@@ -115,6 +115,38 @@ export function claimReward(id: number, cost: number, currentChips = 0): ClaimRe
   return { ok: true };
 }
 
+export interface SubRank {
+  tierName: string;
+  division: "I" | "II" | "III";
+  label: string;
+  progress: number;
+  nextTierName: string | null;
+  tierColor: string;
+}
+
+export function getSubRank(xp: number): SubRank {
+  const tierIdx = TIERS.reduce((best, _, i) => (xp >= TIERS[i].minXP ? i : best), 0);
+  const cur  = TIERS[tierIdx];
+  const next = TIERS[tierIdx + 1] ?? null;
+
+  if (!next) {
+    return { tierName: cur.name, division: "III", label: `${cur.name.toUpperCase()} III`, progress: 100, nextTierName: null, tierColor: cur.color };
+  }
+
+  const span     = next.minXP - cur.minXP;
+  const pos      = Math.min(1, (xp - cur.minXP) / span);
+  const division: "I" | "II" | "III" = pos < 1 / 3 ? "I" : pos < 2 / 3 ? "II" : "III";
+
+  return {
+    tierName:    cur.name,
+    division,
+    label:       `${cur.name.toUpperCase()} ${division}`,
+    progress:    Math.round(pos * 100),
+    nextTierName: next.name,
+    tierColor:   cur.color,
+  };
+}
+
 export function subscribeRewards(cb: (s: RewardsState) => void): () => void {
   const h = (e: Event) => cb((e as CustomEvent<RewardsState>).detail);
   window.addEventListener(REWARDS_EVENT, h);

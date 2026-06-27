@@ -9,6 +9,7 @@ import {
   TrendingUp, Package, Gavel, History, ArrowLeftRight,
   Tag, Settings, ListOrdered, Store, AlertTriangle, Activity, Layers,
 } from "lucide-react";
+import { getRewardsState, subscribeRewards, getSubRank } from "../lib/rewardsState";
 import { TableGamesPage } from "./TableGamesPage";
 import { MiniGamesPage }     from "./MiniGamesPage";
 import { SlotsPage }         from "./SlotsPage";
@@ -177,6 +178,14 @@ export function Lobby() {
 
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
+
+  // ── Rewards rank (live, from rewardsState) ────────────────────
+  const [rewardsXP, setRewardsXP] = useState(() => getRewardsState().xp);
+  useEffect(() => {
+    setRewardsXP(getRewardsState().xp);
+    return subscribeRewards((s) => setRewardsXP(s.xp));
+  }, []);
+  const subRank = getSubRank(rewardsXP);
 
   // ── Recently Played ───────────────────────────────────────────
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedEntry[]>(getRecentlyPlayed);
@@ -349,14 +358,20 @@ export function Lobby() {
         <div className="flex items-center shrink-0 ml-auto order-2 md:order-3 lg:order-4 lg:pr-1" style={{ gap: 12 }}>
           {/* Rank pill — hidden on mobile */}
           <div className="nav-pill nav-pill-rank hidden md:flex">
-            <Star size={12} style={{ color: "#9ca3af", fill: "#9ca3af", flexShrink: 0 }} />
+            <Star size={12} style={{ color: subRank.tierColor, fill: subRank.tierColor, flexShrink: 0 }} />
             <div className="flex flex-col leading-none gap-[5px]">
-              <span className="text-[11px] font-black uppercase tracking-wide leading-none" style={{ color: "#c4cdd8" }}>Silver II</span>
+              <span className="text-[11px] font-black uppercase tracking-wide leading-none" style={{ color: "#c4cdd8" }}>{subRank.label}</span>
               <div className="flex items-center gap-1.5">
                 <div className="nav-rank-bar">
-                  <div className="nav-rank-fill" style={{ width: "68%" }} />
+                  <div className="nav-rank-fill" style={{ width: `${subRank.progress}%` }} />
                 </div>
-                <span className="text-[8px] font-bold tracking-wide leading-none" style={{ color: "rgba(245,197,24,0.65)" }}>68% TO GOLD</span>
+                {subRank.nextTierName ? (
+                  <span className="text-[8px] font-bold tracking-wide leading-none" style={{ color: "rgba(245,197,24,0.65)" }}>
+                    {subRank.progress}% TO {subRank.nextTierName.toUpperCase()}
+                  </span>
+                ) : (
+                  <span className="text-[8px] font-bold tracking-wide leading-none" style={{ color: "rgba(245,197,24,0.65)" }}>MAX RANK</span>
+                )}
               </div>
             </div>
           </div>
