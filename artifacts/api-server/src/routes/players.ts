@@ -483,11 +483,12 @@ router.get("/leaderboard", async (_req, res) => {
   }
 
   const result = players.map(p => {
-    const stats    = txByPlayer.get(p.id) ?? { wagered: 0, won: 0, betCount: 0, winCount: 0 };
-    const games    = Number(p.handsPlayed ?? 0);
-    const wins     = Number(p.wins ?? 0);
-    const winRate  = games > 0 ? Math.round((wins / games) * 100) : 0;
+    const stats     = txByPlayer.get(p.id) ?? { wagered: 0, won: 0, betCount: 0, winCount: 0 };
+    const games     = stats.betCount;
+    const wins      = stats.winCount;
+    const winRate   = games > 0 ? Math.round((wins / games) * 100) : 0;
     const netResult = stats.won - stats.wagered;
+    const chips     = Number(p.chips);
     return {
       id:        p.id,
       username:  p.username,
@@ -495,8 +496,8 @@ router.get("/leaderboard", async (_req, res) => {
       wins,
       winRate,
       totalWon:  netResult,
-      chips:     Number(p.chips),
-      tier:      getTier(Number(p.chips)),
+      chips,
+      tier:      getTier(chips),
       avatarUrl: p.avatarUrl ?? null,
       staffRole: p.staffRole ?? null,
     };
