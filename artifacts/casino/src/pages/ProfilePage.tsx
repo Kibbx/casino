@@ -157,6 +157,7 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
   const [rakeback,     setRakeback]     = useState<RakebackStatus | null>(null);
   const [rbClaiming,   setRbClaiming]   = useState(false);
   const [rbClaimMsg,   setRbClaimMsg]   = useState<{ ok: boolean; text: string } | null>(null);
+  const [, setTick]                     = useState(0);
   const [showSecurity, setShowSecurity] = useState(false);
   const [curPin,       setCurPin]       = useState("");
   const [newPin,       setNewPin]       = useState("");
@@ -300,13 +301,22 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
     }
   }
 
+  useEffect(() => {
+    if (!rakeback?.onCooldown) return;
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [rakeback?.onCooldown]);
+
   function fmtCooldown(nextClaimAt: string | null) {
     if (!nextClaimAt) return "";
     const ms = new Date(nextClaimAt).getTime() - Date.now();
     if (ms <= 0) return "";
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    const s = Math.floor((ms % 60000) / 1000);
+    if (h > 0) return `${h}h ${m}m ${s}s`;
+    if (m > 0) return `${m}m ${s}s`;
+    return `${s}s`;
   }
 
   async function handleChangePin() {
