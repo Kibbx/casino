@@ -361,13 +361,22 @@ export function Lobby() {
             <Menu size={17} style={{ color: "rgba(255,255,255,0.45)" }} />
           </button>
           <div className="w-px h-5 shrink-0 hidden sm:block" style={{ background: "rgba(255,255,255,0.08)" }} />
-          <h1 className="font-rajdhani font-black uppercase shrink-0"
-            style={{ color: "#fff", whiteSpace: "nowrap", fontSize: "clamp(14px, 1.1vw, 16px)", letterSpacing: "0.09em", lineHeight: 1 }}>
-            {appMode === "casino"
-              ? <>BIG HOUSE&nbsp;<span style={{ color: "#e8400a", textShadow: "0 0 12px rgba(232,64,10,0.55)" }}>CASINO</span></>
-              : <>BIG HOUSE&nbsp;<span style={{ color: "#f5c518", textShadow: "0 0 12px rgba(245,197,24,0.5)" }}>MARKET</span></>
-            }
-          </h1>
+          <div className="flex items-baseline gap-[5px] shrink-0" style={{ whiteSpace: "nowrap" }}>
+            <span className="font-rajdhani font-black uppercase"
+              style={{ color: "#fff", fontSize: "clamp(14px, 1.1vw, 16px)", letterSpacing: "0.09em", lineHeight: 1 }}>
+              BIG HOUSE
+            </span>
+            <span className="font-rajdhani font-black uppercase"
+              style={{
+                fontSize: "clamp(14px, 1.1vw, 16px)", letterSpacing: "0.09em", lineHeight: 1,
+                color: appMode === "casino" ? "#e8400a" : "#f5c518",
+                textShadow: appMode === "casino"
+                  ? "0 0 12px rgba(232,64,10,0.55)"
+                  : "0 0 12px rgba(245,197,24,0.5)",
+              }}>
+              {appMode === "casino" ? "CASINO" : "MARKET"}
+            </span>
+          </div>
           <div className="w-px h-5 shrink-0 hidden lg:block" style={{ background: "rgba(255,255,255,0.08)" }} />
         </div>
 
