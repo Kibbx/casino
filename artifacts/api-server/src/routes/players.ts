@@ -565,7 +565,6 @@ router.get("/leaderboard", async (_req, res) => {
       winRate:   stats.winRate,     // wins / handsPlayed × 100
       totalWon:  stats.netResult,   // won − wagered — same as profile "Net Result"
       chips:     Number(p.chips),
-      tier:      stats.tier,
       avatarUrl: p.avatarUrl ?? null,
       staffRole: p.staffRole ?? null,
     };

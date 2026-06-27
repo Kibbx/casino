@@ -15,7 +15,6 @@ type ApiEntry = {
   winRate: number;
   totalWon: number;
   chips: number;
-  tier: string;
   avatarUrl: string | null;
   staffRole: string | null;
 };
@@ -27,13 +26,6 @@ type RankedEntry = ApiEntry & {
 };
 
 /* ── Constants ──────────────────────────────────────────────────────────────── */
-const TIER_STYLE: Record<string, { color: string; bg: string; border: string; glow: string }> = {
-  Diamond:  { color: "#7dd3fc", bg: "rgba(125,211,252,0.12)", border: "rgba(125,211,252,0.35)", glow: "rgba(125,211,252,0.2)"  },
-  Platinum: { color: "#e2e8f0", bg: "rgba(226,232,240,0.09)", border: "rgba(226,232,240,0.28)", glow: "rgba(226,232,240,0.12)" },
-  Gold:     { color: "#f5c518", bg: "rgba(245,197,24,0.12)",  border: "rgba(245,197,24,0.35)",  glow: "rgba(245,197,24,0.2)"  },
-  Silver:   { color: "#9ca3af", bg: "rgba(156,163,175,0.09)", border: "rgba(156,163,175,0.25)", glow: "rgba(156,163,175,0.12)" },
-  Bronze:   { color: "#cd7f32", bg: "rgba(205,127,50,0.12)",  border: "rgba(205,127,50,0.3)",   glow: "rgba(205,127,50,0.15)" },
-};
 
 const RANK_1_GRADIENT = "linear-gradient(135deg, rgba(255,215,0,0.18) 0%, rgba(255,215,0,0.04) 100%)";
 const RANK_2_GRADIENT = "linear-gradient(135deg, rgba(192,192,192,0.14) 0%, rgba(192,192,192,0.03) 100%)";
@@ -73,21 +65,6 @@ function saveSnapshot(entries: RankedEntry[]): void {
 }
 
 /* ── Sub-components ──────────────────────────────────────────────────────────── */
-function TierBadge({ tier }: { tier: string }) {
-  const s = TIER_STYLE[tier] ?? TIER_STYLE.Bronze;
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", justifyContent: "center",
-      fontSize: 9, fontWeight: 900, letterSpacing: "0.1em", textTransform: "uppercase",
-      padding: "3px 9px", borderRadius: 999,
-      color: s.color, background: s.bg, border: `1px solid ${s.border}`,
-      boxShadow: `0 0 8px ${s.glow}`,
-      whiteSpace: "nowrap",
-    }}>
-      {tier}
-    </span>
-  );
-}
 
 function TrendBadge({ delta }: { delta: number | null }) {
   if (delta === null || delta === 0) {
@@ -292,7 +269,7 @@ export function LeaderboardsPage() {
   const myEntry = ranked.find(e => e.id === playerId || e.username === playerUsername);
   const myRank  = myEntry?.rank ?? null;
 
-  const colLayout = "48px 1fr 72px 72px 96px 100px 68px";
+  const colLayout = "48px 1fr 72px 72px 100px 68px";
 
   return (
     <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7" fillHeight>
@@ -364,7 +341,6 @@ export function LeaderboardsPage() {
           <span>Player</span>
           <span>Games</span>
           <span>Win %</span>
-          <span>Tier</span>
           <span style={{ textAlign: "right" }}>Profit</span>
           <span style={{ textAlign: "center" }}>Trend</span>
         </div>
@@ -511,9 +487,6 @@ export function LeaderboardsPage() {
                     }}>
                       {entry.games > 0 ? entry.winRate + "%" : "—"}
                     </span>
-
-                    {/* Tier */}
-                    <div><TierBadge tier={entry.tier} /></div>
 
                     {/* Profit */}
                     <div style={{ textAlign: "right" }}>
