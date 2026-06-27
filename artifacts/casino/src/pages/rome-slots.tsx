@@ -672,7 +672,7 @@ export default function RomeSlots() {
           textShadow: "0 0 18px rgba(220,38,38,0.55)",
           userSelect: "none",
         }}>
-          Back Alley Bets
+          Big House Casino
         </div>
 
       </div>

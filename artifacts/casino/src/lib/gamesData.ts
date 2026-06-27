@@ -247,7 +247,7 @@ export const GAME_DISPLAY: Record<string, { name: string; category: string; imag
   poker:         { name: "Poker",            category: "TABLE GAMES",  image: `${IMGS}images/card-poker.webp`,           gameKey: "poker"      },
   slots:         { name: "Slots",            category: "SLOTS",        image: `${IMGS}images/card-slots.webp`,           gameKey: "slots"      },
   rome_slots:    { name: "Rome Slots",       category: "SLOTS",        image: `${IMGS}images/card-rome-slots.webp`,      gameKey: "slots"      },
-  western_slots: { name: "Backalley Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, gameKey: "slots"      },
+  western_slots: { name: "Big House Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, gameKey: "slots"      },
   mines:         { name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           gameKey: "mines"      },
   mob_tower:     { name: "Mob Tower",        category: "MINI GAMES",   image: `${IMGS}images/card-mob-tower.png`,        gameKey: "mobtower"   },
   fortune:       { name: "Fortune Spin",     category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "slots"      },
@@ -270,7 +270,7 @@ export const FALLBACK_LIVE: FallbackLiveGame[] = [
   { id: 3, name: "Poker",            category: "TABLE GAMES",  image: `${IMGS}images/card-poker.webp`,           players: 5,  maxPlayers: 6,  activeBets: "$8,900",  status: "In Progress" },
   { id: 4, name: "Horse Racing",     category: "LIVE EVENTS",  image: `${IMGS}images/card-horseracing.webp`,     players: 14, maxPlayers: 20, activeBets: "$14,200", status: "Race Live"   },
   { id: 5, name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           players: 9,  maxPlayers: 0,  activeBets: "$1,870",  status: "In Progress" },
-  { id: 6, name: "Backalley Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, players: 6,  maxPlayers: 0,  activeBets: "$3,200",  status: "In Progress" },
+  { id: 6, name: "Big House Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, players: 6,  maxPlayers: 0,  activeBets: "$3,200",  status: "In Progress" },
   { id: 7, name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.png`,            players: 12, maxPlayers: 20, activeBets: "$480",    status: "Live Draw"   },
   { id: 8, name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.png`,          players: 88, maxPlayers: 0,  activeBets: "$22,600", status: "Open"        },
 ];

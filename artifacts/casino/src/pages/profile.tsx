@@ -416,7 +416,7 @@ export default function ProfilePage() {
             <div className="flex-1 min-w-0 space-y-2">
               <div>
                 <h1 className="text-2xl font-display font-bold text-foreground leading-none">{player.username}</h1>
-                <p className="text-sm text-muted-foreground mt-0.5">Back Alley Bets Member</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Big House Casino Member</p>
               </div>
               <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                 {player.stateId && (

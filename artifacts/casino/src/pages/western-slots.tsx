@@ -811,7 +811,7 @@ export default function WesternSlots() {
           fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:20,
           letterSpacing:"0.12em",textTransform:"uppercase",
           color:"#8B2500",textShadow:"0 0 18px rgba(139,37,0,0.5)"}}>
-          Back Alley Bets
+          Big House Casino
         </div>
       </div>
 

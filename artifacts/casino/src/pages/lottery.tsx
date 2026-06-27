@@ -415,7 +415,7 @@ export default function LotteryPage() {
         }}>← Back</button>
 
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.25em", color: "rgba(251,191,36,0.5)", textTransform: "uppercase", marginBottom: 1 }}>Back Alley Bets</div>
+          <div style={{ fontSize: 11, letterSpacing: "0.25em", color: "rgba(251,191,36,0.5)", textTransform: "uppercase", marginBottom: 1 }}>Big House Casino</div>
           <div style={{ fontWeight: 900, fontSize: 22, letterSpacing: "0.18em", textTransform: "uppercase", color: "#fbbf24", lineHeight: 1 }}>LOTTERY</div>
         </div>
 

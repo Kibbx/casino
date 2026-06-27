@@ -234,7 +234,7 @@ export default function HighLow() {
           <ChevronLeft size={14} /> TABLE GAMES
         </button>
         <div style={{ textAlign:"center" }}>
-          <div style={{ color:"rgba(180,130,60,0.55)", fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase" }}>Back Alley Bets</div>
+          <div style={{ color:"rgba(180,130,60,0.55)", fontSize:10, letterSpacing:"0.2em", textTransform:"uppercase" }}>Big House Casino</div>
           <div style={{ color:"#fff", fontSize:16, fontWeight:700, letterSpacing:"0.08em", textTransform:"uppercase" }}>High · Low</div>
         </div>
         <div style={{ textAlign:"right" }}>

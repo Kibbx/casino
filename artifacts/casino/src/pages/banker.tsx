@@ -189,7 +189,7 @@ export default function BankerDashboard() {
       <div className="border-b border-zinc-700 bg-card/50 sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-display font-bold text-primary tracking-wider uppercase">Back Alley Bets</h1>
+            <h1 className="text-2xl font-display font-bold text-primary tracking-wider uppercase">Big House Casino</h1>
             <p className="text-xs text-muted-foreground font-typewriter tracking-wider">
               Staff Dashboard{effectiveUsername ? ` — ${effectiveUsername}` : ""}
               {allEffectiveRoles[0] && <span className="ml-2 px-1.5 py-0.5 rounded bg-red-950 text-red-300 text-[10px] font-bold uppercase tracking-wider">{ROLE_LABELS[allEffectiveRoles[0]] || allEffectiveRoles[0]}</span>}
@@ -997,7 +997,7 @@ This Loan Agreement ("Agreement") is made and entered into on this ${today} ("Ef
 
 Lender:
 
-Name: ${lenderName}, on behalf of Back Alley Bets
+Name: ${lenderName}, on behalf of Big House Casino
 State ID: ${lenderSid}
 
 Borrower:
@@ -1043,12 +1043,12 @@ Parties Involved:
 
 Casino Owner:
 
-Name: Salvatore Ditacchio, Back Alley Bets
+Name: Salvatore Ditacchio, Big House Casino
 State ID: 23372
 
 Lender:
 
-Name: ${lenderName}, on behalf of Back Alley Bets
+Name: ${lenderName}, on behalf of Big House Casino
 State ID: ${lenderSid}
 
 Borrower:
@@ -6846,7 +6846,7 @@ function StatsTab({ isOwner = false, isBanker = false, isJuniorBanker = false, s
       <div className="flex items-start justify-between gap-2 flex-wrap">
         <div>
           <h2 className="text-lg font-display font-semibold text-foreground mb-1">Casino Dashboard</h2>
-          <p className="text-xs text-muted-foreground">Back Alley Bets — Staff View</p>
+          <p className="text-xs text-muted-foreground">Big House Casino — Staff View</p>
         </div>
         <button onClick={handleRefresh} disabled={refreshing}
           className="text-xs px-3 py-1.5 rounded-lg bg-card border border-zinc-700 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50">

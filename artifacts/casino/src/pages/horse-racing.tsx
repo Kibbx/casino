@@ -1085,7 +1085,7 @@ export default function HorseRacing() {
               INSIDE TRACK
             </div>
             <div style={{ fontSize: 8, color: "rgba(255,255,255,0.25)", letterSpacing: "0.16em", textTransform: "uppercase", marginTop: 2 }}>
-              Back Alley Bets · Horse Racing
+              Big House Casino · Horse Racing
             </div>
           </div>
 

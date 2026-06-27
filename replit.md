@@ -1,4 +1,4 @@
-# Back Alley Bets — FiveM Casino
+# Big House Casino — FiveM Casino
 
 ## ⚠️ MANDATORY RULE — NO EXCEPTIONS
 **After EVERY code change, immediately push to GitHub:**

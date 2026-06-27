@@ -1,0 +1,73 @@
+Search the entire project and replace every instance of **"Back Alley Bets"** with **"Big House Casino"**.
+
+Do **not** change any functionality, routing, styling, or UI layout. Only update branding.
+
+Replace the name everywhere it appears, including but not limited to:
+
+* Browser tab title (`document.title`)
+* HTML `<title>` tag
+* Header logo text
+* Sidebar branding
+* Login page
+* Register page
+* Loading screens
+* Splash screens
+* Profile pages
+* Settings pages
+* Footer
+* Metadata
+* SEO tags
+* Open Graph tags
+* Twitter/X metadata
+* Manifest files
+* PWA configuration
+* Emails
+* Notifications
+* Toast messages
+* Error messages
+* Success messages
+* README files
+* Documentation
+* Comments where appropriate
+* Constants
+* Configuration files
+* Environment variables (only branding-related values)
+* API responses that return the application name
+* Database seed data
+* Default user data
+* Demo data
+* Mock data
+* Placeholder text
+
+Also search for abbreviated or alternate branding such as:
+
+* BackAlleyBets
+* Back-Alley Bets
+* Back Alley
+* BAB
+* backalleybets
+* back_alley_bets
+
+Replace them with the appropriate **Big House Casino** equivalent while preserving naming conventions.
+
+Examples:
+
+* `Back Alley Bets` → `Big House Casino`
+* `BackAlleyBets` → `BigHouseCasino`
+* `backalleybets` → `bighousecasino`
+* `BACK_ALLEY_BETS` → `BIG_HOUSE_CASINO`
+
+After replacing the branding:
+
+* Ensure the browser tab displays **Big House Casino**.
+* Ensure the application header displays **Big House Casino**.
+* Ensure no page, modal, notification, metadata, or hidden configuration still references **Back Alley Bets**.
+* Update imports, constants, and configuration references if the branding is used in identifiers, but **do not** rename files or variables unless necessary to prevent broken imports or runtime errors.
+* Verify there are no remaining references by performing a final project-wide search for:
+
+  * "Back Alley Bets"
+  * "BackAlleyBets"
+  * "Back Alley"
+  * "BAB"
+
+The final project should consistently use **Big House Casino** as the application's name everywhere, with no remaining legacy branding.
