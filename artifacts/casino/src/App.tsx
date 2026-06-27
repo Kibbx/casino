@@ -144,6 +144,7 @@ function Router() {
       <Route path="/market/shops" component={Lobby} />
       <Route path="/market/inventory" component={Lobby} />
       <Route path="/market/profile" component={Lobby} />
+      <Route path="/player/:id" component={Lobby} />
       <Route path="/page-preview/:key" component={PagePreview} />
       <Route component={NotFound} />
     </Switch>

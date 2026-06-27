@@ -1,0 +1,197 @@
+Fix the Challenges page because the card stats/progress appear frozen or hardcoded.
+
+Do **not** change the design, layout, colors, fonts, spacing, or card styling. Only fix the data and functionality.
+
+### Problem
+
+The challenge cards currently display progress values like:
+
+* `3 / 5`
+* `1 / 3`
+* `8 / 20`
+* `620 / 1000`
+
+But these values do not update when the user completes challenge actions. The progress bars also appear to be static/hardcoded.
+
+### Required Fix
+
+Remove any hardcoded challenge progress from the UI layer.
+
+The ChallengeCard component must not contain fixed values like:
+
+* hardcoded `3 / 5`
+* hardcoded `style={{ width: "60%" }}`
+* hardcoded `COMPLETED`
+* hardcoded button states
+* hardcoded rewards inside JSX
+
+Instead, every card must render from live challenge state.
+
+### Dynamic Challenge State
+
+Create one source of truth for challenges, such as:
+
+* challengeService
+* challengeStore
+* playerChallenges state
+* database-backed challenge records
+
+Each challenge should store:
+
+* id
+* title
+* description
+* category
+* currentProgress
+* requiredProgress
+* reward
+* status
+* claimed
+* eventType
+* progressType
+* accentColor
+* icon
+* expiresAt, if applicable
+
+### Progress Calculation
+
+Progress percentage must be calculated dynamically:
+
+```js
+const progressPercent = Math.min(
+  100,
+  Math.round((currentProgress / requiredProgress) * 100)
+);
+```
+
+The progress bar width must use this calculated value:
+
+```js
+style={{ width: `${progressPercent}%` }}
+```
+
+Do not use fixed CSS widths for challenge progress.
+
+### Event-Based Updates
+
+Connect all challenge progress to the existing event system.
+
+Create or fix this function:
+
+```js
+updateChallengeProgress(eventType, payload)
+```
+
+It must update the matching challenge records when relevant actions happen.
+
+Examples:
+
+```js
+updateChallengeProgress("blackjack_round_played")
+```
+
+Should update High Roller from `3 / 5` to `4 / 5`.
+
+```js
+updateChallengeProgress("roulette_spin")
+```
+
+Should update Spin Doctor until it reaches `3 / 3`.
+
+```js
+updateChallengeProgress("single_bet_placed", { amount: 150 })
+```
+
+Should complete Big Bettor if the amount is over 100.
+
+```js
+updateChallengeProgress("tournament_entered")
+```
+
+Should increment Tournament Regular.
+
+```js
+updateChallengeProgress("mini_game_round_played")
+```
+
+Should increment Mini Game Marathon.
+
+```js
+updateChallengeProgress("full_table_played")
+```
+
+Should increment Social Butterfly.
+
+```js
+updateChallengeProgress("case_opened")
+```
+
+Should increment Case Connoisseur.
+
+```js
+updateChallengeProgress("session_profit_updated", { profit: 1000 })
+```
+
+Should complete On Fire.
+
+### Completion Logic
+
+When `currentProgress >= requiredProgress`:
+
+* Set status to `completed`.
+* Fill the progress bar to 100%.
+* Change the button to `Claim Reward`.
+* Allow the user to claim chips.
+* Persist the updated challenge state.
+
+When reward is claimed:
+
+* Add reward chips to the player’s chip balance.
+* Set `claimed: true`.
+* Set status to `claimed`.
+* Disable the claim button.
+* Show `✓ Claimed`.
+* Prevent duplicate claims.
+* Persist the updated chip balance and claimed state.
+
+### Persistence
+
+Progress must persist after refresh.
+
+Use the correct persistence method for this project:
+
+* If there is a backend/database, update challenge progress through API routes.
+* If this is frontend-only, use localStorage through a clean service layer.
+
+Do not update only temporary React state unless it is also saved.
+
+### Debug Tools
+
+Add a temporary developer-only test panel or console-safe helper functions for testing challenge progress.
+
+Examples:
+
+```js
+window.testChallengeEvent("blackjack_round_played")
+window.testChallengeEvent("roulette_spin")
+window.testChallengeEvent("single_bet_placed", { amount: 150 })
+```
+
+These should update the UI immediately so I can verify that cards are no longer frozen.
+
+Hide or guard these helpers in production.
+
+### Acceptance Criteria
+
+After the fix:
+
+* No challenge progress values are hardcoded in card JSX.
+* No progress bar widths are hardcoded.
+* Progress numbers update when challenge events fire.
+* Progress bars visually move when progress changes.
+* Completed challenges become claimable automatically.
+* Claimed rewards add chips to the player account.
+* Claimed rewards cannot be claimed twice.
+* Progress and claimed states persist after page refresh.
+* Daily, weekly, and monthly challenge rotations still work.
+* The page looks exactly the same visually.

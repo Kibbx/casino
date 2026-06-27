@@ -43,6 +43,8 @@ import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
 import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
+import { searchPlayers, PlayerSearchResult } from "../lib/playerSearchService";
+import { PlayerPublicProfile } from "./PlayerPublicProfile";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -199,10 +201,22 @@ export function Lobby() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen,  setSearchOpen]  = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
+  const [viewedPlayerId, setViewedPlayerId] = useState<number | null>(null);
 
   const searchResults = searchQuery.trim().length > 0
     ? SEARCH_ITEMS.filter(i => i.label.toLowerCase().includes(searchQuery.toLowerCase()))
     : [];
+
+  // Debounced player search against the API
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2 || !sessionToken) { setPlayerResults([]); return; }
+    const timer = setTimeout(() => {
+      searchPlayers(q, sessionToken).then(setPlayerResults).catch(() => setPlayerResults([]));
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [searchQuery, sessionToken]);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -217,12 +231,25 @@ export function Lobby() {
   const goSearch = (route: string) => {
     setSearchQuery("");
     setSearchOpen(false);
+    setPlayerResults([]);
     setLocation(route);
+  };
+
+  const goPlayer = (id: number) => {
+    setSearchQuery("");
+    setSearchOpen(false);
+    setPlayerResults([]);
+    setViewedPlayerId(id);
+    setActiveNav("player-profile");
+    setLocation(`/player/${id}`);
   };
 
   const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") { setSearchOpen(false); return; }
-    if (e.key === "Enter" && searchResults.length > 0) goSearch(searchResults[0].route);
+    if (e.key === "Enter") {
+      if (searchResults.length > 0) { goSearch(searchResults[0].route); return; }
+      if (playerResults.length > 0) { goPlayer(playerResults[0].id); }
+    }
   };
 
   // ── Rewards rank (live, from rewardsState) ────────────────────
@@ -294,6 +321,12 @@ export function Lobby() {
       "/market/inventory":        "mkt-inventory",
       "/market/profile":          "mkt-profile",
     };
+    const playerMatch = location.match(/^\/player\/(\d+)$/);
+    if (playerMatch) {
+      setViewedPlayerId(Number(playerMatch[1]));
+      setActiveNav("player-profile");
+      return;
+    }
     const mapped = routeToNav[location];
     if (mapped) {
       setActiveNav(mapped);
@@ -399,7 +432,7 @@ export function Lobby() {
               onKeyDown={handleSearchKey}
             />
           </div>
-          {searchOpen && searchResults.length > 0 && (
+          {searchOpen && (searchResults.length > 0 || playerResults.length > 0) && (
             <div
               className="lg:max-w-[350px] lg:mx-auto"
               style={{
@@ -415,6 +448,7 @@ export function Lobby() {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
               }}
             >
+              {/* Game / page results */}
               {searchResults.map((item, idx) => (
                 <button
                   key={idx}
@@ -428,7 +462,7 @@ export function Lobby() {
                     background: "transparent",
                     border: "none",
                     cursor: "pointer",
-                    borderBottom: idx < searchResults.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                    borderBottom: idx < searchResults.length - 1 || playerResults.length > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
                     textAlign: "left",
                   }}
                   onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,64,10,0.1)")}
@@ -438,6 +472,60 @@ export function Lobby() {
                   <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.category}</span>
                 </button>
               ))}
+
+              {/* Player results */}
+              {playerResults.length > 0 && (
+                <>
+                  {searchResults.length > 0 && (
+                    <div style={{ padding: "5px 14px 4px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.2)" }}>Players</div>
+                  )}
+                  {playerResults.map((p, idx) => {
+                    const initials = p.username.charAt(0).toUpperCase();
+                    const fmtChips = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : String(n);
+                    return (
+                      <button
+                        key={p.id}
+                        onMouseDown={() => goPlayer(p.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          width: "100%",
+                          padding: "8px 14px",
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          borderBottom: idx < playerResults.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                          textAlign: "left",
+                        }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.08)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                      >
+                        {/* Avatar */}
+                        <div style={{ position: "relative", flexShrink: 0 }}>
+                          {p.avatarUrl ? (
+                            <img src={p.avatarUrl} alt={p.username} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
+                          ) : (
+                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#a855f7" }}>
+                              {initials}
+                            </div>
+                          )}
+                          <div style={{ position: "absolute", bottom: 0, right: 0, width: 8, height: 8, borderRadius: "50%", background: p.isOnline ? "#22c55e" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(12,10,10,1)", boxShadow: p.isOnline ? "0 0 4px rgba(34,197,94,0.7)" : "none" }} />
+                        </div>
+                        {/* Name + state ID */}
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                          <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username}</span>
+                          {p.stateId && (
+                            <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 10, fontWeight: 500 }}>#{p.stateId}</span>
+                          )}
+                        </div>
+                        {/* Chips */}
+                        <span style={{ color: "#f5c518", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{fmtChips(p.chips)}</span>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
             </div>
           )}
         </div>
@@ -589,6 +677,9 @@ export function Lobby() {
 
         {/* ── Main ── */}
         <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }} tabIndex={-1} onFocus={(e) => e.currentTarget.blur()}>
+          {activeNav === "player-profile" && viewedPlayerId !== null && (
+            <PlayerPublicProfile playerId={viewedPlayerId} onBack={() => { setActiveNav("home"); setLocation("/lobby"); }} />
+          )}
           {activeNav === "home" && (
             <>
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">

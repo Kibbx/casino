@@ -2,7 +2,7 @@ import path from "path";
 import fs from "fs/promises";
 import { randomUUID } from "crypto";
 import express, { Router } from "express";
-import { db, playersTable, transactionsTable, blackjackGamesTable, bankerAccountsTable, referralPromotersTable, loansTable, settingsTable } from "@workspace/db";
+import { db, playersTable, transactionsTable, blackjackGamesTable, bankerAccountsTable, referralPromotersTable, loansTable, settingsTable, challengeClaimsTable } from "@workspace/db";
 import { eq, inArray, sql as sqlFn, desc } from "drizzle-orm";
 
 import { createPlayerSession, invalidatePlayerSessions, updatePlayerSessionStaffRole } from "../lib/sessions.js";
@@ -211,15 +211,95 @@ router.get("/search", requirePlayer, async (req, res) => {
       id: playersTable.id,
       username: playersTable.username,
       stateId: playersTable.stateId,
+      chips: playersTable.chips,
+      avatarUrl: playersTable.avatarUrl,
+      wins: playersTable.wins,
+      totalWon: playersTable.totalWon,
+      handsPlayed: playersTable.handsPlayed,
+      createdAt: playersTable.createdAt,
+      isBot: playersTable.isBot,
     }).from(playersTable);
+
+    const activePlayers = getActivePlayers();
+    const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
+
     const results = all
-      .filter(p => p.id !== selfId && p.username.toLowerCase().includes(q))
+      .filter(p =>
+        p.id !== selfId &&
+        !p.isBot &&
+        (p.username.toLowerCase().includes(q) || (p.stateId ?? "").toLowerCase().includes(q))
+      )
       .slice(0, 8)
-      .map(p => ({ id: p.id, username: p.username, stateId: p.stateId ?? null }));
+      .map(p => ({
+        id: p.id,
+        username: p.username,
+        stateId: p.stateId ?? null,
+        chips: p.chips,
+        avatarUrl: p.avatarUrl ?? null,
+        wins: Number(p.wins),
+        totalWon: Number(p.totalWon),
+        handsPlayed: p.handsPlayed,
+        createdAt: p.createdAt.toISOString(),
+        isOnline: activeMap.has(p.id),
+        currentGame: activeMap.get(p.id) ?? null,
+      }));
     return res.json(results);
   } catch (e: any) {
     return res.status(500).json({ error: e.message });
   }
+});
+
+// Public player profile — any authenticated player can view
+router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
+  const id = parseInt(req.params.playerId as string);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid player ID" });
+
+  const [player] = await db
+    .select({
+      id: playersTable.id,
+      username: playersTable.username,
+      stateId: playersTable.stateId,
+      chips: playersTable.chips,
+      avatarUrl: playersTable.avatarUrl,
+      wins: playersTable.wins,
+      totalWon: playersTable.totalWon,
+      handsPlayed: playersTable.handsPlayed,
+      createdAt: playersTable.createdAt,
+      isBot: playersTable.isBot,
+    })
+    .from(playersTable)
+    .where(eq(playersTable.id, id));
+
+  if (!player || player.isBot) return res.status(404).json({ error: "Player not found" });
+
+  const claimRows = await db
+    .select({ rewardAmount: challengeClaimsTable.rewardAmount })
+    .from(challengeClaimsTable)
+    .where(eq(challengeClaimsTable.playerId, id));
+
+  const totalChallengesCompleted = claimRows.length;
+  const totalChipsFromChallenges = claimRows.reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
+
+  const activePlayers = getActivePlayers();
+  const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
+
+  return res.json({
+    id: player.id,
+    username: player.username,
+    stateId: player.stateId ?? null,
+    chips: player.chips,
+    avatarUrl: player.avatarUrl ?? null,
+    wins: Number(player.wins),
+    totalWon: Number(player.totalWon),
+    handsPlayed: player.handsPlayed,
+    createdAt: player.createdAt.toISOString(),
+    isOnline: activeMap.has(player.id),
+    currentGame: activeMap.get(player.id) ?? null,
+    challengeStats: {
+      completed: totalChallengesCompleted,
+      chipsEarned: totalChipsFromChallenges,
+    },
+  });
 });
 
 // ── Player-to-player chip transfer ───────────────────────────────────────────
