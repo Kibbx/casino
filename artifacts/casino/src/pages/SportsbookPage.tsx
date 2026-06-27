@@ -1103,7 +1103,7 @@ function BetSlip({
                         opacity: placing ? 0.6 : 1,
                         cursor: canPlace ? "pointer" : "not-allowed",
                       }}>
-                      <span className="text-[12px] font-black uppercase tracking-widest"
+                      <span className="text-[14px] font-extrabold uppercase tracking-widest leading-none"
                         style={{ color: canPlace ? "#fff" : "#8B8E98" }}>
                         {placing
                           ? "Placing…"
@@ -1116,7 +1116,8 @@ function BetSlip({
                           : "Enter Wager Amount"}
                       </span>
                       {canPlace && (
-                        <span className="text-[9px] mt-0.5" style={{ color: "rgba(255,255,255,0.65)" }}>
+                        <span className="text-[11px] font-semibold mt-1.5 whitespace-nowrap"
+                          style={{ color: "rgba(255,255,255,0.92)", letterSpacing: "0.01em" }}>
                           ${parlayWager} pays ${parlayPayout.toFixed(2)}
                         </span>
                       )}
