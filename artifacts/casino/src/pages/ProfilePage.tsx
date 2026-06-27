@@ -710,24 +710,6 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
                   </p>
                 </div>
 
-                {onCooldown && cdLabel && (
-                  <div style={{ textAlign: "center" }}>
-                    <p style={{ fontSize: 9, color: "rgba(255,255,255,0.28)", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>
-                      Next claim in
-                    </p>
-                    <p style={{
-                      fontFamily: "'Orbitron', monospace",
-                      fontSize: 18,
-                      fontWeight: 900,
-                      color: "rgba(255,255,255,0.55)",
-                      letterSpacing: "0.04em",
-                      lineHeight: 1,
-                    }}>
-                      {cdLabel}
-                    </p>
-                  </div>
-                )}
-
                 {rbClaimMsg && (
                   <p style={{ fontSize: 9, marginTop: 5, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
                     {rbClaimMsg.text}
@@ -751,7 +733,11 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
                     width: "100%",
                   }}
                 >
-                  {rbClaiming ? "Claiming…" : onCooldown ? "On Cooldown" : "Collect Rakeback"}
+                  {rbClaiming
+                    ? "Claiming…"
+                    : onCooldown && cdLabel
+                    ? `Cooldown · ${cdLabel}`
+                    : "Collect Rakeback"}
                 </button>
               </div>
             );
