@@ -12,7 +12,6 @@ const AVAILABLE_REWARDS = [
   { id: 2, name: "10% Deposit Bonus",      cost: 500,  icon: "💰", color: "#f5c518" },
   { id: 3, name: "Free Lottery Ticket",    cost: 300,  icon: "🎫", color: "#22c55e" },
   { id: 4, name: "VIP Table Access (1hr)", cost: 1000, icon: "🃏", color: "#a855f7" },
-  { id: 5, name: "Custom Avatar Border",   cost: 150,  icon: "🎨", color: "#ec4899" },
   { id: 6, name: "Double XP Weekend",      cost: 800,  icon: "⚡", color: "#06b6d4" },
 ];
 
