@@ -11,6 +11,9 @@ import {
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+// Custom event fired after a successful RP claim so the lobby header updates
+export const RP_UPDATE_EVENT = "bab:rp:update";
+
 type FullChallenge = ChallengeDefinition & ChallengeState;
 
 // ── Toast notification ────────────────────────────────────────────────────────
@@ -25,7 +28,6 @@ interface ToastData {
 function ClaimToast({ toast, onDone }: { toast: ToastData; onDone: () => void }) {
   const [visible, setVisible] = useState(false);
 
-  // Slide-in then slide-out
   useEffect(() => {
     const showT  = requestAnimationFrame(() => setVisible(true));
     const hideT  = setTimeout(() => setVisible(false), 3_200);
@@ -49,7 +51,7 @@ function ClaimToast({ toast, onDone }: { toast: ToastData; onDone: () => void })
         right:      28,
         zIndex:     9999,
         minWidth:   240,
-        maxWidth:   320,
+        maxWidth:   340,
         padding:    "14px 18px",
         borderRadius: 12,
         background: bgColor,
@@ -62,7 +64,6 @@ function ClaimToast({ toast, onDone }: { toast: ToastData; onDone: () => void })
         pointerEvents: "none",
       }}
     >
-      {/* Icon + title row */}
       <div className="flex items-center gap-2 mb-1">
         <span style={{ fontSize: 18, lineHeight: 1 }}>
           {toast.ok ? "🎉" : "⚠️"}
@@ -80,7 +81,6 @@ function ClaimToast({ toast, onDone }: { toast: ToastData; onDone: () => void })
           {toast.title}
         </span>
       </div>
-      {/* Sub-text */}
       <p
         style={{
           color:      "rgba(255,255,255,0.55)",
@@ -92,6 +92,43 @@ function ClaimToast({ toast, onDone }: { toast: ToastData; onDone: () => void })
       >
         {toast.sub}
       </p>
+    </div>
+  );
+}
+
+// ── Reward pill ───────────────────────────────────────────────────────────────
+
+function RewardDisplay({ reward, rewardPoints }: { reward: number; rewardPoints?: number }) {
+  const hasRP = (rewardPoints ?? 0) > 0;
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      {/* Chips */}
+      <span
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 4,
+          fontSize: 11, fontWeight: 800,
+          color: "#f5c518",
+        }}
+      >
+        🪙 {reward.toLocaleString()} Chips
+      </span>
+
+      {/* RP — only shown when present */}
+      {hasRP && (
+        <>
+          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 10 }}>+</span>
+          <span
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 4,
+              fontSize: 11, fontWeight: 800,
+              color: "#a78bfa",
+            }}
+          >
+            ⭐ {(rewardPoints!).toLocaleString()} RP
+          </span>
+        </>
+      )}
     </div>
   );
 }
@@ -110,6 +147,7 @@ function ChallengeCard({
   const pct      = Math.min(100, Math.round((c.progress / c.total) * 100));
   const done     = pct >= 100;
   const canClaim = done && !c.claimed && !claiming;
+  const hasRP    = (c.rewardPoints ?? 0) > 0;
 
   return (
     <div
@@ -149,25 +187,29 @@ function ChallengeCard({
 
       {/* Progress bar */}
       <div>
-        <div className="flex justify-between mb-1">
-          <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+        <div className="flex justify-between items-start mb-1 gap-2">
+          <span className="text-[10px] shrink-0" style={{ color: "rgba(255,255,255,0.35)" }}>
             {done
               ? "COMPLETED ✓"
               : c.total >= 1000
               ? `${c.progress.toLocaleString()} / ${c.total.toLocaleString()}`
               : `${c.progress} / ${c.total}`}
           </span>
-          <span className="text-[10px] font-bold" style={{ color: "#f5c518" }}>
-            🪙 {c.reward.toLocaleString()}
-          </span>
+          <RewardDisplay reward={c.reward} rewardPoints={c.rewardPoints} />
         </div>
         <div className="rounded-full h-1.5" style={{ background: "rgba(255,255,255,0.08)" }}>
           <div
             className="h-1.5 rounded-full transition-all duration-500"
             style={{
               width: `${pct}%`,
-              background: c.color,
-              boxShadow: done ? `0 0 6px ${c.color}` : "none",
+              background: hasRP
+                ? `linear-gradient(90deg, ${c.color}, #a78bfa)`
+                : c.color,
+              boxShadow: done
+                ? hasRP
+                  ? `0 0 8px ${c.color}, 0 0 4px #a78bfa`
+                  : `0 0 6px ${c.color}`
+                : "none",
             }}
           />
         </div>
@@ -230,26 +272,42 @@ export function ChallengesPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${sessionToken}`,
         },
-        body: JSON.stringify({ amount: c.reward, challengeId: c.id, label: c.name }),
+        body: JSON.stringify({
+          amount:       c.reward,
+          rewardPoints: c.rewardPoints ?? 0,
+          challengeId:  c.id,
+          label:        c.name,
+        }),
       });
-      const body = await res.json().catch(() => ({}));
+      const body = await res.json().catch(() => ({})) as any;
 
       if (res.ok) {
         markClaimed(c.id);
+
+        // Notify lobby header to update RP balance
+        if (body.newRewardPoints !== undefined) {
+          window.dispatchEvent(
+            new CustomEvent(RP_UPDATE_EVENT, { detail: { rp: body.newRewardPoints } })
+          );
+        }
+
+        // Build toast message
+        const rp = c.rewardPoints ?? 0;
+        const chipsLabel = `🪙 +${c.reward.toLocaleString()} Chips`;
+        const rpLabel    = rp > 0 ? `  ⭐ +${rp.toLocaleString()} RP` : "";
         pushToast(
           true,
-          `+${c.reward.toLocaleString()} Chips Earned!`,
-          `${c.name} — Reward Claimed Successfully`,
+          `${chipsLabel}${rpLabel}`,
+          `${c.name} — Reward Claimed`,
         );
       } else if (res.status === 409) {
-        // Already claimed server-side — sync local state
         markClaimed(c.id);
         pushToast(false, "Already Claimed", "This reward was already collected.");
       } else {
         pushToast(
           false,
           "Claim Failed",
-          (body as any).error ?? "Something went wrong — please try again.",
+          body.error ?? "Something went wrong — please try again.",
         );
       }
     } catch {

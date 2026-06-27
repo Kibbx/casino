@@ -28,7 +28,8 @@ import { MktHomePage }       from "./MktHomePage";
 import { useGetPlayer }      from "@workspace/api-client-react";
 import { usePlayerSocket }   from "../lib/usePlayerSocket";
 import { setAccessToken }    from "../lib/gamePasswordGuard";
-import { ActiveChipsDisplay } from "../components/ActiveChipsDisplay";
+import { ActiveChipsDisplay, ActiveRPDisplay } from "../components/ActiveChipsDisplay";
+import { RP_UPDATE_EVENT } from "./ChallengesPage";
 import { MktTrendingPage }   from "./MktTrendingPage";
 import { MktInventoryPage }  from "./MktInventoryPage";
 import { MktAuctionsPage }   from "./MktAuctionsPage";
@@ -186,6 +187,22 @@ export function Lobby() {
   const { data: currentPlayer } = useGetPlayer(playerId!, { query: { enabled: !!playerId } });
   const { chips: liveChips }   = usePlayerSocket(playerId ?? null, sessionToken);
   const chips = liveChips ?? currentPlayer?.chips ?? 0;
+
+  // ── Reward Points balance ─────────────────────────────────────────────────
+  const [rpBalance, setRpBalance] = useState<number>(0);
+  useEffect(() => {
+    if (currentPlayer && typeof (currentPlayer as any).rewardPoints === "number") {
+      setRpBalance((currentPlayer as any).rewardPoints);
+    }
+  }, [(currentPlayer as any)?.rewardPoints]);
+  useEffect(() => {
+    function onRpUpdate(e: Event) {
+      const rp = (e as CustomEvent<{ rp: number }>).detail?.rp;
+      if (typeof rp === "number") setRpBalance(rp);
+    }
+    window.addEventListener(RP_UPDATE_EVENT, onRpUpdate);
+    return () => window.removeEventListener(RP_UPDATE_EVENT, onRpUpdate);
+  }, []);
 
   const displayName  = playerUsername ?? "Player";
   const initials     = displayName.charAt(0).toUpperCase();
@@ -557,6 +574,13 @@ export function Lobby() {
               </div>
             </div>
           </div>
+
+          {/* Reward Points pill — hidden on small screens */}
+          {rpBalance > 0 && (
+            <div className="hidden sm:flex">
+              <ActiveRPDisplay rp={rpBalance} />
+            </div>
+          )}
 
           {/* Wallet / Chips pill */}
           <ActiveChipsDisplay chips={chips} label={appMode === "marketplace" ? "Wallet" : "Chips"} />

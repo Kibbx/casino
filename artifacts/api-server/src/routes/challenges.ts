@@ -6,7 +6,8 @@ import { broadcastPlayerBalance } from "../lib/table-ws.js";
 
 const router = Router();
 
-const MAX_REWARD = 150_000;
+const MAX_CHIPS_REWARD = 150_000;
+const MAX_RP_REWARD    = 10_000;
 
 // ── Derive the current rotation period key from the challenge ID ──────────────
 // Matches the same logic in the frontend challengeService.ts so neither side
@@ -38,12 +39,17 @@ function periodKeyFor(challengeId: string): string {
 // POST /api/challenges/claim-reward
 router.post("/claim-reward", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
-  const { amount, challengeId, label } = req.body ?? {};
+  const { amount, rewardPoints: rpRaw, challengeId, label } = req.body ?? {};
 
   // ── Validate inputs ──────────────────────────────────────────────────────────
   const chips = Math.round(Number(amount));
-  if (!chips || chips <= 0 || chips > MAX_REWARD) {
+  const rp    = Math.round(Number(rpRaw ?? 0));
+
+  if (!chips || chips <= 0 || chips > MAX_CHIPS_REWARD) {
     return res.status(400).json({ error: "Invalid reward amount" });
+  }
+  if (rp < 0 || rp > MAX_RP_REWARD) {
+    return res.status(400).json({ error: "Invalid reward points amount" });
   }
   if (!challengeId || typeof challengeId !== "string" || challengeId.length > 80) {
     return res.status(400).json({ error: "challengeId required" });
@@ -80,12 +86,20 @@ router.post("/claim-reward", requirePlayer, async (req, res) => {
     .set({ chips: sql`${playersTable.chips} + ${chips}` })
     .where(eq(playersTable.id, playerId));
 
+  // ── Award reward points (if any) ─────────────────────────────────────────────
+  if (rp > 0) {
+    await db.execute(
+      sql`UPDATE players SET reward_points = reward_points + ${rp} WHERE id = ${playerId}`
+    );
+  }
+
   // ── Record transaction (bonus history) ──────────────────────────────────────
+  const rpSuffix = rp > 0 ? ` + ${rp.toLocaleString()} RP` : "";
   await db.insert(transactionsTable).values({
     playerId,
     type:        "bonus",
     amount:      chips,
-    description: `Challenge reward: ${claimLabel}`,
+    description: `Challenge reward: ${claimLabel}${rpSuffix}`,
   });
 
   // ── Record claim (prevents re-claim this period) ─────────────────────────────
@@ -97,7 +111,7 @@ router.post("/claim-reward", requirePlayer, async (req, res) => {
     periodKey,
   });
 
-  // ── Broadcast new balance via WebSocket so nav updates instantly ─────────────
+  // ── Broadcast new chip balance via WebSocket ──────────────────────────────────
   const [updated] = await db
     .select({ chips: playersTable.chips })
     .from(playersTable)
@@ -106,7 +120,13 @@ router.post("/claim-reward", requirePlayer, async (req, res) => {
   const newBalance = Number(updated?.chips ?? 0);
   broadcastPlayerBalance(playerId, newBalance);
 
-  return res.json({ ok: true, newBalance });
+  // ── Return new RP balance ─────────────────────────────────────────────────────
+  const rpRow = rp > 0
+    ? await db.execute(sql`SELECT reward_points FROM players WHERE id = ${playerId}`)
+    : null;
+  const newRewardPoints = rp > 0 ? Number((rpRow?.rows[0] as any)?.reward_points ?? 0) : undefined;
+
+  return res.json({ ok: true, newBalance, newRewardPoints });
 });
 
 // GET /api/challenges/claim-history — player's reward history

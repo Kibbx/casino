@@ -1477,6 +1477,10 @@ export async function runMigrations(): Promise<void> {
         ON challenge_claims (player_id, challenge_id, period_key)`,
     },
     {
+      name: "players.reward_points column",
+      sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS reward_points INTEGER NOT NULL DEFAULT 0`,
+    },
+    {
       name: "backfill player wins and total_won from transactions",
       sql: `
         UPDATE players p
