@@ -1,0 +1,47 @@
+Create a dev/testing script to generate multiple test accounts, simulate gameplay, and collect leaderboard/profile data for debugging.
+
+Goal:
+We need realistic test data so the leaderboard, profile stats, RTP, rank, wagered amount, wins, net result, activity breakdown, and trend calculations can be tested properly.
+
+Requirements:
+
+* Create a seed/simulation script that can generate many test users/accounts.
+* Suggested default: 25–100 accounts.
+* Each account should have realistic randomized data:
+
+  * username
+  * stat ID / referral ID
+  * chips balance
+  * games played
+  * total wagered
+  * total won
+  * net result/profit
+  * largest win
+  * RTP / win percentage
+  * tier
+  * activity history
+  * leaderboard trend
+* Simulate players playing multiple games instead of only inserting final totals.
+* Use the same data models, database tables, and stat update functions used by the real app.
+* Do not bypass existing stat calculation logic unless absolutely necessary.
+* Include edge cases:
+
+  * brand-new player with 0 games
+  * player with many wins
+  * player with heavy losses
+  * player with large jackpot win
+  * player with break-even results
+  * current logged-in user
+* Add a command or npm script like:
+  npm run seed:test-players
+  or
+  npm run simulate:leaderboard
+* Make the script safe for development only.
+* Do not run in production.
+* Clearly mark generated users as test/demo users so they can be deleted later.
+* Add a cleanup script or option to remove generated test accounts and game history.
+* After seeding, the leaderboard should show multiple players with accurate ranks and stats.
+* Profile pages for generated users should display accurate RTP, total wagered, total won, largest win, net result, and activity breakdown.
+
+Acceptance check:
+After running the script, the leaderboard should contain many players with realistic ranked data, and clicking any player profile should show matching calculated stats from their generated game history.

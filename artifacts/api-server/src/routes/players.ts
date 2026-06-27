@@ -435,19 +435,15 @@ router.post("/change-pin", requirePlayer, async (req, res) => {
 
 // ── Public leaderboard — must be before /:playerId wildcard ──────────────────
 router.get("/leaderboard", async (_req, res) => {
-  const players = await db
-    .select({
-      id: playersTable.id,
-      username: playersTable.username,
-      chips: playersTable.chips,
-      handsPlayed: playersTable.handsPlayed,
-      wins: playersTable.wins,
-      totalWon: playersTable.totalWon,
-      avatarUrl: playersTable.avatarUrl,
-      staffRole: playersTable.staffRole,
-    })
-    .from(playersTable)
-    .where(sqlFn`${playersTable.isBot} = false`);
+  const WAGER_T = new Set(["loss", "fortuna-bet", "fortuna-bonus-buy", "rome-slots-bet", "western-slots-bet", "highlow_bet", "baccarat", "sport_bet"]);
+  const WIN_T   = new Set(["win", "tournament_win", "fortuna-win", "rome-slots-win", "western-slots-win", "rakeback"]);
+
+  function isPokerRow(type: string, description: string) {
+    const d = (description ?? "").toLowerCase();
+    return type === "buyin" || type === "poker_win" || type === "cashout" ||
+      d.startsWith("poker") || d.startsWith("won pot") ||
+      d.startsWith("rake collected at") || d.startsWith("buy-in to table") || d.startsWith("left table");
+  }
 
   function getTier(chips: number): string {
     if (chips >= 1_000_000) return "Diamond";
@@ -457,20 +453,50 @@ router.get("/leaderboard", async (_req, res) => {
     return "Bronze";
   }
 
+  const [players, allTxs] = await Promise.all([
+    db.select({
+      id:          playersTable.id,
+      username:    playersTable.username,
+      chips:       playersTable.chips,
+      handsPlayed: playersTable.handsPlayed,
+      wins:        playersTable.wins,
+      avatarUrl:   playersTable.avatarUrl,
+      staffRole:   playersTable.staffRole,
+    }).from(playersTable).where(eq(playersTable.isBot, false)),
+
+    db.select({
+      playerId:    transactionsTable.playerId,
+      type:        transactionsTable.type,
+      amount:      transactionsTable.amount,
+      description: transactionsTable.description,
+    }).from(transactionsTable),
+  ]);
+
+  type TxStats = { wagered: number; won: number; betCount: number; winCount: number };
+  const txByPlayer = new Map<number, TxStats>();
+  for (const tx of allTxs) {
+    if (!txByPlayer.has(tx.playerId)) txByPlayer.set(tx.playerId, { wagered: 0, won: 0, betCount: 0, winCount: 0 });
+    const s = txByPlayer.get(tx.playerId)!;
+    if (isPokerRow(tx.type, tx.description)) continue;
+    if (WAGER_T.has(tx.type)) { s.wagered += tx.amount; s.betCount++; }
+    if (WIN_T.has(tx.type))   { s.won     += tx.amount; s.winCount++; }
+  }
+
   const result = players.map(p => {
-    const wins = (p.wins as number) ?? 0;
-    const games = p.handsPlayed ?? 0;
-    const winRate = games > 0 ? Math.round((wins / games) * 100) : 0;
-    const totalWon = (p.totalWon as number) ?? 0;
+    const stats    = txByPlayer.get(p.id) ?? { wagered: 0, won: 0, betCount: 0, winCount: 0 };
+    const games    = Number(p.handsPlayed ?? 0);
+    const wins     = Number(p.wins ?? 0);
+    const winRate  = games > 0 ? Math.round((wins / games) * 100) : 0;
+    const netResult = stats.won - stats.wagered;
     return {
-      id: p.id,
-      username: p.username,
+      id:        p.id,
+      username:  p.username,
       games,
       wins,
       winRate,
-      totalWon,
-      chips: p.chips,
-      tier: getTier(p.chips),
+      totalWon:  netResult,
+      chips:     Number(p.chips),
+      tier:      getTier(Number(p.chips)),
       avatarUrl: p.avatarUrl ?? null,
       staffRole: p.staffRole ?? null,
     };

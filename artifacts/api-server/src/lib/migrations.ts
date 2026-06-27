@@ -1412,34 +1412,39 @@ export async function runMigrations(): Promise<void> {
     {
       name: "seed demo players",
       sql: `
-        INSERT INTO players (username, state_id, pin, chips, hands_played, wins, total_won, real_balance, referral_code, is_bot)
-        VALUES
-          ('ShadowKing',   'DEMO001', '0000', 2450000,  8420, 4800, 1920000,  95000, 'DEMO001', false),
-          ('NeonRacer',    'DEMO002', '0000', 987000,   5210, 2700, 780000,   40000, 'DEMO002', false),
-          ('CrimsonAce',   'DEMO003', '0000', 3800000,  12300, 7100, 3200000, 180000, 'DEMO003', false),
-          ('VoltageX',     'DEMO004', '0000', 145000,   1800, 820,  98000,   12000, 'DEMO004', false),
-          ('FrostByte',    'DEMO005', '0000', 560000,   3900, 2100, 430000,  28000, 'DEMO005', false),
-          ('BlazeThorn',   'DEMO006', '0000', 7200000,  21000, 12400, 6800000, 350000, 'DEMO006', false),
-          ('MirageOne',    'DEMO007', '0000', 320000,   2600, 1300, 210000,  20000, 'DEMO007', false),
-          ('IronClaw',     'DEMO008', '0000', 88000,    1100, 440,  52000,   8000, 'DEMO008', false),
-          ('NightWolf',    'DEMO009', '0000', 1650000,  7200, 3900, 1300000, 75000, 'DEMO009', false),
-          ('CobraStrike',  'DEMO010', '0000', 4500000,  15800, 9200, 4100000, 220000, 'DEMO010', false),
-          ('StarDrifter',  'DEMO011', '0000', 230000,   2100, 980,  160000,  15000, 'DEMO011', false),
-          ('RubyShark',    'DEMO012', '0000', 920000,   4700, 2500, 720000,  38000, 'DEMO012', false),
-          ('PhantomEdge',  'DEMO013', '0000', 62000,    800,  310,  35000,   5000, 'DEMO013', false),
-          ('TitanFall',    'DEMO014', '0000', 5100000,  18200, 10800, 4700000, 260000, 'DEMO014', false),
-          ('GlitchMode',   'DEMO015', '0000', 410000,   3100, 1600, 310000,  22000, 'DEMO015', false),
-          ('ArcFlash',     'DEMO016', '0000', 1100000,  6400, 3400, 880000,  55000, 'DEMO016', false),
-          ('SerpentKing',  'DEMO017', '0000', 195000,   1500, 690,  120000,  10000, 'DEMO017', false),
-          ('DuskRider',    'DEMO018', '0000', 2800000,  9800, 5600, 2400000, 130000, 'DEMO018', false),
-          ('IceFang',      'DEMO019', '0000', 730000,   4200, 2200, 570000,  32000, 'DEMO019', false),
-          ('OmegaVault',   'DEMO020', '0000', 9500000,  28000, 16500, 9100000, 500000, 'DEMO020', false),
-          ('PixelRogue',   'DEMO021', '0000', 380000,   2800, 1450, 270000,  18000, 'DEMO021', false),
-          ('ToxicDawn',    'DEMO022', '0000', 155000,   1300, 580,  85000,   9000, 'DEMO022', false),
-          ('GoldViper',    'DEMO023', '0000', 3300000,  11500, 6700, 2900000, 160000, 'DEMO023', false),
-          ('SilverGhost',  'DEMO024', '0000', 510000,   3600, 1900, 400000,  25000, 'DEMO024', false),
-          ('BronzeFist',   'DEMO025', '0000', 72000,    950,  380,  42000,   6000, 'DEMO025', false)
-        ON CONFLICT (username) DO NOTHING
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM players LIMIT 1) THEN
+            INSERT INTO players (username, state_id, pin, chips, hands_played, wins, total_won, real_balance, referral_code, is_bot)
+            VALUES
+              ('ShadowKing',   'DEMO001', '0000', 2450000,  8420,  4800,  1920000, 95000,  'DEMO001', false),
+              ('NeonRacer',    'DEMO002', '0000', 987000,   5210,  2700,  780000,  40000,  'DEMO002', false),
+              ('CrimsonAce',   'DEMO003', '0000', 3800000,  12300, 7100,  3200000, 180000, 'DEMO003', false),
+              ('VoltageX',     'DEMO004', '0000', 145000,   1800,  820,   98000,   12000,  'DEMO004', false),
+              ('FrostByte',    'DEMO005', '0000', 560000,   3900,  2100,  430000,  28000,  'DEMO005', false),
+              ('BlazeThorn',   'DEMO006', '0000', 7200000,  21000, 12400, 6800000, 350000, 'DEMO006', false),
+              ('MirageOne',    'DEMO007', '0000', 320000,   2600,  1300,  210000,  20000,  'DEMO007', false),
+              ('IronClaw',     'DEMO008', '0000', 88000,    1100,  440,   52000,   8000,   'DEMO008', false),
+              ('NightWolf',    'DEMO009', '0000', 1650000,  7200,  3900,  1300000, 75000,  'DEMO009', false),
+              ('CobraStrike',  'DEMO010', '0000', 4500000,  15800, 9200,  4100000, 220000, 'DEMO010', false),
+              ('StarDrifter',  'DEMO011', '0000', 230000,   2100,  980,   160000,  15000,  'DEMO011', false),
+              ('RubyShark',    'DEMO012', '0000', 920000,   4700,  2500,  720000,  38000,  'DEMO012', false),
+              ('PhantomEdge',  'DEMO013', '0000', 62000,    800,   310,   35000,   5000,   'DEMO013', false),
+              ('TitanFall',    'DEMO014', '0000', 5100000,  18200, 10800, 4700000, 260000, 'DEMO014', false),
+              ('GlitchMode',   'DEMO015', '0000', 410000,   3100,  1600,  310000,  22000,  'DEMO015', false),
+              ('ArcFlash',     'DEMO016', '0000', 1100000,  6400,  3400,  880000,  55000,  'DEMO016', false),
+              ('SerpentKing',  'DEMO017', '0000', 195000,   1500,  690,   120000,  10000,  'DEMO017', false),
+              ('DuskRider',    'DEMO018', '0000', 2800000,  9800,  5600,  2400000, 130000, 'DEMO018', false),
+              ('IceFang',      'DEMO019', '0000', 730000,   4200,  2200,  570000,  32000,  'DEMO019', false),
+              ('OmegaVault',   'DEMO020', '0000', 9500000,  28000, 16500, 9100000, 500000, 'DEMO020', false),
+              ('PixelRogue',   'DEMO021', '0000', 380000,   2800,  1450,  270000,  18000,  'DEMO021', false),
+              ('ToxicDawn',    'DEMO022', '0000', 155000,   1300,  580,   85000,   9000,   'DEMO022', false),
+              ('GoldViper',    'DEMO023', '0000', 3300000,  11500, 6700,  2900000, 160000, 'DEMO023', false),
+              ('SilverGhost',  'DEMO024', '0000', 510000,   3600,  1900,  400000,  25000,  'DEMO024', false),
+              ('BronzeFist',   'DEMO025', '0000', 72000,    950,   380,   42000,   6000,   'DEMO025', false)
+            ON CONFLICT (username) DO NOTHING;
+          END IF;
+        END $$
       `,
     },
     {
