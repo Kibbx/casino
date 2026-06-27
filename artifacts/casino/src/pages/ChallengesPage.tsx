@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader, CardGrid } from "./shared";
 import {
@@ -12,6 +12,89 @@ import {
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type FullChallenge = ChallengeDefinition & ChallengeState;
+
+// ── Toast notification ────────────────────────────────────────────────────────
+
+interface ToastData {
+  id:      number;
+  ok:      boolean;
+  title:   string;
+  sub:     string;
+}
+
+function ClaimToast({ toast, onDone }: { toast: ToastData; onDone: () => void }) {
+  const [visible, setVisible] = useState(false);
+
+  // Slide-in then slide-out
+  useEffect(() => {
+    const showT  = requestAnimationFrame(() => setVisible(true));
+    const hideT  = setTimeout(() => setVisible(false), 3_200);
+    const doneT  = setTimeout(onDone,                  3_800);
+    return () => {
+      cancelAnimationFrame(showT);
+      clearTimeout(hideT);
+      clearTimeout(doneT);
+    };
+  }, [onDone]);
+
+  const borderColor = toast.ok ? "rgba(34,197,94,0.35)"  : "rgba(239,68,68,0.35)";
+  const titleColor  = toast.ok ? "#4ade80"               : "#fca5a5";
+  const bgColor     = toast.ok ? "rgba(34,197,94,0.10)"  : "rgba(239,68,68,0.10)";
+
+  return (
+    <div
+      style={{
+        position:   "fixed",
+        bottom:     28,
+        right:      28,
+        zIndex:     9999,
+        minWidth:   240,
+        maxWidth:   320,
+        padding:    "14px 18px",
+        borderRadius: 12,
+        background: bgColor,
+        border:     `1px solid ${borderColor}`,
+        backdropFilter: "blur(12px)",
+        boxShadow:  "0 8px 32px rgba(0,0,0,0.55)",
+        transform:  visible ? "translateX(0)"    : "translateX(calc(100% + 36px))",
+        opacity:    visible ? 1                  : 0,
+        transition: "transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.35s ease",
+        pointerEvents: "none",
+      }}
+    >
+      {/* Icon + title row */}
+      <div className="flex items-center gap-2 mb-1">
+        <span style={{ fontSize: 18, lineHeight: 1 }}>
+          {toast.ok ? "🎉" : "⚠️"}
+        </span>
+        <span
+          style={{
+            color:      titleColor,
+            fontSize:   14,
+            fontWeight: 900,
+            fontFamily: "Rajdhani, sans-serif",
+            letterSpacing: "0.03em",
+            lineHeight: 1,
+          }}
+        >
+          {toast.title}
+        </span>
+      </div>
+      {/* Sub-text */}
+      <p
+        style={{
+          color:      "rgba(255,255,255,0.55)",
+          fontSize:   11,
+          fontWeight: 600,
+          margin:     0,
+          paddingLeft: 26,
+        }}
+      >
+        {toast.sub}
+      </p>
+    </div>
+  );
+}
 
 // ── Challenge Card ─────────────────────────────────────────────────────────────
 
@@ -80,7 +163,7 @@ function ChallengeCard({
         </div>
         <div className="rounded-full h-1.5" style={{ background: "rgba(255,255,255,0.08)" }}>
           <div
-            className="h-1.5 rounded-full transition-all"
+            className="h-1.5 rounded-full transition-all duration-500"
             style={{
               width: `${pct}%`,
               background: c.color,
@@ -115,7 +198,8 @@ export function ChallengesPage() {
 
   const [challenges, setChallenges] = useState<FullChallenge[]>([]);
   const [claiming,   setClaiming]   = useState<string | null>(null);
-  const [claimMsg,   setClaimMsg]   = useState<{ ok: boolean; text: string } | null>(null);
+  const [toasts,     setToasts]     = useState<ToastData[]>([]);
+  const toastId = useRef(0);
 
   const refresh = useCallback(() => {
     setChallenges(getChallengeStates(playerId));
@@ -126,6 +210,15 @@ export function ChallengesPage() {
     window.addEventListener(CHALLENGES_EVENT, refresh);
     return () => window.removeEventListener(CHALLENGES_EVENT, refresh);
   }, [refresh]);
+
+  function pushToast(ok: boolean, title: string, sub: string) {
+    const id = ++toastId.current;
+    setToasts(prev => [...prev, { id, ok, title, sub }]);
+  }
+
+  function removeToast(id: number) {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }
 
   async function handleClaim(c: FullChallenge) {
     if (!sessionToken || claiming || c.claimed) return;
@@ -140,17 +233,29 @@ export function ChallengesPage() {
         body: JSON.stringify({ amount: c.reward, challengeId: c.id, label: c.name }),
       });
       const body = await res.json().catch(() => ({}));
+
       if (res.ok) {
         markClaimed(c.id);
-        setClaimMsg({ ok: true, text: `+${c.reward.toLocaleString()} chips added to your balance!` });
+        pushToast(
+          true,
+          `+${c.reward.toLocaleString()} Chips Earned!`,
+          `${c.name} — Reward Claimed Successfully`,
+        );
+      } else if (res.status === 409) {
+        // Already claimed server-side — sync local state
+        markClaimed(c.id);
+        pushToast(false, "Already Claimed", "This reward was already collected.");
       } else {
-        setClaimMsg({ ok: false, text: (body as any).error ?? "Claim failed — try again." });
+        pushToast(
+          false,
+          "Claim Failed",
+          (body as any).error ?? "Something went wrong — please try again.",
+        );
       }
     } catch {
-      setClaimMsg({ ok: false, text: "Network error — try again." });
+      pushToast(false, "Network Error", "Could not reach the server — try again.");
     }
     setClaiming(null);
-    setTimeout(() => setClaimMsg(null), 3500);
   }
 
   const daily   = challenges.filter(c => c.category === "daily");
@@ -160,25 +265,6 @@ export function ChallengesPage() {
 
   return (
     <PageWrapper title="Challenges" breadcrumb="The Hub / Challenges" accentColor="#ec4899">
-
-      {/* Claim toast */}
-      {claimMsg && (
-        <div
-          style={{
-            background:   claimMsg.ok ? "rgba(34,197,94,0.10)"  : "rgba(239,68,68,0.10)",
-            border:      `1px solid ${claimMsg.ok ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
-            color:        claimMsg.ok ? "#4ade80" : "#fca5a5",
-            borderRadius: 10,
-            padding:      "10px 18px",
-            fontSize:     13,
-            fontWeight:   700,
-            marginBottom: 20,
-            textAlign:    "center",
-          }}
-        >
-          {claimMsg.text}
-        </div>
-      )}
 
       <SubHeader label="Daily Challenges" />
       <CardGrid minItemWidth={240} maxItemWidth={280} gap={16} className="mb-10">
@@ -207,6 +293,21 @@ export function ChallengesPage() {
           <ChallengeCard key={c.id} c={c} onClaim={() => handleClaim(c)} claiming={claiming === c.id} />
         ))}
       </CardGrid>
+
+      {/* Fixed corner toasts — stacked bottom-right */}
+      {toasts.map((t, i) => (
+        <div
+          key={t.id}
+          style={{
+            position: "fixed",
+            bottom: 28 + i * 90,
+            right: 28,
+            zIndex: 9999 + i,
+          }}
+        >
+          <ClaimToast toast={t} onDone={() => removeToast(t.id)} />
+        </div>
+      ))}
 
     </PageWrapper>
   );

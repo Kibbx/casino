@@ -104,7 +104,7 @@ router.post("/claim-reward", requirePlayer, async (req, res) => {
     .where(eq(playersTable.id, playerId));
 
   const newBalance = Number(updated?.chips ?? 0);
-  await broadcastPlayerBalance(playerId, newBalance).catch(() => {});
+  broadcastPlayerBalance(playerId, newBalance);
 
   return res.json({ ok: true, newBalance });
 });

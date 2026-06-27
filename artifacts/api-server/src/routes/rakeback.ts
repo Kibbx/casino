@@ -17,7 +17,7 @@ router.post("/claim", requirePlayer, async (req, res) => {
   if (result.error && result.claimed === 0) {
     return res.status(400).json({ error: result.error });
   }
-  await broadcastPlayerBalance(playerId, result.newBalance).catch(() => {});
+  broadcastPlayerBalance(playerId, result.newBalance);
   return res.json({ success: true, claimed: result.claimed, newBalance: result.newBalance });
 });
 
