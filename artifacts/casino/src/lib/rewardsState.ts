@@ -9,17 +9,17 @@ export interface RewardsState {
 }
 
 export const TIERS = [
-  { name: "Bronze",   minXP: 0,    color: "#cd7f32", icon: "🥉" },
-  { name: "Silver",   minXP: 800,  color: "#9ca3af", icon: "🥈" },
-  { name: "Gold",     minXP: 1500, color: "#f5c518", icon: "🥇" },
-  { name: "Platinum", minXP: 3000, color: "#e2e8f0", icon: "💎" },
-  { name: "Diamond",  minXP: 6000, color: "#7dd3fc", icon: "👑" },
+  { name: "Bronze",   minXP: 0,     color: "#cd7f32", icon: "🥉" },
+  { name: "Silver",   minXP: 5000,  color: "#9ca3af", icon: "🥈" },
+  { name: "Gold",     minXP: 15000, color: "#f5c518", icon: "🥇" },
+  { name: "Platinum", minXP: 40000, color: "#e2e8f0", icon: "💎" },
+  { name: "Diamond",  minXP: 100000, color: "#7dd3fc", icon: "👑" },
 ];
 
 const DEFAULT_STATE: RewardsState = {
-  xp: 800,
-  tier: "Silver",
-  points: 800,
+  xp: 0,
+  tier: "Bronze",
+  points: 0,
   claimed: [],
 };
 
@@ -58,7 +58,7 @@ export function getRewardsState(): RewardsState {
 }
 
 export function awardXP(betAmount: number): void {
-  const xp = Math.floor(betAmount * 0.01);
+  const xp = Math.floor(betAmount * 0.003);
   if (xp <= 0) return;
   const s = load();
   const newXP = s.xp + xp;
