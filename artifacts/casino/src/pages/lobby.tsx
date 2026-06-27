@@ -435,6 +435,26 @@ export function Lobby() {
 
         {/* RIGHT — rank · chips · profile · logout (Git pill design) */}
         <div className="flex items-center shrink-0 ml-auto order-2 md:order-3 lg:order-4 lg:pr-1" style={{ gap: 12 }}>
+          {/* Rank pill — hidden on mobile */}
+          <div className="nav-pill nav-pill-rank hidden md:flex">
+            <Star size={12} style={{ color: subRank.tierColor, fill: subRank.tierColor, flexShrink: 0 }} />
+            <div className="flex flex-col leading-none gap-[5px]">
+              <span className="text-[11px] font-black uppercase tracking-wide leading-none" style={{ color: "#c4cdd8" }}>{subRank.label}</span>
+              <div className="flex items-center gap-1.5">
+                <div className="nav-rank-bar">
+                  <div className="nav-rank-fill" style={{ width: `${subRank.progress}%` }} />
+                </div>
+                {subRank.nextTierName ? (
+                  <span className="text-[8px] font-bold tracking-wide leading-none" style={{ color: "rgba(245,197,24,0.65)" }}>
+                    {subRank.progress}% TO {subRank.nextTierName.toUpperCase()}
+                  </span>
+                ) : (
+                  <span className="text-[8px] font-bold tracking-wide leading-none" style={{ color: "rgba(245,197,24,0.65)" }}>MAX RANK</span>
+                )}
+              </div>
+            </div>
+          </div>
+
           {/* Wallet / Chips pill */}
           <ActiveChipsDisplay chips={chips} label={appMode === "marketplace" ? "Wallet" : "Chips"} />
 
