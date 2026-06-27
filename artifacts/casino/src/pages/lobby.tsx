@@ -368,22 +368,6 @@ export function Lobby() {
               : <>Big House <span style={{ color: "#f5c518", textShadow: "0 0 14px rgba(245,197,24,0.65)" }}>Market</span></>
             }
           </h1>
-          {/* Volume — hidden on mobile */}
-          <div className="hidden md:flex items-center gap-1.5 shrink-0">
-            <div className="w-px h-5 shrink-0" style={{ background: "rgba(255,255,255,0.09)" }} />
-            <button className="nav-icon-btn shrink-0" onClick={() => setMuted(m => !m)}>
-              {muted
-                ? <VolumeX size={14} style={{ color: "rgba(255,255,255,0.3)" }} />
-                : <Volume2 size={14} style={{ color: "rgba(255,255,255,0.5)" }} />}
-            </button>
-            <input
-              type="range" min={0} max={100}
-              value={muted ? 0 : volume}
-              onChange={e => { setVolume(Number(e.target.value)); setMuted(false); }}
-              className="nav-volume-slider"
-              style={{ "--vol-pct": `${muted ? 0 : volume}%`, display: "block" } as React.CSSProperties}
-            />
-          </div>
           <div className="w-px h-5 shrink-0 hidden lg:block" style={{ background: "rgba(255,255,255,0.09)" }} />
         </div>
 
