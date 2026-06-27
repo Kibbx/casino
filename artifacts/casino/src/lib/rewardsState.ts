@@ -130,7 +130,7 @@ export function getSubRank(xp: number): SubRank {
   const next = TIERS[tierIdx + 1] ?? null;
 
   if (!next) {
-    return { tierName: cur.name, division: "III", label: `${cur.name.toUpperCase()} III`, progress: 100, nextTierName: null, tierColor: cur.color };
+    return { tierName: cur.name, division: "III", label: cur.name.toUpperCase(), progress: 100, nextTierName: null, tierColor: cur.color };
   }
 
   const span     = next.minXP - cur.minXP;
@@ -140,7 +140,7 @@ export function getSubRank(xp: number): SubRank {
   return {
     tierName:    cur.name,
     division,
-    label:       `${cur.name.toUpperCase()} ${division}`,
+    label:       cur.name.toUpperCase(),
     progress:    Math.round(pos * 100),
     nextTierName: next.name,
     tierColor:   cur.color,
