@@ -58,7 +58,7 @@ export function getRewardsState(): RewardsState {
 }
 
 export function awardXP(betAmount: number): void {
-  const xp = Math.floor(betAmount * 0.1);
+  const xp = Math.floor(betAmount * 2);
   if (xp <= 0) return;
   const s = load();
   const newXP = s.xp + xp;
