@@ -61,6 +61,18 @@ interface StoredState {
   sessionProfit:   number;
 }
 
+// ── Reward ranges (chips) — adjust here without touching any other logic ───────
+// Daily:   Easy 1,000–2,000 | Medium 2,000–3,500 | Hard 3,500–5,000
+// Weekly:  Easy 5,000–6,500 | Medium 6,500–8,000 | Hard 8,000–10,000
+// Monthly: Easy 10,000–15,000 | Medium 15,000–20,000 | Hard 20,000–25,000
+// Special: 25,000–100,000+
+export const REWARD_RANGES = {
+  daily:   { easy: [1_000, 2_000],  medium: [2_000, 3_500],  hard: [3_500, 5_000]   },
+  weekly:  { easy: [5_000, 6_500],  medium: [6_500, 8_000],  hard: [8_000, 10_000]  },
+  monthly: { easy: [10_000, 15_000], medium: [15_000, 20_000], hard: [20_000, 25_000] },
+  special: { easy: [25_000, 40_000], medium: [40_000, 75_000], hard: [75_000, 100_000] },
+} as const;
+
 // ── Challenge Pools ───────────────────────────────────────────────────────────
 // 3 are active at a time per category (except special which always shows all).
 
@@ -68,42 +80,42 @@ export const DAILY_POOL: ChallengeDefinition[] = [
   {
     id: "d_high_roller", category: "daily", icon: "🃏",
     name: "High Roller", desc: "Play 5 rounds of Blackjack",
-    total: 5, reward: 50, color: "#22c55e",
+    total: 5, reward: 1_500, color: "#22c55e",
   },
   {
     id: "d_spin_doctor", category: "daily", icon: "🎡",
     name: "Spin Doctor", desc: "Spin the Roulette wheel 3 times",
-    total: 3, reward: 75, color: "#f97316",
+    total: 3, reward: 1_200, color: "#f97316",
   },
   {
     id: "d_big_bettor", category: "daily", icon: "💰",
     name: "Big Bettor", desc: "Place a single bet over $100",
-    total: 1, reward: 100, color: "#f5c518",
+    total: 1, reward: 1_000, color: "#f5c518",
   },
   {
     id: "d_lucky_streak", category: "daily", icon: "⚡",
     name: "Lucky Streak", desc: "Win 3 consecutive hands",
-    total: 3, reward: 80, color: "#eab308",
+    total: 3, reward: 2_500, color: "#eab308",
   },
   {
     id: "d_quick_gambler", category: "daily", icon: "🎲",
     name: "Quick Gambler", desc: "Play 10 rounds of any game",
-    total: 10, reward: 60, color: "#6366f1",
+    total: 10, reward: 1_000, color: "#6366f1",
   },
   {
     id: "d_case_opener", category: "daily", icon: "📦",
     name: "Case Opener", desc: "Open 1 case",
-    total: 1, reward: 90, color: "#8b5cf6",
+    total: 1, reward: 2_000, color: "#8b5cf6",
   },
   {
     id: "d_whale_bet", category: "daily", icon: "🐋",
     name: "Whale Bet", desc: "Wager over $500 in a single bet",
-    total: 1, reward: 120, color: "#14b8a6",
+    total: 1, reward: 3_000, color: "#14b8a6",
   },
   {
     id: "d_roulette_winner", category: "daily", icon: "🔴",
     name: "Roulette Winner", desc: "Win 2 Roulette spins",
-    total: 2, reward: 85, color: "#ef4444",
+    total: 2, reward: 2_500, color: "#ef4444",
   },
 ];
 
@@ -111,32 +123,32 @@ export const WEEKLY_POOL: ChallengeDefinition[] = [
   {
     id: "w_tourney", category: "weekly", icon: "🏆",
     name: "Tournament Regular", desc: "Enter 3 tournaments this week",
-    total: 3, reward: 400, color: "#a855f7",
+    total: 3, reward: 7_500, color: "#a855f7",
   },
   {
     id: "w_mini_marathon", category: "weekly", icon: "🎰",
     name: "Mini Game Marathon", desc: "Play 20 rounds of any mini game",
-    total: 20, reward: 250, color: "#ec4899",
+    total: 20, reward: 5_000, color: "#ec4899",
   },
   {
     id: "w_social", category: "weekly", icon: "🤝",
     name: "Social Butterfly", desc: "Play at full tables 5 times",
-    total: 5, reward: 300, color: "#06b6d4",
+    total: 5, reward: 6_000, color: "#06b6d4",
   },
   {
     id: "w_high_roller", category: "weekly", icon: "🃏",
     name: "Blackjack Devotee", desc: "Play 50 rounds of Blackjack this week",
-    total: 50, reward: 350, color: "#22c55e",
+    total: 50, reward: 7_000, color: "#22c55e",
   },
   {
     id: "w_case_hunter", category: "weekly", icon: "📦",
     name: "Case Hunter", desc: "Open 5 cases this week",
-    total: 5, reward: 450, color: "#8b5cf6",
+    total: 5, reward: 8_000, color: "#8b5cf6",
   },
   {
     id: "w_big_winner", category: "weekly", icon: "🏅",
     name: "Big Winner", desc: "Win 20 total bets this week",
-    total: 20, reward: 500, color: "#f59e0b",
+    total: 20, reward: 10_000, color: "#f59e0b",
   },
 ];
 
@@ -144,32 +156,32 @@ export const MONTHLY_POOL: ChallengeDefinition[] = [
   {
     id: "m_marathon", category: "monthly", icon: "🏃",
     name: "The Long Haul", desc: "Play 500 rounds of any game this month",
-    total: 500, reward: 5000, color: "#f97316",
+    total: 500, reward: 15_000, color: "#f97316",
   },
   {
     id: "m_blackjack_ace", category: "monthly", icon: "🃏",
     name: "Blackjack Ace", desc: "Win 50 Blackjack hands this month",
-    total: 50, reward: 3000, color: "#22c55e",
+    total: 50, reward: 12_000, color: "#22c55e",
   },
   {
     id: "m_fortune_seeker", category: "monthly", icon: "🎡",
     name: "Fortune Seeker", desc: "Win 30 Roulette spins this month",
-    total: 30, reward: 2000, color: "#ef4444",
+    total: 30, reward: 10_000, color: "#ef4444",
   },
   {
     id: "m_case_connoisseur", category: "monthly", icon: "🎁",
     name: "Case Connoisseur", desc: "Open 10 cases this month",
-    total: 10, reward: 4000, color: "#a855f7",
+    total: 10, reward: 18_000, color: "#a855f7",
   },
   {
     id: "m_big_spender", category: "monthly", icon: "💎",
     name: "High Roller Month", desc: "Wager 100,000 chips total this month",
-    total: 100000, reward: 8000, color: "#f59e0b",
+    total: 100000, reward: 25_000, color: "#f59e0b",
   },
   {
     id: "m_winner", category: "monthly", icon: "🏆",
     name: "Unstoppable", desc: "Win 100 total bets this month",
-    total: 100, reward: 6000, color: "#7dd3fc",
+    total: 100, reward: 22_000, color: "#7dd3fc",
   },
 ];
 
@@ -177,12 +189,12 @@ export const SPECIAL_CHALLENGES: ChallengeDefinition[] = [
   {
     id: "s_diamond_run", category: "special", icon: "👑",
     name: "The Diamond Run", desc: "Win 10 consecutive bets — legendary streak",
-    total: 10, reward: 2000, color: "#7dd3fc", limited: true,
+    total: 10, reward: 50_000, color: "#7dd3fc", limited: true,
   },
   {
     id: "s_on_fire", category: "special", icon: "🔥",
     name: "On Fire", desc: "Win $1,000 in a single session",
-    total: 1000, reward: 500, color: "#f97316", limited: true,
+    total: 1000, reward: 25_000, color: "#f97316", limited: true,
   },
 ];
 
