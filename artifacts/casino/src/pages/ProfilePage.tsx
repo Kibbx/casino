@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent } from "lucide-react";
+import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent, X, Package, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader } from "./shared";
@@ -37,6 +37,29 @@ interface Transaction {
   description: string | null;
   createdAt: string;
 }
+
+interface InventoryItem {
+  id: number;
+  prize_item_id: number;
+  prize_name: string;
+  prize_emoji: string | null;
+  prize_type: string;
+  quantity: number;
+  image_url: string | null;
+  tier: string;
+  source: string | null;
+  first_won_at: string;
+  last_won_at: string;
+  prize_value: number;
+}
+
+const ITEM_TIER: Record<string, { label: string; color: string }> = {
+  common:    { label: "Common",    color: "#9ca3af" },
+  rare:      { label: "Rare",      color: "#3b82f6" },
+  epic:      { label: "Epic",      color: "#a855f7" },
+  legendary: { label: "Legendary", color: "#f59e0b" },
+  jackpot:   { label: "Jackpot",   color: "#ef4444" },
+};
 
 const TX_LABELS: Record<string, string> = {
   deposit: "Chip Deposit", withdrawal: "Withdrawal", bonus: "Bonus Gift", gift: "Staff Gift",
@@ -112,6 +135,59 @@ export function ProfilePage() {
   const [confirmPin,   setConfirmPin]   = useState("");
   const [pinSaving,    setPinSaving]    = useState(false);
   const [pinMsg,       setPinMsg]       = useState<{ ok: boolean; text: string } | null>(null);
+
+  const [showItems,    setShowItems]    = useState(false);
+  const [items,        setItems]        = useState<InventoryItem[]>([]);
+  const [itemsLoading, setItemsLoading] = useState(false);
+  const [itemMsg,      setItemMsg]      = useState<{ id: number; text: string; ok: boolean } | null>(null);
+
+  const loadInventory = useCallback(async () => {
+    if (!sessionToken) return;
+    setItemsLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/cases/my-inventory`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      const data = await res.json();
+      setItems(Array.isArray(data) ? data : []);
+    } catch { setItems([]); }
+    finally { setItemsLoading(false); }
+  }, [sessionToken]);
+
+  async function handleItemRequest(id: number) {
+    try {
+      const res = await fetch(`${BASE}/api/cases/my-inventory/${id}/request`, {
+        method: "POST", headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) { setItemMsg({ id, text: "Requested! Staff will deliver it in-game.", ok: true }); loadInventory(); }
+      else setItemMsg({ id, text: (body as any).error ?? "Request failed", ok: false });
+    } catch { setItemMsg({ id, text: "Request failed", ok: false }); }
+    setTimeout(() => setItemMsg(null), 3500);
+  }
+
+  async function handleItemSell(id: number) {
+    try {
+      const res = await fetch(`${BASE}/api/cases/my-inventory/${id}/sell`, {
+        method: "POST", headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok) { setItemMsg({ id, text: `Sold for +${((body as any).chipsAwarded ?? 0).toLocaleString()} chips!`, ok: true }); loadInventory(); }
+      else setItemMsg({ id, text: (body as any).error ?? "Sell failed", ok: false });
+    } catch { setItemMsg({ id, text: "Sell failed", ok: false }); }
+    setTimeout(() => setItemMsg(null), 3500);
+  }
+
+  async function handleItemTrash(id: number) {
+    try {
+      const res = await fetch(`${BASE}/api/cases/my-inventory/${id}/trash`, {
+        method: "POST", headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) setItemMsg({ id, text: (body as any).error ?? "Failed", ok: false });
+      else loadInventory();
+    } catch { setItemMsg({ id, text: "Failed", ok: false }); }
+  }
 
   const load = useCallback(async () => {
     if (!sessionToken || !playerId) return;
@@ -340,7 +416,7 @@ export function ProfilePage() {
           {/* Items + Prizes quick-nav */}
           <div className="px-5 pb-5 flex gap-2">
             <button
-              onClick={() => setLocation("/cases")}
+              onClick={() => { setShowItems(true); loadInventory(); }}
               className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
               style={{
                 background: "rgba(6,182,212,0.10)",
@@ -583,6 +659,165 @@ export function ProfilePage() {
               }}>
               +{fmt(biggestWin)} chips
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Items Inventory modal ───────────────────────────────── */}
+      {showItems && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.78)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowItems(false); }}
+        >
+          <div style={{
+            background: "#0e0b0b",
+            border: "1px solid rgba(6,182,212,0.18)",
+            borderRadius: 18,
+            width: "100%", maxWidth: 600,
+            maxHeight: "82vh",
+            display: "flex", flexDirection: "column",
+            boxShadow: "0 0 80px rgba(0,0,0,0.9), 0 0 40px rgba(6,182,212,0.05)",
+          }}>
+            {/* Header */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "18px 22px 16px",
+              borderBottom: "1px solid rgba(255,255,255,0.07)",
+              flexShrink: 0,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Package size={15} style={{ color: "#06b6d4" }} />
+                <span style={{
+                  fontFamily: "Rajdhani, sans-serif", fontWeight: 900, fontSize: 13,
+                  letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
+                }}>Item Inventory</span>
+                {items.length > 0 && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700,
+                    background: "rgba(6,182,212,0.14)", border: "1px solid rgba(6,182,212,0.28)",
+                    color: "#06b6d4", borderRadius: 20, padding: "2px 8px",
+                  }}>{items.length} item{items.length !== 1 ? "s" : ""}</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowItems(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 4, lineHeight: 1 }}
+              ><X size={16} /></button>
+            </div>
+
+            {/* Body */}
+            <div style={{ overflowY: "auto", flex: 1, padding: "14px 22px 22px" }}>
+              {itemsLoading ? (
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 0" }}>
+                  <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading items…</span>
+                </div>
+              ) : items.length === 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "48px 0" }}>
+                  <Package size={32} style={{ color: "rgba(255,255,255,0.1)" }} />
+                  <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 13, textAlign: "center" }}>
+                    No items in your inventory.<br />Open some cases to win prizes!
+                  </span>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {items.map(item => {
+                    const tc = ITEM_TIER[item.tier] ?? ITEM_TIER.common;
+                    const sellVal = Math.floor((item.prize_value ?? 0) * 0.5);
+                    const msg = itemMsg?.id === item.id ? itemMsg : null;
+                    return (
+                      <div key={item.id} style={{
+                        background: "#0c0a0a",
+                        border: `1px solid ${tc.color}22`,
+                        borderRadius: 12,
+                        padding: "11px 14px",
+                        display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                      }}>
+                        {/* Emoji / image */}
+                        <div style={{
+                          width: 40, height: 40, borderRadius: 8, flexShrink: 0,
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          background: `${tc.color}12`, border: `1px solid ${tc.color}28`,
+                          fontSize: 20, overflow: "hidden",
+                        }}>
+                          {item.image_url
+                            ? <img src={`${BASE}/api/uploads${item.image_url}`} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            : (item.prize_emoji || "🎁")}
+                        </div>
+
+                        {/* Info */}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "Rajdhani, sans-serif" }}>
+                              {item.prize_name}
+                            </span>
+                            <span style={{
+                              fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em",
+                              color: tc.color, background: `${tc.color}18`, border: `1px solid ${tc.color}2a`,
+                              borderRadius: 10, padding: "1px 6px",
+                            }}>{tc.label}</span>
+                            {item.quantity > 1 && (
+                              <span style={{
+                                fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.45)",
+                                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: 10, padding: "1px 6px",
+                              }}>×{item.quantity}</span>
+                            )}
+                          </div>
+                          <div style={{ display: "flex", gap: 12, marginTop: 3, flexWrap: "wrap", alignItems: "center" }}>
+                            {item.source && (
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.28)" }}>From: {item.source}</span>
+                            )}
+                            {sellVal > 0 && (
+                              <span style={{ fontSize: 10, color: "#f5c518" }}>Sell: {sellVal.toLocaleString()} chips</span>
+                            )}
+                          </div>
+                          {msg && (
+                            <p style={{ fontSize: 10, margin: "4px 0 0", color: msg.ok ? "#22c55e" : "#ef4444" }}>{msg.text}</p>
+                          )}
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                          <button
+                            onClick={() => handleItemRequest(item.id)}
+                            style={{
+                              padding: "5px 10px", borderRadius: 7, fontSize: 10, fontWeight: 700,
+                              background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.28)",
+                              color: "#22c55e", cursor: "pointer", textTransform: "uppercase",
+                              letterSpacing: "0.06em", fontFamily: "Rajdhani, sans-serif",
+                            }}
+                          >Request</button>
+                          {sellVal > 0 && (
+                            <button
+                              onClick={() => handleItemSell(item.id)}
+                              style={{
+                                padding: "5px 10px", borderRadius: 7, fontSize: 10, fontWeight: 700,
+                                background: "rgba(245,197,24,0.12)", border: "1px solid rgba(245,197,24,0.28)",
+                                color: "#f5c518", cursor: "pointer", textTransform: "uppercase",
+                                letterSpacing: "0.06em", fontFamily: "Rajdhani, sans-serif",
+                              }}
+                            >Sell</button>
+                          )}
+                          <button
+                            onClick={() => handleItemTrash(item.id)}
+                            style={{
+                              padding: "5px 8px", borderRadius: 7,
+                              background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)",
+                              color: "rgba(239,68,68,0.5)", cursor: "pointer", display: "flex", alignItems: "center",
+                            }}
+                          ><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
