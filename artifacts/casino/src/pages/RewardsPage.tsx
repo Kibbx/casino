@@ -155,63 +155,22 @@ export function RewardsPage() {
         </div>
       </div>
 
-      <SubHeader label="Available Rewards" />
-      <CardGrid minItemWidth={180} maxItemWidth={220} gap={16}>
-        {AVAILABLE_REWARDS.map((r) => {
-          const isClaimed  = state.claimed.includes(r.id);
-          const canAfford  = state.points >= r.cost;
-          const actionable = !isClaimed && canAfford;
-
-          const btnLabel = isClaimed
-            ? "Claimed ✓"
-            : !canAfford
-              ? "Insufficient"
-              : "Claim";
-
-          const btnBg = isClaimed
-            ? "rgba(74,222,128,0.12)"
-            : !canAfford
-              ? "rgba(255,255,255,0.05)"
-              : r.color;
-
-          const btnColor = isClaimed
-            ? "#4ade80"
-            : !canAfford
-              ? "rgba(255,255,255,0.20)"
-              : "#060404";
-
-          return (
-            <div
-              key={r.id}
-              className="rounded-xl px-5 py-4 flex flex-col gap-3"
-              style={{
-                background: "#0c0a0a",
-                border: `1px solid ${isClaimed ? "rgba(255,255,255,0.08)" : `${r.color}22`}`,
-                width: 200,
-                minWidth: 180,
-                flexShrink: 0,
-                opacity: isClaimed ? 0.6 : 1,
-              }}
-            >
-              <div className="text-3xl">{r.icon}</div>
-              <p className="text-[13px] font-bold leading-snug" style={{ color: "rgba(255,255,255,0.80)" }}>{r.name}</p>
-              <div className="flex items-center justify-between mt-auto">
-                <span className="text-[12px] font-black" style={{ color: isClaimed ? "rgba(255,255,255,0.30)" : "#f5c518" }}>
-                  🪙 {r.cost.toLocaleString()}
-                </span>
-                <button
-                  className="px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-                  style={{ background: btnBg, color: btnColor, cursor: actionable ? "pointer" : "default" }}
-                  disabled={!actionable}
-                  onClick={() => handleClaim(r.id, r.cost)}
-                >
-                  {btnLabel}
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </CardGrid>
+      <SubHeader label="Reward Shop" />
+      <div
+        className="rounded-2xl flex flex-col items-center justify-center gap-4 py-16"
+        style={{ background: "#0c0a0a", border: "1px solid rgba(255,255,255,0.07)" }}
+      >
+        <div style={{ fontSize: 48, lineHeight: 1 }}>🛒</div>
+        <h3
+          className="text-xl font-black uppercase tracking-widest"
+          style={{ fontFamily: "'Orbitron', sans-serif", color: "rgba(255,255,255,0.35)" }}
+        >
+          Coming Soon
+        </h3>
+        <p className="text-[13px] text-center max-w-xs" style={{ color: "rgba(255,255,255,0.25)" }}>
+          The reward shop is under construction. Check back soon to spend your points.
+        </p>
+      </div>
 
     </PageWrapper>
   );
