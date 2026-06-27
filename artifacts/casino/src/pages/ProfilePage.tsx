@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent, X, Package, Trash2, Clock, CheckCircle2, Hourglass } from "lucide-react";
+import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent, X, Package, Trash2, Clock, CheckCircle2, Hourglass, ArrowRightLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { fmtETDateTime } from "../utils/timezone";
 import { useStore } from "../store";
@@ -177,6 +177,11 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
   const [pubData,    setPubData]    = useState<PublicProfileData | null>(null);
   const [pubLoading, setPubLoading] = useState(false);
 
+  const [showTransfer,    setShowTransfer]    = useState(false);
+  const [transferAmt,     setTransferAmt]     = useState("");
+  const [transferLoading, setTransferLoading] = useState(false);
+  const [transferResult,  setTransferResult]  = useState<{ ok: boolean; text: string } | null>(null);
+
   const loadPrizes = useCallback(async () => {
     if (!sessionToken) return;
     setPrizesLoading(true);
@@ -324,6 +329,32 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
       setPinMsg({ ok: false, text: e.message ?? "Failed to change PIN" });
     } finally {
       setPinSaving(false);
+    }
+  }
+
+  async function doTransfer() {
+    if (!sessionToken || !pubData) return;
+    const amt = parseInt(transferAmt);
+    if (!amt || amt < 1) return;
+    setTransferLoading(true);
+    setTransferResult(null);
+    try {
+      const r = await fetch(`${BASE}/api/players/transfer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
+        body: JSON.stringify({ toUsername: pubData.username, amount: amt }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setTransferResult({ ok: false, text: d.error ?? "Transfer failed" });
+      } else {
+        setTransferResult({ ok: true, text: `Sent ${amt.toLocaleString()} chips to ${pubData.username}.` });
+        setTransferAmt("");
+      }
+    } catch {
+      setTransferResult({ ok: false, text: "Network error. Please try again." });
+    } finally {
+      setTransferLoading(false);
     }
   }
 
@@ -502,9 +533,23 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
             })}
           </div>
 
-          {/* Security — change PIN (own) / Back (viewed) */}
-          <div className={`px-5 pt-1 ${isViewing ? "pb-5" : "pb-2"}`}>
-            {isViewing ? (
+          {/* Buttons: Transfer + Back (viewed player) / Security + Items + Prizes (own profile) */}
+          {isViewing ? (
+            <div className="px-5 pt-1 pb-5 flex flex-col gap-2">
+              <button
+                onClick={() => { setShowTransfer(true); setTransferResult(null); setTransferAmt(""); }}
+                className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: "rgba(232,64,10,0.08)",
+                  color: "#e8400a",
+                  border: "1px solid rgba(232,64,10,0.45)",
+                  letterSpacing: "0.1em",
+                  boxShadow: "0 0 10px rgba(232,64,10,0.12)",
+                  cursor: "pointer",
+                }}
+              >
+                Transfer
+              </button>
               <button
                 onClick={onBack}
                 className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
@@ -518,50 +563,50 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
               >
                 ← Back
               </button>
-            ) : (
-              <button
-                onClick={() => { setShowSecurity(true); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
-                className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-                style={{
-                  background: "rgba(232,64,10,0.10)",
-                  color: "#e8400a",
-                  border: "1px solid rgba(232,64,10,0.40)",
-                  letterSpacing: "0.1em",
-                }}
-              >
-                Security
-              </button>
-            )}
-          </div>
-
-          {/* Items + Prizes quick-nav (own profile only) */}
-          {!isViewing && (
-            <div className="px-5 pb-5 flex gap-2">
-              <button
-                onClick={() => { setShowItems(true); loadInventory(); }}
-                className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-                style={{
-                  background: "rgba(6,182,212,0.10)",
-                  color: "#06b6d4",
-                  border: "1px solid rgba(6,182,212,0.35)",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                🎁 Items
-              </button>
-              <button
-                onClick={() => { setShowPrizes(true); loadPrizes(); }}
-                className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-                style={{
-                  background: "rgba(168,85,247,0.10)",
-                  color: "#a855f7",
-                  border: "1px solid rgba(168,85,247,0.35)",
-                  letterSpacing: "0.08em",
-                }}
-              >
-                🏅 Prizes
-              </button>
             </div>
+          ) : (
+            <>
+              <div className="px-5 pt-1 pb-2">
+                <button
+                  onClick={() => { setShowSecurity(true); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
+                  className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                  style={{
+                    background: "rgba(232,64,10,0.10)",
+                    color: "#e8400a",
+                    border: "1px solid rgba(232,64,10,0.40)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  Security
+                </button>
+              </div>
+              <div className="px-5 pb-5 flex gap-2">
+                <button
+                  onClick={() => { setShowItems(true); loadInventory(); }}
+                  className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                  style={{
+                    background: "rgba(6,182,212,0.10)",
+                    color: "#06b6d4",
+                    border: "1px solid rgba(6,182,212,0.35)",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  🎁 Items
+                </button>
+                <button
+                  onClick={() => { setShowPrizes(true); loadPrizes(); }}
+                  className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                  style={{
+                    background: "rgba(168,85,247,0.10)",
+                    color: "#a855f7",
+                    border: "1px solid rgba(168,85,247,0.35)",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  🏅 Prizes
+                </button>
+              </div>
+            </>
           )}
 
         </div>
@@ -1207,6 +1252,105 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
               }}
             >
               {pinSaving ? "Saving…" : "Change PIN"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Transfer Chips modal ─────────────────────────────────── */}
+      {isViewing && showTransfer && pubData && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.78)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 16,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) { setShowTransfer(false); setTransferResult(null); } }}
+        >
+          <div style={{
+            background: "#0e0b06",
+            border: "1px solid rgba(232,64,10,0.22)",
+            borderRadius: 18,
+            padding: "22px 24px 24px",
+            width: "100%", maxWidth: 320,
+            boxShadow: "0 0 80px rgba(0,0,0,0.9), 0 0 40px rgba(232,64,10,0.05)",
+            display: "flex", flexDirection: "column", gap: 16,
+          }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ArrowRightLeft size={14} style={{ color: "#e8400a" }} />
+                <span style={{
+                  fontFamily: "Rajdhani, sans-serif", fontWeight: 900, fontSize: 13,
+                  letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
+                }}>
+                  Transfer Chips
+                </span>
+              </div>
+              <button
+                onClick={() => { setShowTransfer(false); setTransferResult(null); }}
+                style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 2, lineHeight: 1, fontSize: 18 }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Recipient chip */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 8,
+              background: "rgba(232,64,10,0.07)",
+              border: "1px solid rgba(232,64,10,0.18)",
+              borderRadius: 8, padding: "7px 12px",
+            }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.35)", fontFamily: "Rajdhani, sans-serif", textTransform: "uppercase", letterSpacing: "0.1em", flexShrink: 0 }}>To</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "Rajdhani, sans-serif", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pubData.username}</span>
+              {pubData.stateId && <span style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", flexShrink: 0 }}>#{pubData.stateId}</span>}
+            </div>
+
+            {/* Amount input */}
+            <input
+              type="number"
+              min={1}
+              value={transferAmt}
+              onChange={e => { setTransferAmt(e.target.value); setTransferResult(null); }}
+              onKeyDown={e => { if (e.key === "Enter" && !transferLoading) doTransfer(); }}
+              placeholder="Amount"
+              disabled={transferLoading}
+              style={{
+                background: "rgba(0,0,0,0.4)",
+                border: "1px solid rgba(255,255,255,0.10)",
+                borderRadius: 8, padding: "8px 12px",
+                color: "#fff", fontSize: 14, outline: "none",
+                width: "100%", boxSizing: "border-box",
+                fontFamily: "'Orbitron', monospace",
+              }}
+            />
+
+            {/* Result message */}
+            {transferResult && (
+              <p style={{ fontSize: 12, margin: 0, color: transferResult.ok ? "#22c55e" : "#ef4444", textAlign: "center" }}>
+                {transferResult.text}
+              </p>
+            )}
+
+            {/* Confirm button */}
+            <button
+              onClick={doTransfer}
+              disabled={!parseInt(transferAmt) || parseInt(transferAmt) < 1 || transferLoading}
+              style={{
+                padding: "10px 0", borderRadius: 8,
+                background: "rgba(232,64,10,0.16)",
+                border: "1px solid rgba(232,64,10,0.45)",
+                color: "#e8400a", fontWeight: 700, fontSize: 12,
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                cursor: (!parseInt(transferAmt) || parseInt(transferAmt) < 1 || transferLoading) ? "not-allowed" : "pointer",
+                opacity: (!parseInt(transferAmt) || parseInt(transferAmt) < 1 || transferLoading) ? 0.5 : 1,
+                fontFamily: "Rajdhani, sans-serif",
+                boxShadow: "0 0 16px rgba(232,64,10,0.08)",
+              }}
+            >
+              {transferLoading ? "Sending…" : "Confirm Transfer"}
             </button>
           </div>
         </div>
