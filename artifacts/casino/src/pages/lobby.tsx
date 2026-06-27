@@ -363,12 +363,12 @@ export function Lobby() {
           <div className="w-px h-5 shrink-0 hidden sm:block" style={{ background: "rgba(255,255,255,0.08)" }} />
           <div className="flex items-baseline gap-[5px] shrink-0" style={{ whiteSpace: "nowrap" }}>
             <span className="font-rajdhani font-black uppercase"
-              style={{ color: "#fff", fontSize: "clamp(14px, 1.1vw, 16px)", letterSpacing: "0.09em", lineHeight: 1 }}>
+              style={{ color: "#fff", fontSize: "clamp(16px, 1.3vw, 19px)", letterSpacing: "0.09em", lineHeight: 1 }}>
               BIG HOUSE
             </span>
             <span className="font-rajdhani font-black uppercase"
               style={{
-                fontSize: "clamp(14px, 1.1vw, 16px)", letterSpacing: "0.09em", lineHeight: 1,
+                fontSize: "clamp(16px, 1.3vw, 19px)", letterSpacing: "0.09em", lineHeight: 1,
                 color: appMode === "casino" ? "#e8400a" : "#f5c518",
                 textShadow: appMode === "casino"
                   ? "0 0 12px rgba(232,64,10,0.55)"
