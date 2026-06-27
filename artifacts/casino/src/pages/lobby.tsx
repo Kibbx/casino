@@ -237,6 +237,7 @@ export function Lobby() {
       "/rewards":                 "rewards",
       "/challenges":              "challenges",
       "/leaderboards":            "leaderboards",
+      "/profile":                 "profile",
       "/market":                  "mkt-home",
       "/market/item-listings":    "mkt-item-listings",
       "/market/trades":           "mkt-trades",

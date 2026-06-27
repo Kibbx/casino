@@ -108,7 +108,7 @@ function Router() {
       <Route path="/poker" component={PokerLobby} />
       <Route path="/cases" component={CasesPage} />
       <Route path="/my-rewards" component={MyRewardsPage} />
-      <Route path="/profile" component={ProfilePage} />
+      <Route path="/profile" component={Lobby} />
       <Route path="/profileold" component={ProfilePageOld} />
       <Route path="/blackjack" component={Blackjack} />
       <Route path="/slots" component={Lobby} />
