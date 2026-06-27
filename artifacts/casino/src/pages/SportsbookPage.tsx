@@ -147,6 +147,10 @@ function fmtTime(iso: string, live: boolean) {
 }
 
 
+function fmtMoney(n: number) {
+  return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 /* ── Sports ticker ───────────────────────────────────────────────── */
 function TickerLogo({ name, sport }: { name: string; sport?: string }) {
   const url = sport === "Soccer"
@@ -1118,7 +1122,7 @@ function BetSlip({
                       {canPlace && (
                         <span className="text-[11px] font-semibold mt-1.5 whitespace-nowrap"
                           style={{ color: "rgba(255,255,255,0.92)", letterSpacing: "0.01em" }}>
-                          ${parlayWager} pays ${parlayPayout.toFixed(2)}
+                          ${Number(parlayWager).toLocaleString("en-US")} pays ${fmtMoney(parlayPayout)}
                         </span>
                       )}
                     </button>
@@ -1212,7 +1216,7 @@ function BetSlip({
                           </span>
                           {canPlace && (
                             <span className="text-[8px] mt-0.5" style={{ color: "rgba(255,255,255,0.6)" }}>
-                              ${sw} pays ${payout.toFixed(2)}
+                              ${Number(sw).toLocaleString("en-US")} pays ${fmtMoney(payout)}
                             </span>
                           )}
                         </button>
