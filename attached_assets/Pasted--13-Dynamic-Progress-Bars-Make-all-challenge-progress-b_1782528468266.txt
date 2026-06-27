@@ -1,0 +1,50 @@
+### 13. Dynamic Progress Bars
+
+Make all challenge progress bars fully dynamic and connected to real challenge progress data.
+
+Do not hardcode progress bar widths, labels, or completion states.
+
+Each challenge progress bar should calculate its width from:
+
+currentProgress / requiredProgress * 100
+
+Requirements:
+
+* Progress numbers must come from challenge state.
+* Progress bar width must update automatically when progress changes.
+* The text above each bar should show the real current value and goal, such as `3 / 5`.
+* Completed challenges should show `COMPLETED ✓`.
+* Progress should never visually exceed 100%.
+* If a challenge is completed, the progress bar should display as full.
+* Progress updates must persist after refresh.
+* Progress bars should animate smoothly when updated.
+* The existing colors and visual style must stay exactly the same.
+* Each challenge category should keep its current accent color style.
+
+When the user performs actions that match a challenge event, update both:
+
+1. the challenge progress number
+2. the visual progress bar width
+
+Example:
+
+* If the player plays one Blackjack round, High Roller changes from `3 / 5` to `4 / 5`, and the green progress bar expands from 60% to 80%.
+* If the player spins Roulette once, Spin Doctor increments until it reaches `3 / 3`, then changes to `COMPLETED ✓` and shows the Claim Reward button.
+* If the player places a bet over $100, Big Bettor changes from `0 / 1` to `1 / 1`, the bar fills to 100%, and the reward becomes claimable.
+
+Implement the progress logic through the central challenge service/event system, not directly inside individual challenge cards.
+
+The ChallengeCard component should receive data like:
+
+* currentProgress
+* requiredProgress
+* progressPercent
+* status
+* reward
+* accentColor
+* isClaimable
+* isClaimed
+
+Then it should render the correct progress bar and button state from those values.
+
+Do not manually set progress bar widths in JSX, CSS, or HTML. All widths must be calculated from live challenge data.
