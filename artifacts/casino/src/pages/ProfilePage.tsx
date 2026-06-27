@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent, X, Package, Trash2 } from "lucide-react";
+import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent, X, Package, Trash2, Clock, CheckCircle2, Hourglass } from "lucide-react";
 import { useLocation } from "wouter";
+import { fmtETDateTime } from "../utils/timezone";
 import { useStore } from "../store";
 import { PageWrapper, SubHeader } from "./shared";
 import { AvatarUpload } from "../components/AvatarUpload";
@@ -51,6 +52,19 @@ interface InventoryItem {
   first_won_at: string;
   last_won_at: string;
   prize_value: number;
+}
+
+interface Reward {
+  id: number;
+  game: string;
+  prize_type: "chips" | "item" | "bet" | "gems";
+  prize_name: string;
+  prize_emoji: string;
+  chips_amount: number;
+  won_at: string;
+  delivered_at: string | null;
+  delivered_by: string | null;
+  notes: string | null;
 }
 
 const ITEM_TIER: Record<string, { label: string; color: string }> = {
@@ -140,6 +154,24 @@ export function ProfilePage() {
   const [items,        setItems]        = useState<InventoryItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemMsg,      setItemMsg]      = useState<{ id: number; text: string; ok: boolean } | null>(null);
+
+  const [showPrizes,    setShowPrizes]    = useState(false);
+  const [prizes,        setPrizes]        = useState<Reward[]>([]);
+  const [prizesLoading, setPrizesLoading] = useState(false);
+  const [prizeFilter,   setPrizeFilter]   = useState<"all" | "pending" | "delivered">("all");
+
+  const loadPrizes = useCallback(async () => {
+    if (!sessionToken) return;
+    setPrizesLoading(true);
+    try {
+      const res = await fetch(`${BASE}/api/prizes/my-rewards`, {
+        headers: { Authorization: `Bearer ${sessionToken}` },
+      });
+      const data = await res.json();
+      setPrizes(Array.isArray(data) ? data : []);
+    } catch { setPrizes([]); }
+    finally { setPrizesLoading(false); }
+  }, [sessionToken]);
 
   const loadInventory = useCallback(async () => {
     if (!sessionToken) return;
@@ -428,7 +460,7 @@ export function ProfilePage() {
               🎁 Items
             </button>
             <button
-              onClick={() => setLocation("/my-rewards")}
+              onClick={() => { setShowPrizes(true); loadPrizes(); }}
               className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
               style={{
                 background: "rgba(168,85,247,0.10)",
@@ -821,6 +853,180 @@ export function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* ── Prizes modal ────────────────────────────────────────── */}
+      {showPrizes && (() => {
+        const pending   = prizes.filter(r => !r.delivered_at);
+        const delivered = prizes.filter(r =>  r.delivered_at);
+        const visible   = prizeFilter === "pending"   ? pending
+                        : prizeFilter === "delivered" ? delivered
+                        : prizes;
+        return (
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 9999,
+              background: "rgba(0,0,0,0.78)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              padding: 16,
+            }}
+            onClick={e => { if (e.target === e.currentTarget) setShowPrizes(false); }}
+          >
+            <div style={{
+              background: "#0e0b0b",
+              border: "1px solid rgba(168,85,247,0.18)",
+              borderRadius: 18,
+              width: "100%", maxWidth: 600,
+              maxHeight: "82vh",
+              display: "flex", flexDirection: "column",
+              boxShadow: "0 0 80px rgba(0,0,0,0.9), 0 0 40px rgba(168,85,247,0.05)",
+            }}>
+              {/* Header */}
+              <div style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                padding: "18px 22px 14px",
+                borderBottom: "1px solid rgba(255,255,255,0.07)",
+                flexShrink: 0,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <Trophy size={15} style={{ color: "#a855f7" }} />
+                  <span style={{
+                    fontFamily: "Rajdhani, sans-serif", fontWeight: 900, fontSize: 13,
+                    letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff",
+                  }}>Prize History</span>
+                  {pending.length > 0 && (
+                    <span style={{
+                      fontSize: 10, fontWeight: 700,
+                      background: "rgba(251,191,36,0.14)", border: "1px solid rgba(251,191,36,0.28)",
+                      color: "#fbbf24", borderRadius: 20, padding: "2px 8px",
+                    }}>{pending.length} pending</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => setShowPrizes(false)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.3)", padding: 4, lineHeight: 1 }}
+                ><X size={16} /></button>
+              </div>
+
+              {/* Filter tabs */}
+              <div style={{
+                display: "flex", gap: 6, padding: "10px 22px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+                flexShrink: 0,
+              }}>
+                {(["all", "pending", "delivered"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setPrizeFilter(f)}
+                    style={{
+                      padding: "4px 12px", borderRadius: 20, fontSize: 10, fontWeight: 700,
+                      textTransform: "capitalize", letterSpacing: "0.06em", cursor: "pointer",
+                      fontFamily: "Rajdhani, sans-serif",
+                      background: prizeFilter === f ? "rgba(168,85,247,0.2)" : "rgba(255,255,255,0.05)",
+                      border: prizeFilter === f ? "1px solid rgba(168,85,247,0.45)" : "1px solid rgba(255,255,255,0.1)",
+                      color: prizeFilter === f ? "#a855f7" : "rgba(255,255,255,0.4)",
+                    }}
+                  >
+                    {f === "all"       ? `All (${prizes.length})`
+                    : f === "pending"  ? `Pending (${pending.length})`
+                    :                   `Delivered (${delivered.length})`}
+                  </button>
+                ))}
+              </div>
+
+              {/* Body */}
+              <div style={{ overflowY: "auto", flex: 1, padding: "14px 22px 22px" }}>
+                {prizesLoading ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 0" }}>
+                    <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>Loading prizes…</span>
+                  </div>
+                ) : prizes.length === 0 ? (
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "48px 0" }}>
+                    <Trophy size={32} style={{ color: "rgba(255,255,255,0.1)" }} />
+                    <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 13, textAlign: "center" }}>
+                      No prizes yet.<br />Play games and open cases to win rewards!
+                    </span>
+                  </div>
+                ) : visible.length === 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 0" }}>
+                    <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 13 }}>
+                      No {prizeFilter} prizes.
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {visible.map(r => {
+                      const isDelivered = !!r.delivered_at;
+                      const gameLabel = r.game === "wheel" ? "Prize Wheel" : r.game;
+                      return (
+                        <div
+                          key={r.id}
+                          style={{
+                            background: "#0c0a0a",
+                            border: `1px solid ${isDelivered ? "rgba(74,222,128,0.15)" : "rgba(251,191,36,0.15)"}`,
+                            borderRadius: 12, padding: "12px 14px",
+                            display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+                          }}
+                        >
+                          {/* Emoji */}
+                          <span style={{ fontSize: 26, lineHeight: 1, flexShrink: 0 }}>{r.prize_emoji}</span>
+
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", fontFamily: "Rajdhani, sans-serif" }}>
+                                {r.prize_name}
+                              </span>
+                              {r.prize_type === "chips" && r.chips_amount > 0 && (
+                                <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11, color: "#fbbf24", fontWeight: 700 }}>
+                                  <Coins size={10} /> {r.chips_amount.toLocaleString()}
+                                </span>
+                              )}
+                              {r.prize_type === "gems" && r.chips_amount > 0 && (
+                                <span style={{ fontSize: 11, color: "#c084fc", fontWeight: 700 }}>
+                                  💎 {r.chips_amount.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3, flexWrap: "wrap" }}>
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "capitalize" }}>{gameLabel}</span>
+                              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.2)" }}>·</span>
+                              <span style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 10, color: "rgba(255,255,255,0.35)" }}>
+                                <Clock size={9} />
+                                {(() => { try { return fmtETDateTime(r.won_at); } catch { return r.won_at; } })()}
+                              </span>
+                            </div>
+                            {isDelivered && (
+                              <div style={{ fontSize: 10, color: "#4ade80", marginTop: 4, display: "flex", alignItems: "center", gap: 4, flexWrap: "wrap" }}>
+                                <CheckCircle2 size={10} />
+                                {r.delivered_by ? `Delivered by ${r.delivered_by}` : "Delivered"}
+                                {r.delivered_at && (
+                                  <span style={{ color: "rgba(255,255,255,0.3)" }}>
+                                    · {(() => { try { return fmtETDateTime(r.delivered_at!); } catch { return r.delivered_at; } })()}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {r.notes && (
+                              <p style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", marginTop: 3 }}>{r.notes}</p>
+                            )}
+                          </div>
+
+                          {/* Status icon */}
+                          <div style={{ flexShrink: 0 }}>
+                            {isDelivered
+                              ? <CheckCircle2 size={16} style={{ color: "#4ade80" }} />
+                              : <Hourglass   size={16} style={{ color: "#fbbf24" }} />}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── Security / Change PIN modal ─────────────────────────── */}
       {showSecurity && (
