@@ -363,7 +363,7 @@ function RouletteWheel({ wheelOrder, rotation, spinning, ballRotation, ballDurat
 
         {/* Hub (fixed, on top) */}
         <circle cx={CX} cy={CY} r={HUB_R} fill="#111" stroke="#FFD700" strokeWidth="1.5" />
-        <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle" fill="#FFD700" fontSize="10" fontWeight="bold" fontFamily="sans-serif">BACK ALLEY</text>
+        <text x={CX} y={CY} textAnchor="middle" dominantBaseline="middle" fill="#FFD700" fontSize="10" fontWeight="bold" fontFamily="sans-serif">BIG HOUSE</text>
 
         {/* Ball — counter-clockwise, on outer track */}
         <g

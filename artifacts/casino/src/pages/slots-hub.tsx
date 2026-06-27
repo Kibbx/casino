@@ -447,7 +447,7 @@ export default function SlotsHub() {
         textAlign: "center", padding: "0 0 28px",
         color: "rgba(160,130,60,0.35)", fontSize: 11, letterSpacing: "0.1em",
       }}>
-        BACK ALLEY BETS · EST. LOS SANTOS
+        BIG HOUSE CASINO · EST. LOS SANTOS
       </div>
     </div>
   );

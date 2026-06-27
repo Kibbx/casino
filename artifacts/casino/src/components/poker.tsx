@@ -393,7 +393,7 @@ export function PokerTableVisual({
           <text x="50%" y="78%" textAnchor="middle"
             fill="rgba(192,40,64,0.08)" fontSize="clamp(8px, 1.8vw, 20px)"
             fontFamily="'Oswald', sans-serif" fontWeight="700" letterSpacing="14">
-            BACK ALLEY BETS
+            BIG HOUSE CASINO
           </text>
         </svg>
 

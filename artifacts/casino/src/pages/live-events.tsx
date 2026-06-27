@@ -177,7 +177,7 @@ export default function LiveEventsPage() {
       </div>
 
       <div style={{ textAlign: "center", padding: "0 0 24px", color: "rgba(255,255,255,0.15)", fontSize: 11, letterSpacing: "0.1em" }}>
-        BACK ALLEY BETS · EST. LOS SANTOS
+        BIG HOUSE CASINO · EST. LOS SANTOS
       </div>
     </div>
   );

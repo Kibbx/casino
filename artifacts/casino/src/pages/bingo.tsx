@@ -201,7 +201,7 @@ export default function BingoPage() {
         </button>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontFamily: "Oswald, Georgia, serif", fontWeight: 700, fontSize: 22, letterSpacing: "0.12em", textTransform: "uppercase", color: "#fff" }}>BINGO</div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", letterSpacing: "0.08em" }}>BACK ALLEY BETS</div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.45)", letterSpacing: "0.08em" }}>BIG HOUSE CASINO</div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Chips</div>

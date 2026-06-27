@@ -980,7 +980,7 @@ export default function BlackjackPage() {
         {/* ── Table watermarks — site identity ── */}
         <text x="50%" y="34%" textAnchor="middle"
           fill="rgba(192,40,64,0.1)" fontSize="clamp(10px, 2vw, 22px)"
-          fontFamily="'Oswald', sans-serif" fontWeight="700" letterSpacing="12">BACK ALLEY BETS</text>
+          fontFamily="'Oswald', sans-serif" fontWeight="700" letterSpacing="12">BIG HOUSE CASINO</text>
         <text x="50%" y="40.5%" textAnchor="middle"
           fill="rgba(245,158,11,0.07)" fontSize="clamp(6px, 0.9vw, 11px)"
           fontFamily="'Oswald', sans-serif" fontWeight="500" letterSpacing="7">BLACKJACK PAYS 3 TO 2</text>
