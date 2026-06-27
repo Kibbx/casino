@@ -1,0 +1,55 @@
+### 10. Automatic Challenge Rotation
+
+Implement a complete challenge rotation system.
+
+**Daily Challenges**
+
+* Automatically generate a new set of daily challenges every 24 hours (based on the server's local timezone or UTC).
+* Reset all daily challenge progress at the start of each new day.
+* Previously claimed daily rewards should reset with the new challenges.
+* Randomly select new daily challenges from a larger challenge pool so players don't receive the same challenges every day.
+* Prevent duplicate daily challenge combinations whenever possible.
+
+**Weekly Challenges**
+
+* Automatically refresh every 7 days (or every Monday at 12:00 AM, depending on the existing reset system).
+* Reset weekly progress and claimed rewards.
+* Randomly select new weekly challenges from a larger weekly challenge pool.
+* Preserve completed rewards until the scheduled weekly reset.
+
+**Monthly Challenges**
+
+* Add a new Monthly Challenges section that matches the existing UI design exactly.
+* Populate it with higher-value objectives and larger rewards.
+* Automatically reset on the first day of every month at 12:00 AM.
+* Generate a fresh set of monthly challenges from a larger challenge pool.
+* Save monthly progress persistently.
+* Monthly rewards should also reset with the new monthly challenge rotation.
+
+**Challenge Pool System**
+Create a scalable challenge library where each challenge contains:
+
+* unique ID
+* title
+* description
+* category (daily, weekly, monthly, special)
+* objective type
+* progress goal
+* reward amount
+* difficulty
+* icon
+* limited flag
+* event trigger
+* enabled status
+
+The system should randomly generate challenge sets from this pool while avoiding duplicates and maintaining balanced difficulty.
+
+**Reset Logic**
+
+* Detect resets automatically when the player logs in or opens the Challenges page.
+* Store the last reset timestamps.
+* If the scheduled reset time has passed, automatically generate the new challenge set before rendering the page.
+* Never reset challenges multiple times within the same period.
+* All reset logic must remain accurate across page refreshes and browser sessions.
+
+The challenge system should be modular so new challenges can be added simply by adding a new object to the challenge pool without modifying the core logic.

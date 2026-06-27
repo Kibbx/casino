@@ -13,6 +13,8 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type FullChallenge = ChallengeDefinition & ChallengeState;
 
+// ── Challenge Card ─────────────────────────────────────────────────────────────
+
 function ChallengeCard({
   c,
   onClaim,
@@ -62,14 +64,18 @@ function ChallengeCard({
         </div>
       </div>
 
-      {/* Progress */}
+      {/* Progress bar */}
       <div>
         <div className="flex justify-between mb-1">
           <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
-            {done ? "COMPLETED ✓" : `${c.progress} / ${c.total}`}
+            {done
+              ? "COMPLETED ✓"
+              : c.total >= 1000
+              ? `${c.progress.toLocaleString()} / ${c.total.toLocaleString()}`
+              : `${c.progress} / ${c.total}`}
           </span>
           <span className="text-[10px] font-bold" style={{ color: "#f5c518" }}>
-            🪙 {c.reward}
+            🪙 {c.reward.toLocaleString()}
           </span>
         </div>
         <div className="rounded-full h-1.5" style={{ background: "rgba(255,255,255,0.08)" }}>
@@ -101,6 +107,8 @@ function ChallengeCard({
     </div>
   );
 }
+
+// ── Page ───────────────────────────────────────────────────────────────────────
 
 export function ChallengesPage() {
   const { sessionToken, playerId } = useStore();
@@ -147,22 +155,25 @@ export function ChallengesPage() {
 
   const daily   = challenges.filter(c => c.category === "daily");
   const weekly  = challenges.filter(c => c.category === "weekly");
+  const monthly = challenges.filter(c => c.category === "monthly");
   const special = challenges.filter(c => c.category === "special");
 
   return (
     <PageWrapper title="Challenges" breadcrumb="The Hub / Challenges" accentColor="#ec4899">
+
+      {/* Claim toast */}
       {claimMsg && (
         <div
           style={{
-            background:  claimMsg.ok ? "rgba(34,197,94,0.10)"  : "rgba(239,68,68,0.10)",
-            border:     `1px solid ${claimMsg.ok ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
-            color:       claimMsg.ok ? "#4ade80" : "#fca5a5",
+            background:   claimMsg.ok ? "rgba(34,197,94,0.10)"  : "rgba(239,68,68,0.10)",
+            border:      `1px solid ${claimMsg.ok ? "rgba(34,197,94,0.30)" : "rgba(239,68,68,0.30)"}`,
+            color:        claimMsg.ok ? "#4ade80" : "#fca5a5",
             borderRadius: 10,
-            padding: "10px 18px",
-            fontSize: 13,
-            fontWeight: 700,
+            padding:      "10px 18px",
+            fontSize:     13,
+            fontWeight:   700,
             marginBottom: 20,
-            textAlign: "center",
+            textAlign:    "center",
           }}
         >
           {claimMsg.text}
@@ -172,38 +183,31 @@ export function ChallengesPage() {
       <SubHeader label="Daily Challenges" />
       <CardGrid minItemWidth={240} maxItemWidth={280} gap={16} className="mb-10">
         {daily.map(c => (
-          <ChallengeCard
-            key={c.id}
-            c={c}
-            onClaim={() => handleClaim(c)}
-            claiming={claiming === c.id}
-          />
+          <ChallengeCard key={c.id} c={c} onClaim={() => handleClaim(c)} claiming={claiming === c.id} />
         ))}
       </CardGrid>
 
       <SubHeader label="Weekly Challenges" />
       <CardGrid minItemWidth={240} maxItemWidth={280} gap={16} className="mb-10">
         {weekly.map(c => (
-          <ChallengeCard
-            key={c.id}
-            c={c}
-            onClaim={() => handleClaim(c)}
-            claiming={claiming === c.id}
-          />
+          <ChallengeCard key={c.id} c={c} onClaim={() => handleClaim(c)} claiming={claiming === c.id} />
+        ))}
+      </CardGrid>
+
+      <SubHeader label="Monthly Challenges" />
+      <CardGrid minItemWidth={240} maxItemWidth={280} gap={16} className="mb-10">
+        {monthly.map(c => (
+          <ChallengeCard key={c.id} c={c} onClaim={() => handleClaim(c)} claiming={claiming === c.id} />
         ))}
       </CardGrid>
 
       <SubHeader label="Special Challenges" />
       <CardGrid minItemWidth={240} maxItemWidth={280} gap={16}>
         {special.map(c => (
-          <ChallengeCard
-            key={c.id}
-            c={c}
-            onClaim={() => handleClaim(c)}
-            claiming={claiming === c.id}
-          />
+          <ChallengeCard key={c.id} c={c} onClaim={() => handleClaim(c)} claiming={claiming === c.id} />
         ))}
       </CardGrid>
+
     </PageWrapper>
   );
 }
