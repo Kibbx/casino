@@ -37,11 +37,12 @@ function load(): RewardsState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...DEFAULT_STATE };
     const p = JSON.parse(raw);
+    const xp = typeof p.xp === "number" ? p.xp : DEFAULT_STATE.xp;
     return {
-      xp:      typeof p.xp     === "number"  ? p.xp     : DEFAULT_STATE.xp,
-      tier:    typeof p.tier   === "string"   ? p.tier   : DEFAULT_STATE.tier,
-      points:  typeof p.points === "number"  ? p.points  : DEFAULT_STATE.points,
-      claimed: Array.isArray(p.claimed)       ? p.claimed : [],
+      xp,
+      tier:    computeTier(xp),
+      points:  typeof p.points === "number" ? p.points : DEFAULT_STATE.points,
+      claimed: Array.isArray(p.claimed)     ? p.claimed : [],
     };
   } catch {
     return { ...DEFAULT_STATE };
