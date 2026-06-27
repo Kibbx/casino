@@ -157,6 +157,7 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
   const [rakeback,     setRakeback]     = useState<RakebackStatus | null>(null);
   const [rbClaiming,   setRbClaiming]   = useState(false);
   const [rbClaimMsg,   setRbClaimMsg]   = useState<{ ok: boolean; text: string } | null>(null);
+  const [cdNow,        setCdNow]        = useState(Date.now());
   const [showSecurity, setShowSecurity] = useState(false);
   const [curPin,       setCurPin]       = useState("");
   const [newPin,       setNewPin]       = useState("");
@@ -300,13 +301,21 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
     }
   }
 
-  function fmtCooldown(nextClaimAt: string | null) {
-    if (!nextClaimAt) return "";
-    const ms = new Date(nextClaimAt).getTime() - Date.now();
-    if (ms <= 0) return "";
+  // Tick cdNow every second while on cooldown so the timer updates live
+  useEffect(() => {
+    if (!rakeback?.onCooldown) return;
+    const id = setInterval(() => setCdNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [rakeback?.onCooldown]);
+
+  function getCooldownParts(nextClaimAt: string | null): { h: number; m: number; s: number; expired: boolean } {
+    if (!nextClaimAt) return { h: 0, m: 0, s: 0, expired: true };
+    const ms = new Date(nextClaimAt).getTime() - cdNow;
+    if (ms <= 0) return { h: 0, m: 0, s: 0, expired: true };
     const h = Math.floor(ms / 3600000);
     const m = Math.floor((ms % 3600000) / 60000);
-    return h > 0 ? `${h}h ${m}m` : `${m}m`;
+    const s = Math.floor((ms % 60000) / 1000);
+    return { h, m, s, expired: false };
   }
 
   async function handleChangePin() {
@@ -668,76 +677,121 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
 
           {/* Rakeback card — own profile only */}
           {!isViewing && (() => {
-            const rb = rakeback;
+            const rb         = rakeback;
             const claimable  = rb?.claimable ?? 0;
             const onCooldown = rb?.onCooldown ?? false;
-            const cdLabel    = fmtCooldown(rb?.nextClaimAt ?? null);
+            const cd         = getCooldownParts(rb?.nextClaimAt ?? null);
+            const blocked    = onCooldown && !cd.expired;
+
             return (
               <div
-                className="rounded-xl flex flex-col items-center justify-center gap-2"
+                className="rounded-xl flex flex-col items-center justify-center gap-3"
                 style={{
                   background: "#0c0a0a",
-                  border: "1px solid rgba(34,197,94,0.22)",
-                  padding: "18px 14px",
-                  boxShadow: "inset 0 0 28px rgba(34,197,94,0.04)",
+                  border: `1px solid ${blocked ? "rgba(239,68,68,0.22)" : "rgba(34,197,94,0.22)"}`,
+                  padding: "20px 16px",
+                  boxShadow: blocked
+                    ? "inset 0 0 28px rgba(239,68,68,0.04)"
+                    : "inset 0 0 28px rgba(34,197,94,0.04)",
                   textAlign: "center",
+                  transition: "border-color 0.4s, box-shadow 0.4s",
                 }}
               >
-                {/* Neon icon */}
+                {/* Icon */}
                 <div style={{
-                  width: 54, height: 54, borderRadius: "50%", flexShrink: 0,
+                  width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "radial-gradient(circle, rgba(34,197,94,0.2) 0%, transparent 70%)",
-                  border: "1px solid rgba(34,197,94,0.33)",
-                  boxShadow: "0 0 14px rgba(34,197,94,0.22)",
-                  color: "#22c55e",
+                  background: blocked
+                    ? "radial-gradient(circle, rgba(239,68,68,0.18) 0%, transparent 70%)"
+                    : "radial-gradient(circle, rgba(34,197,94,0.18) 0%, transparent 70%)",
+                  border: `1px solid ${blocked ? "rgba(239,68,68,0.30)" : "rgba(34,197,94,0.30)"}`,
+                  boxShadow: blocked ? "0 0 12px rgba(239,68,68,0.18)" : "0 0 12px rgba(34,197,94,0.18)",
+                  color: blocked ? "#ef4444" : "#22c55e",
+                  transition: "all 0.4s",
                 }}>
-                  <Percent size={22} />
+                  <Percent size={20} />
                 </div>
-                {/* Content */}
-                <div className="flex flex-col items-center">
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.32)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 4 }}>
+
+                {/* Label + amount */}
+                <div className="flex flex-col items-center gap-1">
+                  <p style={{ fontSize: 10, color: "rgba(255,255,255,0.30)", textTransform: "uppercase", letterSpacing: "0.13em" }}>
                     Rakeback
                   </p>
                   <p className="font-black tabular-nums leading-none"
                     style={{
                       fontFamily: "'Orbitron', monospace",
-                      fontSize: "clamp(16px, 1.8vw, 26px)",
-                      color: "#22c55e",
-                      textShadow: "0 0 12px rgba(34,197,94,0.55)",
+                      fontSize: "clamp(15px, 1.6vw, 24px)",
+                      color: blocked ? "rgba(255,255,255,0.25)" : "#22c55e",
+                      textShadow: blocked ? "none" : "0 0 10px rgba(34,197,94,0.5)",
+                      transition: "color 0.4s",
                     }}>
                     {fmt(claimable)}
                   </p>
                 </div>
 
+                {/* ── Cooldown timer — shown big when on cooldown ── */}
+                {blocked && (
+                  <div style={{ width: "100%" }}>
+                    <p style={{
+                      fontSize: 9, color: "rgba(239,68,68,0.55)",
+                      textTransform: "uppercase", letterSpacing: "0.12em",
+                      marginBottom: 8,
+                    }}>
+                      Next claim in
+                    </p>
+                    <div className="flex items-end justify-center gap-2">
+                      {[
+                        { val: cd.h, unit: "H" },
+                        { val: cd.m, unit: "M" },
+                        { val: cd.s, unit: "S" },
+                      ].map(({ val, unit }) => (
+                        <div key={unit} className="flex flex-col items-center gap-0.5">
+                          <span
+                            className="tabular-nums font-black leading-none"
+                            style={{
+                              fontFamily: "'Orbitron', monospace",
+                              fontSize: "clamp(22px, 2.4vw, 34px)",
+                              color: "#ef4444",
+                              textShadow: "0 0 14px rgba(239,68,68,0.55)",
+                              minWidth: "1.8ch",
+                              display: "block",
+                              textAlign: "center",
+                            }}
+                          >
+                            {String(val).padStart(2, "0")}
+                          </span>
+                          <span style={{ fontSize: 9, color: "rgba(239,68,68,0.45)", fontWeight: 700, letterSpacing: "0.1em" }}>
+                            {unit}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {rbClaimMsg && (
-                  <p style={{ fontSize: 9, marginTop: 5, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
+                  <p style={{ fontSize: 9, color: rbClaimMsg.ok ? "#22c55e" : "#ef4444" }}>
                     {rbClaimMsg.text}
                   </p>
                 )}
 
                 <button
                   onClick={handleClaimRakeback}
-                  disabled={rbClaiming || onCooldown || claimable === 0}
+                  disabled={rbClaiming || blocked || claimable === 0}
                   style={{
-                    marginTop: 8, padding: "5px 0", borderRadius: 6,
-                    background: (onCooldown || claimable === 0)
+                    padding: "6px 0", borderRadius: 6, width: "100%",
+                    background: (blocked || claimable === 0)
                       ? "rgba(255,255,255,0.04)"
                       : "rgba(34,197,94,0.14)",
-                    border: `1px solid ${(onCooldown || claimable === 0) ? "rgba(255,255,255,0.08)" : "rgba(34,197,94,0.32)"}`,
-                    color: (onCooldown || claimable === 0) ? "rgba(255,255,255,0.22)" : "#22c55e",
+                    border: `1px solid ${(blocked || claimable === 0) ? "rgba(255,255,255,0.08)" : "rgba(34,197,94,0.32)"}`,
+                    color: (blocked || claimable === 0) ? "rgba(255,255,255,0.22)" : "#22c55e",
                     fontWeight: 700, fontSize: 9,
                     letterSpacing: "0.08em", textTransform: "uppercase",
-                    cursor: (rbClaiming || onCooldown || claimable === 0) ? "not-allowed" : "pointer",
+                    cursor: (rbClaiming || blocked || claimable === 0) ? "not-allowed" : "pointer",
                     fontFamily: "Rajdhani, sans-serif",
-                    width: "100%",
                   }}
                 >
-                  {rbClaiming
-                    ? "Claiming…"
-                    : onCooldown && cdLabel
-                    ? `Cooldown · ${cdLabel}`
-                    : "Collect Rakeback"}
+                  {rbClaiming ? "Claiming…" : blocked ? "On Cooldown" : "Collect Rakeback"}
                 </button>
               </div>
             );
