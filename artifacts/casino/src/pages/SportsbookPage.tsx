@@ -29,7 +29,6 @@ interface SbEvent {
 interface OddsResponse {
   events: SbEvent[];
   cached: boolean;
-  fetchedAt: string;
   activeSportKeys?: string[];
   refreshed?: boolean;
 }
@@ -111,8 +110,6 @@ const SPORT_LIVE_WINDOWS_MS: Record<string, number> = {
   "College Football":   4   * 60 * 60 * 1000,
   "College Basketball": 3   * 60 * 60 * 1000,
 };
-const PER_PAGE_OPTIONS = [10, 25, 50] as const;
-type PerPage = (typeof PER_PAGE_OPTIONS)[number];
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 function isLiveNow(event: SbEvent): boolean {
@@ -149,16 +146,6 @@ function fmtTime(iso: string, live: boolean) {
   return `${d.toLocaleDateString([], { month: "short", day: "numeric" })} ${time}`;
 }
 
-function fmtAgo(iso: string) {
-  const diffMs  = Date.now() - new Date(iso).getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHr  = Math.floor(diffMin / 60);
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay >= 1) return `${diffDay}d ago`;
-  if (diffHr  >= 1) return `${diffHr}h ago`;
-  if (diffMin >= 1) return `${diffMin}m ago`;
-  return "just now";
-}
 
 /* ── Sports ticker ───────────────────────────────────────────────── */
 function TickerLogo({ name, sport }: { name: string; sport?: string }) {
@@ -1400,16 +1387,13 @@ export function SportsbookPage() {
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
-  const [isCached,   setIsCached]   = useState(false);
-  const [fetchedAt,  setFetchedAt]  = useState<string | null>(null);
   const [placed,     setPlaced]     = useState(false);
   const [slip,       setSlip]       = useState<BetSlipEntry[]>([]);
   const [selected,   setSelected]   = useState<Set<string>>(new Set());
 
-  // Pagination + search
-  const [page,     setPage]    = useState(1);
-  const [perPage,  setPerPage] = useState<PerPage>(10);
-  const [search,   setSearch]  = useState("");
+  // Search
+  const [page,   setPage]   = useState(1);
+  const [search, setSearch] = useState("");
 
   // Separate all-sports feed for the ticker — always live across every tab
   const [allEvents, setAllEvents] = useState<SbEvent[]>([]);
@@ -1482,14 +1466,12 @@ export function SportsbookPage() {
         (e.promotion?.toLowerCase().includes(q) ?? false)
       );
     });
-  const totalPages  = Math.max(1, Math.ceil(filteredEvents.length / perPage));
+  const totalPages  = Math.max(1, Math.ceil(filteredEvents.length / 25));
   const safePage    = Math.min(page, totalPages);
-  const pagedEvents = filteredEvents.slice((safePage - 1) * perPage, safePage * perPage);
+  const pagedEvents = filteredEvents.slice((safePage - 1) * 25, safePage * 25);
 
   const applyResponse = (data: OddsResponse) => {
     setEvents(data.events);
-    setIsCached(data.cached);
-    setFetchedAt(data.fetchedAt ?? null);
     setError(null);
     setPage(1);
   };
@@ -1519,24 +1501,9 @@ export function SportsbookPage() {
     return () => { ctrl.abort(); if (intervalRef.current) clearInterval(intervalRef.current); };
   }, [sport, fetchOdds]);
 
-  // Reset to page 1 when search or perPage changes
-  useEffect(() => { setPage(1); }, [search, perPage]);
+  // Reset to page 1 when search changes
+  useEffect(() => { setPage(1); }, [search]);
 
-  async function handleRefreshNow() {
-    setRefreshing(true);
-    setError(null);
-    try {
-      const param = sport === "Live" ? "all" : sport;
-      const res   = await fetch(`/api/sportsbook/refresh?sport=${encodeURIComponent(param)}`, { method: "POST" });
-      if (res.status === 429) { setError("API quota exceeded."); return; }
-      if (!res.ok)            { setError(`Refresh failed (${res.status}).`); return; }
-      applyResponse(await res.json() as OddsResponse);
-    } catch {
-      setError("Could not reach the server.");
-    } finally {
-      setRefreshing(false);
-    }
-  }
 
   function handleSportChange(s: SportTab) {
     setSport(s); setSelected(new Set()); setSlip([]); setPage(1); setSearch("");
@@ -1731,41 +1698,15 @@ export function SportsbookPage() {
               />
             </div>
 
-            {/* Per-page */}
-            <select
-              value={perPage}
-              onChange={e => setPerPage(Number(e.target.value) as PerPage)}
-              className="text-[10px] font-bold text-white outline-none px-2 py-1.5 rounded-lg appearance-none"
-              style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.55)" }}>
-              {PER_PAGE_OPTIONS.map(n => (
-                <option key={n} value={n}>{n} / page</option>
-              ))}
-            </select>
-
             {/* Status */}
             <div className="flex items-center gap-1.5 text-[10px] shrink-0" style={{ color: "rgba(255,255,255,0.28)" }}>
               {loading || refreshing
                 ? <><RefreshCw size={10} className="animate-spin" />{refreshing ? "Refreshing…" : "Loading…"}</>
                 : error
                   ? <><WifiOff size={10} />Offline</>
-                  : <>
-                      <Wifi size={10} style={{ color: isCached ? "rgba(255,255,255,0.3)" : "rgba(34,197,94,0.7)" }} />
-                      {isCached ? "Cached" : "Live"} · {fetchedAt ? fmtAgo(fetchedAt) : "—"}
-                    </>
+                  : <><Wifi size={10} style={{ color: "rgba(34,197,94,0.7)" }} />Live</>
               }
             </div>
-
-            {/* Admin refresh */}
-            <button onClick={handleRefreshNow} disabled={loading || refreshing}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wide shrink-0"
-              style={{
-                background: "rgba(249,115,22,0.08)", border: "1px solid rgba(249,115,22,0.22)",
-                color: loading || refreshing ? "rgba(249,115,22,0.35)" : "#f97316",
-                cursor: loading || refreshing ? "not-allowed" : "pointer",
-              }}>
-              <RefreshCw size={10} className={refreshing ? "animate-spin" : ""} />
-              Refresh
-            </button>
           </div>
 
           {/* Results summary + "Next 7 Days" badge */}
@@ -1776,7 +1717,6 @@ export function SportsbookPage() {
                   {filteredEvents.length === upcomingEvents.length
                     ? `${filteredEvents.length} event${filteredEvents.length !== 1 ? "s" : ""}`
                     : `${filteredEvents.length} of ${upcomingEvents.length} events`}
-                  {totalPages > 1 && ` · page ${safePage} of ${totalPages}`}
                 </span>
               </div>
               {search && filteredEvents.length === 0 && (
@@ -1790,7 +1730,7 @@ export function SportsbookPage() {
           {/* Loading skeletons */}
           {(loading || refreshing) && events.length === 0 && (
             <div className="flex flex-col gap-3">
-              {Array.from({ length: perPage > 5 ? 5 : perPage }).map((_, i) => (
+              {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="rounded-xl h-[80px] animate-pulse"
                   style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }} />
               ))}
