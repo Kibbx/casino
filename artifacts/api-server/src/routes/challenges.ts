@@ -7,7 +7,7 @@ import { broadcastPlayerBalance } from "../lib/table-ws.js";
 const router = Router();
 
 const MAX_CHIPS_REWARD = 150_000;
-const MAX_RP_REWARD    = 10_000;
+const MAX_RP_REWARD    = 150;
 
 // ── Derive the current rotation period key from the challenge ID ──────────────
 // Matches the same logic in the frontend challengeService.ts so neither side
