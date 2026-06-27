@@ -1,0 +1,175 @@
+Make my existing Big House Casino **Challenges** page fully functional and production-ready.
+
+Important: **Do not change the UI design at all.** Keep the layout, colors, fonts, spacing, sidebar, cards, buttons, progress bars, header, and overall visual style exactly the same. Only add the logic, data, persistence, and functionality needed to make everything work properly.
+
+Start by inspecting the existing project structure and reuse the current framework, components, styling, routing, and state management patterns. Make the smallest clean changes possible.
+
+Build the following functionality:
+
+1. Player data system
+
+Create or connect a player data model with:
+
+* player name
+* membership tier
+* chip balance
+* tier progress
+* challenge progress
+* completed challenges
+* claimed rewards
+* daily reset tracking
+* weekly reset tracking
+
+Use seeded player data matching the current page:
+
+* Name: Jonah Hydell
+* Tier: Silver
+* Chips: 5,087,732
+* Tier progress: 61% to Gold
+
+2. Data-driven challenges
+
+Make every challenge card data-driven, not hardcoded only in JSX/HTML.
+
+Use these seeded challenges:
+
+Daily Challenges:
+
+* High Roller — Play 5 rounds of Blackjack — progress 3/5 — reward 50
+* Spin Doctor — Spin the Roulette wheel 3 times — completed — reward 75
+* Big Bettor — Place a single bet over $100 — progress 0/1 — reward 100
+
+Weekly Challenges:
+
+* Tournament Regular — Enter 3 tournaments this week — progress 1/3 — reward 400
+* Mini Game Marathon — Play 20 rounds of any mini game — progress 8/20 — reward 250
+* Social Butterfly — Play at full tables 5 times — progress 2/5 — reward 300
+
+Special Challenges:
+
+* The Diamond Run — Win 10 consecutive bets — progress 4/10 — reward 2000 — limited
+* On Fire — Win $1,000 in a single session — progress 620/1000 — reward 500 — limited
+
+Each challenge should support:
+
+* in progress
+* completed
+* claimed
+* expired
+* limited-time badge
+* progress bar updates
+* reward claiming
+* persistent state
+
+3. Buttons and rewards
+
+Make the buttons work properly:
+
+* “In Progress” cannot be claimed.
+* “Claim Reward” adds the reward chips to the player balance.
+* After claiming, the button changes to “Claimed”.
+* Claimed rewards cannot be claimed again.
+* The claimed state persists after refresh.
+* Chip balance updates immediately and smoothly.
+
+4. Challenge progress event system
+
+Create a reusable event-based system so other casino pages can update challenge progress.
+
+Expose a clean function like:
+
+updateChallengeProgress(eventType, payload)
+
+Support events such as:
+
+* blackjack_round_played
+* roulette_spin
+* single_bet_placed
+* tournament_entered
+* mini_game_round_played
+* full_table_played
+* bet_won
+* session_profit_updated
+
+Example behavior:
+
+* blackjack_round_played increments High Roller.
+* roulette_spin increments Spin Doctor.
+* single_bet_placed with amount > 100 completes Big Bettor.
+* tournament_entered increments Tournament Regular.
+* mini_game_round_played increments Mini Game Marathon.
+* full_table_played increments Social Butterfly.
+* consecutive bet wins update The Diamond Run.
+* session profit updates On Fire.
+
+5. Persistence
+
+Use the best persistence method for this Replit project:
+
+* If the project already has a backend/database, use API routes and persistent storage.
+* If it is frontend-only, use localStorage through a clean service layer.
+* Do not scatter localStorage or database calls throughout components.
+
+Create modular services if appropriate:
+
+* playerService
+* challengeService
+* rewardService
+* challengeEventService
+
+6. Resets
+
+Implement proper resets:
+
+* Daily challenges reset once per day.
+* Weekly challenges reset once per week.
+* Special challenges do not reset unless expired or intentionally refreshed.
+* Claimed daily/weekly rewards reset with their challenge cycle.
+* Reset logic must be date-safe and should not reset repeatedly on every page load.
+
+7. Search
+
+Make the top search bar functional while keeping its design unchanged.
+
+It should search:
+
+* games
+* events
+* players
+* challenges
+
+Show matching results in a polished dropdown using the existing casino visual style.
+
+8. Navigation
+
+Keep the sidebar visually unchanged.
+
+Make navigation items route correctly if matching pages/routes exist. The Challenges item should stay active on this page.
+
+9. Quality requirements
+
+Add:
+
+* loading state
+* error handling
+* empty state
+* validation
+* accessible button states
+* clean reusable data structures
+* professional naming
+* no duplicate reward claims
+* no placeholder-only logic
+* no broken existing functionality
+
+Final acceptance criteria:
+
+* The page looks visually identical to the current Challenges screen.
+* All challenge cards are data-driven.
+* Player chips, tier, and progress are real state.
+* Claim Reward works.
+* Rewards cannot be claimed twice.
+* Progress persists after refresh.
+* Daily and weekly reset logic works.
+* The search bar works.
+* Other pages can update challenge progress through a reusable function.
+* Code is clean, modular, and professional.

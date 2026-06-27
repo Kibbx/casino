@@ -29,6 +29,7 @@ import highlowRouter from "./high-low.js";
 import mobTowerRouter from "./mob-tower.js";
 import bingoRouter from "./bingo.js";
 import lotteryRouter from "./lottery.js";
+import challengesRouter from "./challenges.js";
 import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBankerOrOwner } from "../middleware/auth.js";
@@ -133,6 +134,7 @@ router.use("/high-low", highlowRouter);
 router.use("/mob-tower", mobTowerRouter);
 router.use("/bingo", bingoRouter);
 router.use("/lottery", lotteryRouter);
+router.use("/challenges", challengesRouter);
 
 // ── Player self-service kill switches (Banker-accessible) ──────────────────────
 router.get("/settings/player-controls", requireBankerOrOwner, async (_req, res) => {
