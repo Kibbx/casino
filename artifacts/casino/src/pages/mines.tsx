@@ -8,6 +8,7 @@ import { usePageTracker } from "../lib/usePageTracker";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
+import { awardXP } from "../lib/rewardsState";
 import { playSound } from "../lib/sounds";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -240,6 +241,7 @@ export default function Mines() {
         return;
       }
       if (!r.ok) { setErrorMsg(d.error || "Failed to start"); setIsLoading(false); return; }
+      awardXP(bet);
       setSession({ gameId: d.gameId, bet: d.bet, mines: d.mines, revealedTiles: [], currentMultiplier: 1.0 });
       setPhase("playing");
     } catch { setErrorMsg("Connection error"); }

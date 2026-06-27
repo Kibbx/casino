@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
+import { awardXP } from "../lib/rewardsState";
 import { PromoZone } from "../components/PromoRegion";
 import { useWs } from "../lib/WsContext";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
@@ -951,6 +952,7 @@ export default function HorseRacing() {
       const data = await res.json();
       if (!res.ok) { setBetError(data.error || "Failed to place bet"); setBetting(false); return; }
       const horseName = race?.horses.find((h) => h.id === selectedHorseId)?.name ?? "horse";
+      awardXP(betAmount);
       setMyBets((prev) => new Map(prev).set(selectedHorseId, (prev.get(selectedHorseId) ?? 0) + betAmount));
       setLocalChips(data.newChips);
       setBetConfirmed(`Bet placed: ${betAmount.toLocaleString()} chips on ${horseName}`);

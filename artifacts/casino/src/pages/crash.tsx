@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { PromoZone } from "../components/PromoRegion";
+import { awardXP } from "../lib/rewardsState";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -274,6 +275,7 @@ export default function Crash() {
       const d = await r.json();
       const clientAfterMs = Date.now();
       if (!r.ok) { setErrorMsg(d.error || "Failed to place bet"); setGameState("idle"); return; }
+      awardXP(bet);
       setGameId(d.gameId);
 
       // Account for full RTT: half of it was transit after the server stamped serverNowMs

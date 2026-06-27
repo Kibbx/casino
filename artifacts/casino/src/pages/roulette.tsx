@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Fragment } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
+import { awardXP } from "../lib/rewardsState";
 import { PromoZone } from "../components/PromoRegion";
 import { useGetPlayer, useGetRouletteStatus } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
@@ -1037,6 +1038,7 @@ export default function Roulette() {
 
   // ── Place bet via WS ───────────────────────────────────────────────────────
   function handleBet(bet: Omit<ServerBet, "id">) {
+    awardXP(bet.amount);
     if (phase !== "BETTING_OPEN" || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
     const maxBet = wsMaxBet ?? httpStatus?.maxBet;

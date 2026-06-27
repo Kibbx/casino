@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
+import { awardXP } from "../lib/rewardsState";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -234,6 +235,7 @@ export default function Keno() {
       const d = await r.json();
       setIsLoading(false);
       if (!r.ok) { setErrorMsg(d.error || "Failed to play"); return false; }
+      awardXP(bet);
 
       const { drawn: serverDrawn, hits, multiplier, payout } = d;
 

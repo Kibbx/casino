@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
+import { awardXP } from "../lib/rewardsState";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
@@ -152,6 +153,7 @@ export default function HighLow() {
         } else { setErrorMsg(data.error || "Failed to start game"); }
         return;
       }
+      awardXP(betVal);
       setBet(data.bet); setDisplayCard(data.currentCard);
       setMultiplier(1.0); setStreak(0); setPhase("playing");
       playSound("chip");

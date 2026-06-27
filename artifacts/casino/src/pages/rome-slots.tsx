@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
+import { awardXP } from "../lib/rewardsState";
 
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -354,6 +355,7 @@ export default function RomeSlots() {
       });
       data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Spin failed");
+      if (!isFree) awardXP(currentBet);
     } catch (e: any) {
       spinningRef.current = false;
       setSpinning(false);

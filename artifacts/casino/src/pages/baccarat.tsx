@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
+import { awardXP } from "../lib/rewardsState";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCcw } from "lucide-react";
@@ -284,6 +285,7 @@ export default function BaccaratPage() {
       });
       const data = await r.json();
       if (!r.ok) { setGamePhase("idle"); showError(data.error ?? "Failed"); return; }
+      awardXP(betAmount);
 
       // Wait for dealing animation to finish before revealing
       const elapsed = Date.now() - startedAt;

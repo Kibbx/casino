@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { usePageTracker } from "../lib/usePageTracker";
+import { awardXP } from "../lib/rewardsState";
 
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
@@ -587,8 +588,9 @@ export default function WesternSlots() {
       data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Spin failed");
       if (isFree) setFreeLeft(data.freeSpinsRemaining ?? 0);
-      else if (data.freeSpinsAwarded > 0) {
-        awardedFreeSpins = data.freeSpinsAwarded;
+      else {
+        awardXP(betRef.current);
+        if (data.freeSpinsAwarded > 0) awardedFreeSpins = data.freeSpinsAwarded;
       }
     } catch(e: any) {
       spinningRef.current = false;

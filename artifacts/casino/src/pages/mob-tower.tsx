@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
+import { awardXP } from "../lib/rewardsState";
 import { soundSafe, soundBust, soundCashout, setMasterVolume, preloadSounds } from "../sounds";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
@@ -130,6 +131,7 @@ export default function MobTower() {
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
+      awardXP(betAmount);
       setCurrentFloor(0);
       setMultiplier(1.0);
       setFloorResults(Array.from({ length: FLOORS }, () => null));

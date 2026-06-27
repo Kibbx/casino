@@ -7,6 +7,7 @@ import { useGetPlayer } from "@workspace/api-client-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Users, Clock, Lock, X, RotateCcw } from "lucide-react";
 import { playSound } from "../lib/sounds";
+import { awardXP } from "../lib/rewardsState";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
 import { PlayingCardImg, MiniPlayingCard } from "../components/PlayingCardImg";
 
@@ -685,6 +686,7 @@ export default function BlackjackPage() {
     setBetLoading(true);
     setLastStack(betStack);
     wsSend({ type: "bj_bet", token: sessionToken, amount: currentBet });
+    awardXP(currentBet);
     setTimeout(() => setBetLoading(false), 2000);
   };
 
@@ -695,6 +697,7 @@ export default function BlackjackPage() {
     setBetStack(lastStack);
     setBetLoading(true);
     wsSend({ type: "bj_bet", token: sessionToken, amount: total });
+    awardXP(total);
     setTimeout(() => setBetLoading(false), 2000);
   };
 
