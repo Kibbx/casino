@@ -445,11 +445,12 @@ router.get("/leaderboard", async (_req, res) => {
       d.startsWith("rake collected at") || d.startsWith("buy-in to table") || d.startsWith("left table");
   }
 
-  function getTier(chips: number): string {
-    if (chips >= 1_000_000) return "Diamond";
-    if (chips >= 500_000)   return "Platinum";
-    if (chips >= 200_000)   return "Gold";
-    if (chips >= 50_000)    return "Silver";
+  function getTierFromXP(netResult: number, handsPlayed: number): string {
+    const xp = Math.floor(Math.max(0, netResult) * 0.003) + Math.floor((handsPlayed ?? 0) * 3);
+    if (xp >= 100000) return "Diamond";
+    if (xp >= 40000)  return "Platinum";
+    if (xp >= 15000)  return "Gold";
+    if (xp >= 5000)   return "Silver";
     return "Bronze";
   }
 
@@ -497,7 +498,7 @@ router.get("/leaderboard", async (_req, res) => {
       winRate,
       totalWon:  netResult,
       chips,
-      tier:      getTier(chips),
+      tier:      getTierFromXP(netResult, Number(p.handsPlayed ?? 0)),
       avatarUrl: p.avatarUrl ?? null,
       staffRole: p.staffRole ?? null,
     };
