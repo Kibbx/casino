@@ -9,7 +9,6 @@ import {
 } from "../lib/rewardsState";
 
 const AVAILABLE_REWARDS = [
-  { id: 1, name: "Spin the Bonus Wheel",   cost: 200,  icon: "🎡", color: "#f97316" },
   { id: 2, name: "10% Deposit Bonus",      cost: 500,  icon: "💰", color: "#f5c518" },
   { id: 3, name: "Free Lottery Ticket",    cost: 300,  icon: "🎫", color: "#22c55e" },
   { id: 4, name: "VIP Table Access (1hr)", cost: 1000, icon: "🃏", color: "#a855f7" },
