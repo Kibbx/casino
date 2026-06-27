@@ -126,16 +126,30 @@ function creditLabel(score: number) {
   return { label: "POOR", color: "#ef4444" };
 }
 
-export function ProfilePage() {
+interface PublicProfileData {
+  id: number; username: string; stateId: string | null; chips: number; avatarUrl: string | null;
+  createdAt: string; referralCode: string | null; creditScore: number | null;
+  wins: number; totalWon: number; handsPlayed: number; isOnline: boolean; currentGame: string | null;
+  challengeStats: { completed: number; chipsEarned: number };
+  statWagered: number; statWon: number; statBiggestWin: number; statNetResult: number;
+  statRtp: number; statBetCount: number; statWinCount: number;
+  activityBreakdown: { type: string; spent: number; received: number; count: number }[];
+}
+interface ProfilePageProps { viewedPlayerId?: number | null; onBack?: () => void; }
+
+export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps = {}) {
   const [, setLocation] = useLocation();
   const { sessionToken, playerId } = useStore();
 
-  // Shared player data — same react-query cache as the lobby
+  // When viewedPlayerId differs from the logged-in player we're in "view other player" mode
+  const isViewing = !!viewedPlayerId && viewedPlayerId !== playerId;
+
+  // Shared player data — same react-query cache as the lobby (own profile only)
   const { data: player, isLoading: playerLoading } = useGetPlayer(
-    playerId!, { query: { enabled: !!playerId } },
+    playerId!, { query: { enabled: !!playerId && !isViewing } },
   );
-  // Live chip balance via socket (mirrors lobby top-right)
-  const { chips: liveChips } = usePlayerSocket(playerId ?? null, sessionToken);
+  // Live chip balance via socket — own profile only
+  const { chips: liveChips } = usePlayerSocket(isViewing ? null : (playerId ?? null), sessionToken);
 
   const [txs,          setTxs]          = useState<Transaction[]>([]);
   const [txsLoading,   setTxsLoading]   = useState(true);
@@ -159,6 +173,9 @@ export function ProfilePage() {
   const [prizes,        setPrizes]        = useState<Reward[]>([]);
   const [prizesLoading, setPrizesLoading] = useState(false);
   const [prizeFilter,   setPrizeFilter]   = useState<"all" | "pending" | "delivered">("all");
+
+  const [pubData,    setPubData]    = useState<PublicProfileData | null>(null);
+  const [pubLoading, setPubLoading] = useState(false);
 
   const loadPrizes = useCallback(async () => {
     if (!sessionToken) return;
@@ -222,7 +239,7 @@ export function ProfilePage() {
   }
 
   const load = useCallback(async () => {
-    if (!sessionToken || !playerId) return;
+    if (!sessionToken || !playerId || isViewing) return;
     try {
       const headers = { Authorization: `Bearer ${sessionToken}` };
       const [tRes, rbRes] = await Promise.all([
@@ -237,10 +254,23 @@ export function ProfilePage() {
     } finally {
       setTxsLoading(false);
     }
-  }, [sessionToken, playerId]);
+  }, [sessionToken, playerId, isViewing]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (player) setAvatarUrl(player.avatarUrl ?? null); }, [player]);
+
+  // Load public profile data when viewing another player
+  useEffect(() => {
+    if (!isViewing || !viewedPlayerId || !sessionToken) return;
+    setPubLoading(true);
+    setPubData(null);
+    fetch(`${BASE}/api/players/${viewedPlayerId}/public-profile`, {
+      headers: { Authorization: `Bearer ${sessionToken}` },
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => { setPubData(data); setPubLoading(false); })
+      .catch(() => { setPubLoading(false); });
+  }, [viewedPlayerId, isViewing, sessionToken]);
 
   async function handleClaimRakeback() {
     if (!sessionToken) return;
@@ -297,7 +327,7 @@ export function ProfilePage() {
     }
   }
 
-  if (playerLoading || txsLoading) {
+  if (isViewing ? pubLoading : (playerLoading || txsLoading)) {
     return (
       <PageWrapper title="Profile" breadcrumb="Account / Profile" accentColor="#9ca3af">
         <div className="flex items-center justify-center py-24">
@@ -307,7 +337,7 @@ export function ProfilePage() {
     );
   }
 
-  if (!player) {
+  if (isViewing ? !pubData : !player) {
     return (
       <PageWrapper title="Profile" breadcrumb="Account / Profile" accentColor="#9ca3af">
         <div className="flex items-center justify-center py-24">
@@ -317,31 +347,53 @@ export function ProfilePage() {
     );
   }
 
-  // Live chips from socket (same source as lobby top-right), falls back to API value
-  const chips = liveChips ?? Number(player.chips ?? 0);
-  const roundsPlayed = player.handsPlayed ?? 0;
-  const totalWagered = txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
-  const totalWon     = txs.filter(t => WIN_TYPES.has(t.type)   && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
-  const biggestWin   = txs.filter(t => WIN_TYPES.has(t.type)   && !isPokerTx(t)).reduce((max, t) => t.amount > max ? t.amount : max, 0);
-  const netResult    = totalWon - totalWagered;
-  const betCount     = txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).length;
-  const winCount     = txs.filter(t => WIN_TYPES.has(t.type)   && !isPokerTx(t)).length;
+  // Resolve display values — viewed player (public API) or own profile
+  const displayUsername  = isViewing ? (pubData!.username ?? "Unknown Player") : player!.username;
+  const displayAvatarUrl = isViewing ? (pubData!.avatarUrl ?? null) : avatarUrl;
 
-  const cs       = player.creditScore;
-  const csInfo   = cs !== undefined ? creditLabel(cs) : null;
+  // Live chips from socket (own profile), or static chips from public API
+  const chips = isViewing
+    ? Number(pubData!.chips ?? 0)
+    : (liveChips ?? Number(player!.chips ?? 0));
+  const roundsPlayed = isViewing ? Number(pubData!.handsPlayed ?? 0) : (player!.handsPlayed ?? 0);
+
+  // Transaction-derived stats
+  const totalWagered = isViewing
+    ? (pubData!.statWagered ?? 0)
+    : txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
+  const totalWon = isViewing
+    ? (pubData!.statWon ?? 0)
+    : txs.filter(t => WIN_TYPES.has(t.type) && !isPokerTx(t)).reduce((s, t) => s + t.amount, 0);
+  const biggestWin = isViewing
+    ? (pubData!.statBiggestWin ?? 0)
+    : txs.filter(t => WIN_TYPES.has(t.type) && !isPokerTx(t)).reduce((max, t) => t.amount > max ? t.amount : max, 0);
+  const netResult = isViewing ? (pubData!.statNetResult ?? 0) : (totalWon - totalWagered);
+  const betCount  = isViewing ? (pubData!.statBetCount  ?? 0) : txs.filter(t => WAGER_TYPES.has(t.type) && !isPokerTx(t)).length;
+  const winCount  = isViewing ? (pubData!.statWinCount  ?? 0) : txs.filter(t => WIN_TYPES.has(t.type) && !isPokerTx(t)).length;
+
+  const cs = isViewing
+    ? (typeof pubData!.creditScore === "number" ? pubData!.creditScore : undefined)
+    : player!.creditScore;
+  const csInfo = cs !== undefined ? creditLabel(cs) : null;
+
+  const pCreatedAt = isViewing ? pubData!.createdAt    : player!.createdAt;
+  const pStateId   = isViewing ? pubData!.stateId      : player!.stateId;
+  const pReferral  = isViewing ? pubData!.referralCode : player!.referralCode;
 
   const details: [string, string, string?][] = [
-    ["Member Since", fmtDate(player.createdAt)],
-    ["Stat ID",      player.stateId ? `#${player.stateId}` : "—"],
-    ...(player.referralCode ? [["Referral", player.referralCode] as [string, string]] : []),
-    ...(cs !== undefined   ? [["Credit Score", `${cs} — ${csInfo!.label}`, "credit"] as [string, string, string]] : []),
-    ["Chips", fmt(chips),  "gold"],
+    ["Member Since", fmtDate(pCreatedAt)],
+    ["Stat ID",      pStateId ? `#${pStateId}` : "—"],
+    ...(pReferral ? [["Referral", pReferral] as [string, string]] : []),
+    ...(cs !== undefined ? [["Credit Score", `${cs} — ${csInfo!.label}`, "credit"] as [string, string, string]] : []),
+    ["Chips", fmt(chips), "gold"],
   ];
 
-  const currentRtp = totalWagered > 0 ? (totalWon / totalWagered * 100) : 0;
+  const currentRtp = isViewing
+    ? (pubData!.statRtp ?? 0)
+    : (totalWagered > 0 ? (totalWon / totalWagered * 100) : 0);
 
   const stats: { label: string; value: string; sub?: string; icon: React.ReactNode; color: string }[] = [
-    { label: "RTP",   value: currentRtp.toFixed(2) + "%",                         icon: <Activity size={22} />,   color: "#06b6d4" },
+    { label: "RTP",           value: currentRtp.toFixed(2) + "%",                         icon: <Activity size={22} />,   color: "#06b6d4" },
     { label: "Total Wagered", value: fmt(totalWagered),  sub: "chips",                    icon: <Coins size={22} />,      color: "#f97316" },
     { label: "Total Won",     value: fmt(totalWon),      sub: "chips",                    icon: <Trophy size={22} />,     color: "#f5c518" },
     { label: "Largest Win",   value: "+" + fmt(biggestWin), sub: "chips",                 icon: <Star size={22} />,       color: "#a855f7" },
@@ -349,7 +401,7 @@ export function ProfilePage() {
                               icon: netResult >= 0 ? <TrendingUp size={22} /> : <TrendingDown size={22} />, color: netResult >= 0 ? "#22c55e" : "#ef4444" },
   ];
 
-  // Per-type activity breakdown (mirrors old profile overview tab)
+  // Per-type activity breakdown
   const byType: Record<string, { spent: number; received: number; count: number }> = {};
   for (const t of txs) {
     if (!byType[t.type]) byType[t.type] = { spent: 0, received: 0, count: 0 };
@@ -357,11 +409,16 @@ export function ProfilePage() {
     if (WIN_TYPES.has(t.type)) byType[t.type].received += t.amount;
     else byType[t.type].spent += t.amount;
   }
-  const activityEntries = Object.entries(byType)
-    .sort((a, b) => (b[1].spent + b[1].received) - (a[1].spent + a[1].received));
+  const activityEntries: [string, { spent: number; received: number; count: number }][] = isViewing
+    ? (pubData!.activityBreakdown ?? []).map(e => [e.type, { spent: e.spent, received: e.received, count: e.count }])
+    : Object.entries(byType).sort((a, b) => (b[1].spent + b[1].received) - (a[1].spent + a[1].received));
 
   return (
-    <PageWrapper title="Profile" breadcrumb="Account / Profile" accentColor="#9ca3af">
+    <PageWrapper
+      title={isViewing ? displayUsername : "Profile"}
+      breadcrumb={isViewing ? `Players / ${displayUsername}` : "Account / Profile"}
+      accentColor="#9ca3af"
+    >
 
       {/* ── Top row ─────────────────────────────────────────────── */}
       <div className="flex gap-5 mb-6" style={{ alignItems: "stretch" }}>
@@ -377,16 +434,32 @@ export function ProfilePage() {
         >
           {/* Avatar + name */}
           <div className="flex items-center gap-3 p-5 pb-4">
-            <AvatarUpload
-              playerId={player.id}
-              currentAvatarUrl={avatarUrl}
-              username={player.username}
-              size="lg"
-              onUpdate={url => setAvatarUrl(url)}
-            />
+            {isViewing ? (
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                {displayAvatarUrl ? (
+                  <img src={displayAvatarUrl} alt={displayUsername}
+                    style={{ width: 54, height: 54, borderRadius: "50%", objectFit: "cover", border: "2px solid rgba(232,64,10,0.4)" }} />
+                ) : (
+                  <div style={{ width: 54, height: 54, borderRadius: "50%", background: "rgba(232,64,10,0.15)", border: "2px solid rgba(232,64,10,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 800, color: "#e8400a" }}>
+                    {displayUsername.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                {pubData?.isOnline && (
+                  <div style={{ position: "absolute", bottom: 2, right: 2, width: 10, height: 10, borderRadius: "50%", background: "#22c55e", border: "2px solid #0c0a0a", boxShadow: "0 0 5px rgba(34,197,94,0.7)" }} />
+                )}
+              </div>
+            ) : (
+              <AvatarUpload
+                playerId={player!.id}
+                currentAvatarUrl={avatarUrl}
+                username={player!.username}
+                size="lg"
+                onUpdate={url => setAvatarUrl(url)}
+              />
+            )}
             <div className="flex flex-col gap-1 min-w-0">
               <span className="font-rajdhani font-black text-white leading-tight" style={{ fontSize: 16 }}>
-                {player.username}
+                {displayUsername}
               </span>
               <span
                 className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full self-start"
@@ -429,49 +502,67 @@ export function ProfilePage() {
             })}
           </div>
 
-          {/* Security — change PIN */}
-          <div className="px-5 pt-1 pb-2">
-            <button
-              onClick={() => { setShowSecurity(true); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
-              className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-              style={{
-                background: "rgba(232,64,10,0.10)",
-                color: "#e8400a",
-                border: "1px solid rgba(232,64,10,0.40)",
-                letterSpacing: "0.1em",
-              }}
-            >
-              Security
-            </button>
+          {/* Security — change PIN (own) / Back (viewed) */}
+          <div className={`px-5 pt-1 ${isViewing ? "pb-5" : "pb-2"}`}>
+            {isViewing ? (
+              <button
+                onClick={onBack}
+                className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: "rgba(255,255,255,0.05)",
+                  color: "rgba(255,255,255,0.5)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  letterSpacing: "0.1em",
+                  cursor: onBack ? "pointer" : "default",
+                }}
+              >
+                ← Back
+              </button>
+            ) : (
+              <button
+                onClick={() => { setShowSecurity(true); setPinMsg(null); setCurPin(""); setNewPin(""); setConfirmPin(""); }}
+                className="w-full py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: "rgba(232,64,10,0.10)",
+                  color: "#e8400a",
+                  border: "1px solid rgba(232,64,10,0.40)",
+                  letterSpacing: "0.1em",
+                }}
+              >
+                Security
+              </button>
+            )}
           </div>
 
-          {/* Items + Prizes quick-nav */}
-          <div className="px-5 pb-5 flex gap-2">
-            <button
-              onClick={() => { setShowItems(true); loadInventory(); }}
-              className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-              style={{
-                background: "rgba(6,182,212,0.10)",
-                color: "#06b6d4",
-                border: "1px solid rgba(6,182,212,0.35)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              🎁 Items
-            </button>
-            <button
-              onClick={() => { setShowPrizes(true); loadPrizes(); }}
-              className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-              style={{
-                background: "rgba(168,85,247,0.10)",
-                color: "#a855f7",
-                border: "1px solid rgba(168,85,247,0.35)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              🏅 Prizes
-            </button>
-          </div>
+          {/* Items + Prizes quick-nav (own profile only) */}
+          {!isViewing && (
+            <div className="px-5 pb-5 flex gap-2">
+              <button
+                onClick={() => { setShowItems(true); loadInventory(); }}
+                className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: "rgba(6,182,212,0.10)",
+                  color: "#06b6d4",
+                  border: "1px solid rgba(6,182,212,0.35)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                🎁 Items
+              </button>
+              <button
+                onClick={() => { setShowPrizes(true); loadPrizes(); }}
+                className="flex-1 py-2 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
+                style={{
+                  background: "rgba(168,85,247,0.10)",
+                  color: "#a855f7",
+                  border: "1px solid rgba(168,85,247,0.35)",
+                  letterSpacing: "0.08em",
+                }}
+              >
+                🏅 Prizes
+              </button>
+            </div>
+          )}
 
         </div>
 
@@ -530,8 +621,8 @@ export function ProfilePage() {
             </div>
           ))}
 
-          {/* Rakeback card — same icon-left layout */}
-          {(() => {
+          {/* Rakeback card — own profile only */}
+          {!isViewing && (() => {
             const rb = rakeback;
             const claimable  = rb?.claimable ?? 0;
             const onCooldown = rb?.onCooldown ?? false;

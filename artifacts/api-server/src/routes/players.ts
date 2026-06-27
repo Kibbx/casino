@@ -267,6 +267,8 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
         handsPlayed: playersTable.handsPlayed,
         createdAt: playersTable.createdAt,
         isBot: playersTable.isBot,
+        referralCode: playersTable.referralCode,
+        creditScore: playersTable.creditScore,
       })
       .from(playersTable)
       .where(eq(playersTable.id, id));
@@ -287,6 +289,39 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
       // challenge_claims table may not exist yet — return zero stats
     }
 
+    // Transaction-derived stats for the profile page stat cards
+    const WAGER_T = new Set(["loss", "fortuna-bet", "fortuna-bonus-buy", "rome-slots-bet", "western-slots-bet", "highlow_bet", "baccarat", "sport_bet"]);
+    const WIN_T   = new Set(["win", "tournament_win", "fortuna-win", "rome-slots-win", "western-slots-win", "rakeback"]);
+    function isPokerRow(t: { type: string; description: string }) {
+      const d = t.description.toLowerCase();
+      return t.type === "buyin" || t.type === "poker_win" || t.type === "cashout" ||
+        d.startsWith("poker") || d.startsWith("won pot") || d.startsWith("rake collected at") ||
+        d.startsWith("buy-in to table") || d.startsWith("left table");
+    }
+    const allTxs = await db
+      .select({ type: transactionsTable.type, amount: transactionsTable.amount, description: transactionsTable.description })
+      .from(transactionsTable)
+      .where(eq(transactionsTable.playerId, id));
+    const wagerTxs  = allTxs.filter(t => WAGER_T.has(t.type) && !isPokerRow(t));
+    const winTxArr  = allTxs.filter(t => WIN_T.has(t.type)   && !isPokerRow(t));
+    const statWagered  = wagerTxs.reduce((s, t) => s + t.amount, 0);
+    const statWon      = winTxArr.reduce((s, t) => s + t.amount, 0);
+    const statBiggest  = winTxArr.reduce((max, t) => t.amount > max ? t.amount : max, 0);
+    const statNet      = statWon - statWagered;
+    const statRtp      = statWagered > 0 ? statWon / statWagered * 100 : 0;
+    const statBetCount = wagerTxs.length;
+    const statWinCount = winTxArr.length;
+    const byType: Record<string, { spent: number; received: number; count: number }> = {};
+    for (const t of allTxs) {
+      if (!byType[t.type]) byType[t.type] = { spent: 0, received: 0, count: 0 };
+      byType[t.type].count++;
+      if (WIN_T.has(t.type)) byType[t.type].received += t.amount;
+      else byType[t.type].spent += t.amount;
+    }
+    const activityBreakdown = Object.entries(byType)
+      .map(([type, s]) => ({ type, ...s }))
+      .sort((a, b) => (b.spent + b.received) - (a.spent + a.received));
+
     const activePlayers = getActivePlayers();
     const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
 
@@ -302,10 +337,20 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
       createdAt: player.createdAt?.toISOString() ?? new Date().toISOString(),
       isOnline: activeMap.has(player.id),
       currentGame: activeMap.get(player.id) ?? null,
+      referralCode: player.referralCode ?? null,
+      creditScore: typeof player.creditScore === "number" ? player.creditScore : null,
       challengeStats: {
         completed: totalChallengesCompleted,
         chipsEarned: totalChipsFromChallenges,
       },
+      statWagered,
+      statWon,
+      statBiggestWin: statBiggest,
+      statNetResult: statNet,
+      statRtp,
+      statBetCount,
+      statWinCount,
+      activityBreakdown,
     });
   } catch (e: any) {
     console.error("[public-profile] error:", e?.message ?? e);

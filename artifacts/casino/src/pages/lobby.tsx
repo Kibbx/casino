@@ -44,7 +44,6 @@ import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
 import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
 import { searchPlayers, PlayerSearchResult } from "../lib/playerSearchService";
-import { PlayerPublicProfile } from "./PlayerPublicProfile";
 
 const IMGS = import.meta.env.BASE_URL;
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -685,7 +684,7 @@ export function Lobby() {
         {/* ── Main ── */}
         <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }} tabIndex={-1} onFocus={(e) => e.currentTarget.blur()}>
           {activeNav === "player-profile" && viewedPlayerId !== null && (
-            <PlayerPublicProfile playerId={viewedPlayerId} onBack={() => { setActiveNav("home"); setLocation("/lobby"); }} />
+            <ProfilePage viewedPlayerId={viewedPlayerId} onBack={() => { setActiveNav("home"); setLocation("/lobby"); }} />
           )}
           {activeNav === "home" && (
             <>
