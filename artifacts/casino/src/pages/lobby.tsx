@@ -667,7 +667,7 @@ export function Lobby() {
           {activeNav === "marketplace"   && <MarketplacePage />}
           {activeNav === "profile"       && <ProfilePage />}
           {activeNav === "staff"         && <StaffPage />}
-          {activeNav === "mkt-home"          && <MktHomePage />}
+          {activeNav === "mkt-home"          && <MktComingSoon title="Home"           />}
           {activeNav === "mkt-item-listings"  && <MktComingSoon title="Item Listings"  />}
           {activeNav === "mkt-trades"         && <MktComingSoon title="Trades"         />}
           {activeNav === "mkt-sales-history"  && <MktComingSoon title="Sales History"  />}
