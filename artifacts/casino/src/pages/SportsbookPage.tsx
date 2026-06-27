@@ -119,7 +119,15 @@ function isLiveNow(event: SbEvent): boolean {
   return elapsed < window;
 }
 
-function fmtOdds(n: number) { return n >= 0 ? `+${n}` : `${n}`; }
+function fmtOdds(n: number, format: "US" | "EU" = "US"): string {
+  if (format === "EU") return americanToDecimal(n).toFixed(2);
+  return n >= 0 ? `+${n}` : `${n}`;
+}
+
+function decimalToAmerican(decimal: number): number {
+  if (decimal >= 2) return Math.round((decimal - 1) * 100);
+  return Math.round(-100 / (decimal - 1));
+}
 
 function impliedPct(n: number) {
   const pct = n >= 0 ? 100 / (n + 100) : Math.abs(n) / (Math.abs(n) + 100);
@@ -167,7 +175,7 @@ function TickerLogo({ name, sport }: { name: string; sport?: string }) {
   );
 }
 
-function SportsTicker({ items, scores }: { items: SbEvent[]; scores: ScoreMap }) {
+function SportsTicker({ items, scores, oddsFormat = "US" }: { items: SbEvent[]; scores: ScoreMap; oddsFormat?: "US" | "EU" }) {
   if (items.length === 0) return null;
 
   const capped  = items.slice(0, 24);
@@ -237,7 +245,7 @@ function SportsTicker({ items, scores }: { items: SbEvent[]; scores: ScoreMap })
                   <>
                     <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 9 }}>•</span>
                     <span className="text-[10px] font-black" style={{ color: "#22c55e" }}>
-                      {fmtOdds(ev.bestAwayOdds!)} / {fmtOdds(ev.bestHomeOdds!)}
+                      {fmtOdds(ev.bestAwayOdds!, oddsFormat)} / {fmtOdds(ev.bestHomeOdds!, oddsFormat)}
                     </span>
                   </>
                 )}
@@ -695,8 +703,8 @@ function computeGameStatus(sport: string, commenceTime: string): string {
 
 /* ── Event card ──────────────────────────────────────────────────────── */
 function EventCard({
-  event, selHome, selAway, onHome, onAway, score,
-}: { event: SbEvent; selHome: boolean; selAway: boolean; onHome: () => void; onAway: () => void; score?: ScoreInfo }) {
+  event, selHome, selAway, onHome, onAway, score, oddsFormat = "US",
+}: { event: SbEvent; selHome: boolean; selAway: boolean; onHome: () => void; onAway: () => void; score?: ScoreInfo; oddsFormat?: "US" | "EU" }) {
   const accent    = SPORT_COLORS[event.sport] ?? "#f97316";
   const live      = isLiveNow(event);
   const isCombat  = event.sport === "UFC" || event.sport === "Boxing";
@@ -826,7 +834,7 @@ function EventCard({
               </span>
               <span className="text-[16px] font-black leading-tight"
                 style={{ color: sel ? "#f97316" : "rgba(255,255,255,0.85)", fontVariantNumeric: "tabular-nums" }}>
-                {fmtOdds(odds)}
+                {fmtOdds(odds, oddsFormat)}
               </span>
               <SportsbookBadge eventId={event.id} sideIdx={i} />
             </button>
@@ -841,6 +849,7 @@ function EventCard({
 function BetSlip({
   entries, popularEvents = [], onRemove, onClear, onPlace, onSelect,
   chips, chipsKnown = false, placeError, placing = false, betLimits,
+  oddsFormat = "US", onOddsFormatChange,
 }: {
   entries: BetSlipEntry[];
   popularEvents?: SbEvent[];
@@ -854,6 +863,8 @@ function BetSlip({
   placeError?: string;
   placing?: boolean;
   betLimits?: { minBet: number; maxBet: number };
+  oddsFormat?: "US" | "EU";
+  onOddsFormatChange?: (fmt: "US" | "EU") => void;
 }) {
   const [activeTab,    setActiveTab]    = useState<"parlay" | "singles">("parlay");
   const [parlayWager,  setParlayWager]  = useState("");
@@ -932,13 +943,32 @@ function BetSlip({
             </span>
           )}
         </div>
-        {entries.length > 0 && (
-          <button onClick={onClear}
-            className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold transition-opacity hover:opacity-70"
-            style={{ color: "#8B8E98" }}>
-            <Trash2 size={10} />Clear
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {/* US / EU odds format toggle */}
+          <div className="flex items-center p-[2px] rounded-full"
+            style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
+            {(["US", "EU"] as const).map(fmt => (
+              <button
+                key={fmt}
+                onClick={() => onOddsFormatChange?.(fmt)}
+                className="px-2.5 py-[3px] text-[8.5px] font-black uppercase tracking-wide transition-all"
+                style={{
+                  borderRadius: "9999px",
+                  background: oddsFormat === fmt ? "#FF6A00" : "transparent",
+                  color: oddsFormat === fmt ? "#000" : "rgba(255,255,255,0.3)",
+                }}>
+                {fmt}
+              </button>
+            ))}
+          </div>
+          {entries.length > 0 && (
+            <button onClick={onClear}
+              className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold transition-opacity hover:opacity-70"
+              style={{ color: "#8B8E98" }}>
+              <Trash2 size={10} />Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Tabs (only when picks exist) ── */}
@@ -991,7 +1021,7 @@ function BetSlip({
                 </div>
                 <span className="text-[11px] font-black shrink-0 ml-2"
                   style={{ color: row.odds >= 0 ? "#00E676" : "rgba(255,255,255,0.6)" }}>
-                  {fmtOdds(row.odds)}
+                  {fmtOdds(row.odds, oddsFormat)}
                 </span>
               </button>
             ))}
@@ -1025,7 +1055,9 @@ function BetSlip({
                 </div>
                 <div className="text-right">
                   <p className="text-[16px] font-black" style={{ color: "#00E676" }}>
-                    {combinedDecimal.toFixed(2)}×
+                    {oddsFormat === "EU"
+                      ? `${combinedDecimal.toFixed(2)}×`
+                      : fmtOdds(decimalToAmerican(combinedDecimal))}
                   </p>
                   <button className="text-[8px] font-black uppercase tracking-wide px-2 py-0.5 rounded"
                     style={{ background: "rgba(0,230,118,0.08)", border: "1px solid rgba(0,230,118,0.2)", color: "#00E676" }}>
@@ -1052,7 +1084,7 @@ function BetSlip({
                     </div>
                     <span className="text-[10px] font-black shrink-0"
                       style={{ color: e.odds >= 0 ? "#00E676" : "rgba(255,255,255,0.55)" }}>
-                      {fmtOdds(e.odds)}
+                      {fmtOdds(e.odds, oddsFormat)}
                     </span>
                   </div>
                 ))}
@@ -1175,7 +1207,7 @@ function BetSlip({
                     </button>
                     <span className="text-[13px] font-black"
                       style={{ color: e.odds >= 0 ? "#00E676" : "rgba(255,255,255,0.6)" }}>
-                      {fmtOdds(e.odds)}
+                      {fmtOdds(e.odds, oddsFormat)}
                     </span>
                   </div>
                 </div>
@@ -1317,7 +1349,7 @@ function Pagination({
 
 /* ── Trending / fill panel ───────────────────────────────────────── */
 
-function TrendingPanel({ events }: { events: SbEvent[] }) {
+function TrendingPanel({ events, oddsFormat = "US" }: { events: SbEvent[]; oddsFormat?: "US" | "EU" }) {
   const shortName = (s: string) => s.split(" ").slice(-1)[0];
   const withOdds  = events.filter(e => e.bestHomeOdds !== null && e.bestAwayOdds !== null);
 
@@ -1362,7 +1394,7 @@ function TrendingPanel({ events }: { events: SbEvent[] }) {
                     <p className="text-[10px] font-bold text-white truncate">{shortName(favTeam)} ML</p>
                     <p className="text-[8px] truncate" style={{ color: "rgba(255,255,255,0.28)" }}>{ev.league}</p>
                   </div>
-                  <span className="text-[11px] font-black shrink-0 ml-2" style={{ color: "#22c55e" }}>{fmtOdds(favOdds)}</span>
+                  <span className="text-[11px] font-black shrink-0 ml-2" style={{ color: "#22c55e" }}>{fmtOdds(favOdds, oddsFormat)}</span>
                 </div>
               );
             })}
@@ -1389,7 +1421,7 @@ function TrendingPanel({ events }: { events: SbEvent[] }) {
                     <p className="text-[10px] font-bold text-white truncate">{shortName(dogTeam)} ML</p>
                     <p className="text-[8px] truncate" style={{ color: "rgba(255,255,255,0.28)" }}>{ev.league}</p>
                   </div>
-                  <span className="text-[11px] font-black shrink-0 ml-2" style={{ color: "#f97316" }}>{fmtOdds(dogOdds)}</span>
+                  <span className="text-[11px] font-black shrink-0 ml-2" style={{ color: "#f97316" }}>{fmtOdds(dogOdds, oddsFormat)}</span>
                 </div>
               );
             })}
@@ -1566,6 +1598,14 @@ export function SportsbookPage() {
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing,    setPlacing]    = useState(false);
   const [betLimits,  setBetLimits]  = useState<{ minBet: number; maxBet: number } | null>(null);
+  const [oddsFormat, setOddsFormat] = useState<"US" | "EU">(() => {
+    const stored = typeof localStorage !== "undefined" ? localStorage.getItem("sbOddsFormat") : null;
+    return stored === "EU" ? "EU" : "US";
+  });
+  const handleOddsFormat = (fmt: "US" | "EU") => {
+    setOddsFormat(fmt);
+    localStorage.setItem("sbOddsFormat", fmt);
+  };
 
   useEffect(() => {
     fetch("/api/sportbets/settings")
@@ -1656,7 +1696,7 @@ export function SportsbookPage() {
       )}
 
       {/* Smooth scrolling ticker — only currently live games, all sports, all tabs */}
-      <SportsTicker items={allEvents.filter(isLiveNow)} scores={scores} />
+      <SportsTicker items={allEvents.filter(isLiveNow)} scores={scores} oddsFormat={oddsFormat} />
 
       <div className="flex gap-6">
         {/* ── Events column ── */}
@@ -1833,6 +1873,7 @@ export function SportsbookPage() {
                   onHome={() => toggleSelection(event, "home")}
                   onAway={() => toggleSelection(event, "away")}
                   score={scores[event.id]}
+                  oddsFormat={oddsFormat}
                 />
               ))}
             </div>
@@ -1849,7 +1890,7 @@ export function SportsbookPage() {
 
           {/* Trending / fill section — visible when events loaded */}
           {!loading && !error && pagedEvents.length > 0 && (
-            <TrendingPanel events={pagedEvents} />
+            <TrendingPanel events={pagedEvents} oddsFormat={oddsFormat} />
           )}
         </div>
 
@@ -1868,6 +1909,8 @@ export function SportsbookPage() {
               placeError={placeError}
               placing={placing}
               betLimits={betLimits ?? undefined}
+              oddsFormat={oddsFormat}
+              onOddsFormatChange={handleOddsFormat}
             />
           </div>
         </div>

@@ -1,0 +1,46 @@
+Add an odds format switch directly in the Bet Slip header, positioned next to the "Clear" button, allowing users to instantly toggle between American and European (Decimal) odds.
+
+Requirements:
+- Place a compact toggle/switch beside the existing "Clear" button in the Bet Slip header.
+- The toggle should have two options:
+  - US (American Odds)
+  - EU (Decimal Odds)
+- The switch should match the existing premium dark sportsbook theme with subtle animations and neon accents.
+- It should feel like a native part of the Bet Slip, not a separate settings panel.
+
+Functionality:
+- Switching formats should update all displayed odds instantly without refreshing the page.
+- Update odds everywhere in the sportsbook:
+  - Event cards
+  - Bet Slip selections
+  - Combined Parlay Odds
+  - Cash Out values
+  - Open Bets
+  - Bet History
+  - Live Bets
+  - Any future sportsbook odds displays
+- The selected format should persist across page refreshes and future sessions for the logged-in user.
+- Save the preference in the backend user settings (or local storage if user settings aren't available).
+
+Backend:
+- Store one canonical odds format internally (prefer Decimal for calculations).
+- Convert odds only when displaying them to the user.
+- Ensure all payout calculations continue using the canonical values.
+- Do not change sportsbook pricing or calculations when switching formats.
+
+Conversions:
+- American → Decimal
+- Decimal → American
+- Correctly calculate positive and negative American odds.
+- Round decimal odds to two decimal places.
+- Display American odds with + and - signs.
+
+UI:
+- Keep the Bet Slip exactly the same size.
+- The toggle should fit neatly beside the "Clear" button without crowding the header.
+- Use a compact pill-style segmented switch (US | EU) with a smooth animated slider.
+- Highlight the active selection with the sportsbook's orange accent color.
+- Maintain full responsiveness for desktop and mobile.
+
+Important:
+This is a display preference only. Switching formats must never alter the actual odds, payouts, or sportsbook calculations—only how they are presented to the user.
