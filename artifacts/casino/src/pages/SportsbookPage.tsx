@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   Tv2, TrendingUp, Clock, ChevronRight, ChevronLeft, X, Trash2,
-  ReceiptText, Lock, RefreshCw, AlertTriangle, Wifi, WifiOff, Search,
+  ReceiptText, Lock, AlertTriangle, Search,
 } from "lucide-react";
 import { PageWrapper } from "./shared";
 import { useStore } from "../store";
@@ -1385,7 +1385,6 @@ export function SportsbookPage() {
   const [sport,      setSport]      = useState<SportTab>("Live");
   const [events,     setEvents]     = useState<SbEvent[]>([]);
   const [loading,    setLoading]    = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error,      setError]      = useState<string | null>(null);
   const [placed,     setPlaced]     = useState(false);
   const [slip,       setSlip]       = useState<BetSlipEntry[]>([]);
@@ -1698,15 +1697,6 @@ export function SportsbookPage() {
               />
             </div>
 
-            {/* Status */}
-            <div className="flex items-center gap-1.5 text-[10px] shrink-0" style={{ color: "rgba(255,255,255,0.28)" }}>
-              {loading || refreshing
-                ? <><RefreshCw size={10} className="animate-spin" />{refreshing ? "Refreshing…" : "Loading…"}</>
-                : error
-                  ? <><WifiOff size={10} />Offline</>
-                  : <><Wifi size={10} style={{ color: "rgba(34,197,94,0.7)" }} />Live</>
-              }
-            </div>
           </div>
 
           {/* Results summary + "Next 7 Days" badge */}
@@ -1728,7 +1718,7 @@ export function SportsbookPage() {
           )}
 
           {/* Loading skeletons */}
-          {(loading || refreshing) && events.length === 0 && (
+          {loading && events.length === 0 && (
             <div className="flex flex-col gap-3">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="rounded-xl h-[80px] animate-pulse"
@@ -1738,7 +1728,7 @@ export function SportsbookPage() {
           )}
 
           {/* No events — sport has no odds at all */}
-          {!loading && !refreshing && !error && events.length === 0 && (
+          {!loading && !error && events.length === 0 && (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <Lock size={28} style={{ color: "rgba(255,255,255,0.1)" }} />
               <p className="text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>
@@ -1759,7 +1749,7 @@ export function SportsbookPage() {
           )}
 
           {/* No events within 7-day window (odds exist but all beyond the window) */}
-          {!loading && !refreshing && !error && events.length > 0 && upcomingEvents.length === 0 && sport !== "Live" && !search && (
+          {!loading && !error && events.length > 0 && upcomingEvents.length === 0 && sport !== "Live" && !search && (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <Lock size={28} style={{ color: "rgba(255,255,255,0.1)" }} />
               <p className="text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>
@@ -1774,7 +1764,7 @@ export function SportsbookPage() {
           )}
 
           {/* No live events on LIVE tab */}
-          {!loading && !refreshing && !error && sport === "Live" && filteredEvents.length === 0 && !search && (
+          {!loading && !error && sport === "Live" && filteredEvents.length === 0 && !search && (
             <div className="flex flex-col items-center gap-3 py-16 text-center">
               <Lock size={28} style={{ color: "rgba(255,255,255,0.1)" }} />
               <p className="text-[13px] font-bold" style={{ color: "rgba(255,255,255,0.35)" }}>
