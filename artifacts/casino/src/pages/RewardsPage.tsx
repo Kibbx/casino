@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { PageWrapper, SubHeader, CardGrid } from "./shared";
+import { useStore } from "../store";
+import { usePlayerSocket } from "../lib/usePlayerSocket";
 import {
   getRewardsState,
   claimReward,
@@ -15,13 +17,36 @@ const AVAILABLE_REWARDS = [
   { id: 6, name: "Double XP Weekend",      cost: 800,  icon: "⚡", color: "#06b6d4" },
 ];
 
+interface Toast { msg: string; ok: boolean; key: number }
+
 export function RewardsPage() {
-  const [state, setState] = useState<RewardsState>(getRewardsState);
+  const { playerId, sessionToken } = useStore();
+  const { chips: liveChips } = usePlayerSocket(playerId ?? null, sessionToken);
+
+  const [state, setState]   = useState<RewardsState>(getRewardsState);
+  const [toast, setToast]   = useState<Toast | null>(null);
 
   useEffect(() => {
     setState(getRewardsState());
     return subscribeRewards(setState);
   }, []);
+
+  function showToast(msg: string, ok: boolean) {
+    const key = Date.now();
+    setToast({ msg, ok, key });
+    setTimeout(() => setToast(t => t?.key === key ? null : t), 3000);
+  }
+
+  function handleClaim(id: number, cost: number) {
+    const result = claimReward(id, cost, liveChips ?? 0);
+    if (result.ok) {
+      showToast("Reward claimed!", true);
+    } else if (result.reason === "already_claimed") {
+      showToast("Reward already claimed", false);
+    } else {
+      showToast("Not enough reward points", false);
+    }
+  }
 
   const tierIdx = TIERS.findIndex((t) => t.name === state.tier);
   const curTier = TIERS[tierIdx] ?? TIERS[0];
@@ -31,12 +56,25 @@ export function RewardsPage() {
     ? Math.min(100, ((state.xp - curTier.minXP) / (nextTier.minXP - curTier.minXP)) * 100)
     : 100;
 
-  function handleClaim(id: number, cost: number) {
-    claimReward(id, cost);
-  }
-
   return (
     <PageWrapper title="Rewards" breadcrumb="The Hub / Rewards" accentColor="#f5c518">
+
+      {/* Toast */}
+      {toast && (
+        <div
+          key={toast.key}
+          className="fixed top-6 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-xl text-[13px] font-bold shadow-xl pointer-events-none"
+          style={{
+            background: toast.ok ? "rgba(21,128,61,0.95)" : "rgba(153,27,27,0.95)",
+            border: `1px solid ${toast.ok ? "#4ade80" : "#f87171"}44`,
+            color: toast.ok ? "#4ade80" : "#fca5a5",
+            animation: "fadeInDown 0.18s ease",
+          }}
+        >
+          {toast.msg}
+        </div>
+      )}
+
       {/* Tier progress card */}
       <div
         className="rounded-2xl p-6 mb-8"
@@ -124,6 +162,24 @@ export function RewardsPage() {
           const canAfford  = state.points >= r.cost;
           const actionable = !isClaimed && canAfford;
 
+          const btnLabel = isClaimed
+            ? "Claimed ✓"
+            : !canAfford
+              ? "Insufficient"
+              : "Claim";
+
+          const btnBg = isClaimed
+            ? "rgba(74,222,128,0.12)"
+            : !canAfford
+              ? "rgba(255,255,255,0.05)"
+              : r.color;
+
+          const btnColor = isClaimed
+            ? "#4ade80"
+            : !canAfford
+              ? "rgba(255,255,255,0.20)"
+              : "#060404";
+
           return (
             <div
               key={r.id}
@@ -145,23 +201,11 @@ export function RewardsPage() {
                 </span>
                 <button
                   className="px-3 py-1 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all duration-150"
-                  style={{
-                    background: isClaimed
-                      ? "rgba(74,222,128,0.12)"
-                      : actionable
-                        ? r.color
-                        : "rgba(255,255,255,0.06)",
-                    color: isClaimed
-                      ? "#4ade80"
-                      : actionable
-                        ? "#060404"
-                        : "rgba(255,255,255,0.25)",
-                    cursor: actionable ? "pointer" : "default",
-                  }}
+                  style={{ background: btnBg, color: btnColor, cursor: actionable ? "pointer" : "default" }}
                   disabled={!actionable}
                   onClick={() => handleClaim(r.id, r.cost)}
                 >
-                  {isClaimed ? "Claimed ✓" : "Claim"}
+                  {btnLabel}
                 </button>
               </div>
             </div>
