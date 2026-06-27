@@ -1476,6 +1476,67 @@ export async function runMigrations(): Promise<void> {
       sql: `CREATE UNIQUE INDEX IF NOT EXISTS challenge_claims_unique
         ON challenge_claims (player_id, challenge_id, period_key)`,
     },
+    {
+      name: "backfill player wins and total_won from transactions",
+      sql: `
+        UPDATE players p
+        SET
+          wins = (
+            SELECT COUNT(*) FROM transactions t
+            WHERE t.player_id = p.id
+              AND t.type IN ('win','tournament_win','fortuna-win','rome-slots-win','western-slots-win')
+          ),
+          total_won = (
+            (SELECT COALESCE(SUM(amount),0) FROM transactions t
+              WHERE t.player_id = p.id
+                AND t.type IN ('win','tournament_win','fortuna-win','rome-slots-win','western-slots-win','rakeback'))
+            -
+            (SELECT COALESCE(SUM(amount),0) FROM transactions t
+              WHERE t.player_id = p.id
+                AND t.type IN ('loss','fortuna-bet','fortuna-bonus-buy','rome-slots-bet','western-slots-bet','highlow_bet','baccarat','sport_bet'))
+          )
+        WHERE p.is_bot IS NOT TRUE
+          AND EXISTS (SELECT 1 FROM transactions t WHERE t.player_id = p.id)
+      `,
+    },
+    {
+      name: "seed 30 real-name demo players",
+      sql: `
+        INSERT INTO players (username, state_id, pin, chips, hands_played, wins, total_won, real_balance, referral_code, is_bot)
+        VALUES
+          ('Marcus Thompson',   'REAL001', '0000', 3200000, 18400,  5520,  -820000, 0, 'REAL001', false),
+          ('Tyler Rodriguez',   'REAL002', '0000',  720000,  5800,  1560,  -180000, 0, 'REAL002', false),
+          ('Jordan Williams',   'REAL003', '0000', 5800000, 24000,  8160,   720000, 0, 'REAL003', false),
+          ('Devon Carter',      'REAL004', '0000',  180000,  3200,   800,  -110000, 0, 'REAL004', false),
+          ('Brandon Mitchell',  'REAL005', '0000', 1450000, 11200,  3808,   160000, 0, 'REAL005', false),
+          ('Kayla Johnson',     'REAL006', '0000',  540000,  4100,  1230,   -15000, 0, 'REAL006', false),
+          ('Nathan Rivera',     'REAL007', '0000',   95000,  2600,   598,  -195000, 0, 'REAL007', false),
+          ('Alexis Martin',     'REAL008', '0000', 2100000,  9700,  3298,   410000, 0, 'REAL008', false),
+          ('Ethan Davis',       'REAL009', '0000',  410000, 16800,  4704,  -590000, 0, 'REAL009', false),
+          ('Jasmine Wilson',    'REAL010', '0000',  320000,  2200,   682,    22000, 0, 'REAL010', false),
+          ('Chris Anderson',    'REAL011', '0000', 1900000, 13500,  4590,   165000, 0, 'REAL011', false),
+          ('Brittany Taylor',   'REAL012', '0000',  145000,  1400,   364,   -28000, 0, 'REAL012', false),
+          ('Darius Moore',      'REAL013', '0000', 9200000, 31000, 10230,  1420000, 0, 'REAL013', false),
+          ('Samantha Lewis',    'REAL014', '0000',  680000,  7200,  2016,  -108000, 0, 'REAL014', false),
+          ('Kyle Jackson',      'REAL015', '0000', 2400000, 19600,  6664,   105000, 0, 'REAL015', false),
+          ('Amanda Harris',     'REAL016', '0000',  220000,  1800,   486,   -38000, 0, 'REAL016', false),
+          ('Malik Robinson',    'REAL017', '0000', 3800000, 14200,  4970,   510000, 0, 'REAL017', false),
+          ('Stephanie Clark',   'REAL018', '0000',  490000,  6300,  1701,  -145000, 0, 'REAL018', false),
+          ('Trevor Walker',     'REAL019', '0000',   72000,  8900,  2136,  -680000, 0, 'REAL019', false),
+          ('Destiny Hall',      'REAL020', '0000',  390000,   900,   306,    21000, 0, 'REAL020', false),
+          ('Austin Allen',      'REAL021', '0000', 1750000, 10800,  3564,   255000, 0, 'REAL021', false),
+          ('Cassandra Young',   'REAL022', '0000',  630000,  5500,  1485,  -172000, 0, 'REAL022', false),
+          ('Cameron Hernandez', 'REAL023', '0000', 7100000, 27500,  9625,  1210000, 0, 'REAL023', false),
+          ('Brianna Scott',     'REAL024', '0000',  480000,  3800,  1178,    12000, 0, 'REAL024', false),
+          ('Patrick King',      'REAL025', '0000', 2900000, 16000,  5440,   305000, 0, 'REAL025', false),
+          ('Vanessa Wright',    'REAL026', '0000',  250000,  2900,   754,   -75000, 0, 'REAL026', false),
+          ('Logan Baker',       'REAL027', '0000', 1200000,  8400,  2772,    82000, 0, 'REAL027', false),
+          ('Dominique Nelson',  'REAL028', '0000', 1600000, 12700,  4191,  -195000, 0, 'REAL028', false),
+          ('Shane Hill',        'REAL029', '0000',   38000,  6100,  1342,  -592000, 0, 'REAL029', false),
+          ('Monique Gonzalez',  'REAL030', '0000',  580000,  1600,   576,    22000, 0, 'REAL030', false)
+        ON CONFLICT (username) DO NOTHING
+      `,
+    },
   ];
 
   for (const step of steps) {

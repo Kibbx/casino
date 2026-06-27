@@ -522,48 +522,33 @@ router.post("/change-pin", requirePlayer, async (req, res) => {
 });
 
 // ── Public leaderboard — must be before /:playerId wildcard ──────────────────
-// Uses the shared computeTxStats helper (defined above safePlayer) so every
-// field is derived identically to what the profile page and public-profile
-// endpoint show.
+// Reads wins + total_won directly from the players table (kept in sync by
+// gameplay code for real players; pre-seeded for demo accounts).
+// The detailed profile page still uses computeTxStats for per-transaction breakdown.
 router.get("/leaderboard", async (_req, res) => {
-  const [players, allTxs] = await Promise.all([
-    db.select({
-      id:          playersTable.id,
-      username:    playersTable.username,
-      chips:       playersTable.chips,
-      handsPlayed: playersTable.handsPlayed,
-      avatarUrl:   playersTable.avatarUrl,
-      staffRole:   playersTable.staffRole,
-    }).from(playersTable).where(eq(playersTable.isBot, false)),
-
-    db.select({
-      playerId:    transactionsTable.playerId,
-      type:        transactionsTable.type,
-      amount:      transactionsTable.amount,
-      description: transactionsTable.description,
-    }).from(transactionsTable),
-  ]);
-
-  // Group transactions by player
-  const txByPlayer = new Map<number, TxRow[]>();
-  for (const tx of allTxs) {
-    if (!txByPlayer.has(tx.playerId)) txByPlayer.set(tx.playerId, []);
-    txByPlayer.get(tx.playerId)!.push({ type: tx.type, amount: tx.amount, description: tx.description });
-  }
+  const players = await db.select({
+    id:          playersTable.id,
+    username:    playersTable.username,
+    chips:       playersTable.chips,
+    handsPlayed: playersTable.handsPlayed,
+    wins:        playersTable.wins,
+    totalWon:    playersTable.totalWon,
+    avatarUrl:   playersTable.avatarUrl,
+    staffRole:   playersTable.staffRole,
+  }).from(playersTable).where(eq(playersTable.isBot, false));
 
   const result = players.map(p => {
-    const handsPlayed = Number(p.handsPlayed ?? 0);
-    const stats = computeTxStats(txByPlayer.get(p.id) ?? [], handsPlayed);
-
-    console.log(`[leaderboard] ${p.username}: games=${stats.games} wins=${stats.wins} winRate=${stats.winRate}% wagered=${stats.wagered} won=${stats.won} net=${stats.netResult} tier=${stats.tier}`);
+    const games   = Number(p.handsPlayed ?? 0);
+    const wins    = Number(p.wins ?? 0);
+    const winRate = games > 0 ? Math.round(wins / games * 100) : 0;
 
     return {
       id:        p.id,
       username:  p.username,
-      games:     stats.games,       // handsPlayed — same as profile "Rounds Played"
-      wins:      stats.wins,        // WIN_CNT_T count — excl. rakeback
-      winRate:   stats.winRate,     // wins / handsPlayed × 100
-      totalWon:  stats.netResult,   // won − wagered — same as profile "Net Result"
+      games,
+      wins,
+      winRate,
+      totalWon:  Number(p.totalWon ?? 0),
       chips:     Number(p.chips),
       avatarUrl: p.avatarUrl ?? null,
       staffRole: p.staffRole ?? null,
