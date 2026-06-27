@@ -1454,6 +1454,23 @@ export async function runMigrations(): Promise<void> {
       name: "settings seed: sbAutoDeleteRetentionMinutes",
       sql: `INSERT INTO settings (key, value) VALUES ('sbAutoDeleteRetentionMinutes', '30') ON CONFLICT (key) DO NOTHING`,
     },
+    {
+      name: "challenge_claims table",
+      sql: `CREATE TABLE IF NOT EXISTS challenge_claims (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL,
+        challenge_id TEXT NOT NULL,
+        challenge_name TEXT NOT NULL,
+        reward_amount INTEGER NOT NULL,
+        period_key TEXT NOT NULL DEFAULT 'permanent',
+        claimed_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
+      name: "challenge_claims unique index",
+      sql: `CREATE UNIQUE INDEX IF NOT EXISTS challenge_claims_unique
+        ON challenge_claims (player_id, challenge_id, period_key)`,
+    },
   ];
 
   for (const step of steps) {
