@@ -111,17 +111,27 @@ export function PlayerPublicProfile({ playerId, onBack }: Props) {
     );
   }
 
-  const xp = computeXpFromStats(profile.totalWon, profile.handsPlayed);
-  const { tier, next, progress } = getTierProgress(xp);
-  const badges = computeBadges(profile);
-  const winRate = profile.handsPlayed > 0 ? ((profile.wins / profile.handsPlayed) * 100).toFixed(1) : "0.0";
-  const joinDate = new Date(profile.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  const initials = profile.username.charAt(0).toUpperCase();
+  // Normalise fields — API may return null for older DB records
+  const safeChips      = Number(profile.chips ?? 0);
+  const safeWins       = Number(profile.wins ?? 0);
+  const safeTotalWon   = Number(profile.totalWon ?? 0);
+  const safeHands      = Number(profile.handsPlayed ?? 0);
+  const safeUsername   = profile.username ?? "Unknown Player";
+  const safeCreatedAt  = profile.createdAt ?? new Date().toISOString();
 
-  const fmtChips = (n: number) =>
-    n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` :
-    n >= 1_000    ? `${(n / 1_000).toFixed(1)}K` :
-    n.toLocaleString();
+  const xp = computeXpFromStats(safeTotalWon, safeHands);
+  const { tier, next, progress } = getTierProgress(xp);
+  const badges = computeBadges({ ...profile, wins: safeWins, totalWon: safeTotalWon, handsPlayed: safeHands, chips: safeChips });
+  const winRate = safeHands > 0 ? ((safeWins / safeHands) * 100).toFixed(1) : "0.0";
+  const joinDate = new Date(safeCreatedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const initials = safeUsername.charAt(0).toUpperCase();
+
+  const fmtChips = (n: number | null | undefined) => {
+    const num = typeof n === "number" ? n : Number(n ?? 0) || 0;
+    return num >= 1_000_000 ? `${(num / 1_000_000).toFixed(1)}M` :
+           num >= 1_000    ? `${(num / 1_000).toFixed(1)}K` :
+           num.toLocaleString();
+  };
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: "24px 16px", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -152,7 +162,7 @@ export function PlayerPublicProfile({ playerId, onBack }: Props) {
           {profile.avatarUrl ? (
             <img
               src={profile.avatarUrl}
-              alt={profile.username}
+              alt={safeUsername}
               style={{ width: 72, height: 72, borderRadius: "50%", objectFit: "cover", border: `2px solid ${tier.color}` }}
             />
           ) : (
@@ -179,7 +189,7 @@ export function PlayerPublicProfile({ playerId, onBack }: Props) {
         {/* Info */}
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.95)" }}>{profile.username}</span>
+            <span style={{ fontSize: 22, fontWeight: 800, color: "rgba(255,255,255,0.95)" }}>{safeUsername}</span>
             {profile.stateId && (
               <span style={{ fontSize: 12, fontWeight: 700, color: "rgba(255,255,255,0.35)", fontVariantNumeric: "tabular-nums" }}>#{profile.stateId}</span>
             )}
@@ -228,11 +238,11 @@ export function PlayerPublicProfile({ playerId, onBack }: Props) {
 
       {/* ── Stats grid ──────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))", gap: 10 }}>
-        <StatCard label="Chip Balance"  value={fmtChips(profile.chips)}     color="#f5c518" />
-        <StatCard label="Total Wins"    value={profile.wins.toLocaleString()} />
-        <StatCard label="Hands Played"  value={profile.handsPlayed.toLocaleString()} />
+        <StatCard label="Chip Balance"  value={fmtChips(safeChips)}          color="#f5c518" />
+        <StatCard label="Total Wins"    value={safeWins.toLocaleString()} />
+        <StatCard label="Hands Played"  value={safeHands.toLocaleString()} />
         <StatCard label="Win Rate"      value={`${winRate}%`} />
-        <StatCard label="Total Won"     value={fmtChips(profile.totalWon)} sub="all time" color="#22c55e" />
+        <StatCard label="Total Won"     value={fmtChips(safeTotalWon)} sub="all time" color="#22c55e" />
         <StatCard label="Challenges"    value={profile.challengeStats.completed.toLocaleString()} sub="completed" color="#a855f7" />
       </div>
 

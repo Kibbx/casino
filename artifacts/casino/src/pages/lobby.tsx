@@ -480,8 +480,11 @@ export function Lobby() {
                     <div style={{ padding: "5px 14px 4px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.2)" }}>Players</div>
                   )}
                   {playerResults.map((p, idx) => {
-                    const initials = p.username.charAt(0).toUpperCase();
-                    const fmtChips = (n: number) => n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${(n / 1_000).toFixed(0)}K` : String(n);
+                    const initials = (p.username ?? "?").charAt(0).toUpperCase();
+                    const fmtChips = (n: number | null | undefined) => {
+                      const num = typeof n === "number" ? n : Number(n ?? 0) || 0;
+                      return num >= 1_000_000 ? `${(num / 1_000_000).toFixed(1)}M` : num >= 1_000 ? `${(num / 1_000).toFixed(0)}K` : String(num);
+                    };
                     return (
                       <button
                         key={p.id}
@@ -514,9 +517,13 @@ export function Lobby() {
                         </div>
                         {/* Name + state ID */}
                         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
-                          <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username}</span>
-                          {p.stateId && (
+                          <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username ?? "Unknown Player"}</span>
+                          {p.stateId ? (
                             <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 10, fontWeight: 500 }}>#{p.stateId}</span>
+                          ) : (
+                            <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 10, fontWeight: 500 }}>
+                              {p.isOnline ? "● Online" : "Offline"}
+                            </span>
                           )}
                         </div>
                         {/* Chips */}

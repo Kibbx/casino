@@ -227,19 +227,19 @@ router.get("/search", requirePlayer, async (req, res) => {
       .filter(p =>
         p.id !== selfId &&
         !p.isBot &&
-        (p.username.toLowerCase().includes(q) || (p.stateId ?? "").toLowerCase().includes(q))
+        ((p.username ?? "").toLowerCase().includes(q) || (p.stateId ?? "").toLowerCase().includes(q))
       )
       .slice(0, 8)
       .map(p => ({
         id: p.id,
-        username: p.username,
+        username: p.username ?? "Unknown Player",
         stateId: p.stateId ?? null,
-        chips: p.chips,
+        chips: Number(p.chips ?? 0),
         avatarUrl: p.avatarUrl ?? null,
-        wins: Number(p.wins),
-        totalWon: Number(p.totalWon),
-        handsPlayed: p.handsPlayed,
-        createdAt: p.createdAt.toISOString(),
+        wins: Number(p.wins ?? 0),
+        totalWon: Number(p.totalWon ?? 0),
+        handsPlayed: Number(p.handsPlayed ?? 0),
+        createdAt: p.createdAt?.toISOString() ?? new Date().toISOString(),
         isOnline: activeMap.has(p.id),
         currentGame: activeMap.get(p.id) ?? null,
       }));
@@ -251,55 +251,66 @@ router.get("/search", requirePlayer, async (req, res) => {
 
 // Public player profile — any authenticated player can view
 router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
-  const id = parseInt(req.params.playerId as string);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid player ID" });
+  try {
+    const id = parseInt(req.params.playerId as string);
+    if (isNaN(id)) return res.status(400).json({ error: "Invalid player ID" });
 
-  const [player] = await db
-    .select({
-      id: playersTable.id,
-      username: playersTable.username,
-      stateId: playersTable.stateId,
-      chips: playersTable.chips,
-      avatarUrl: playersTable.avatarUrl,
-      wins: playersTable.wins,
-      totalWon: playersTable.totalWon,
-      handsPlayed: playersTable.handsPlayed,
-      createdAt: playersTable.createdAt,
-      isBot: playersTable.isBot,
-    })
-    .from(playersTable)
-    .where(eq(playersTable.id, id));
+    const [player] = await db
+      .select({
+        id: playersTable.id,
+        username: playersTable.username,
+        stateId: playersTable.stateId,
+        chips: playersTable.chips,
+        avatarUrl: playersTable.avatarUrl,
+        wins: playersTable.wins,
+        totalWon: playersTable.totalWon,
+        handsPlayed: playersTable.handsPlayed,
+        createdAt: playersTable.createdAt,
+        isBot: playersTable.isBot,
+      })
+      .from(playersTable)
+      .where(eq(playersTable.id, id));
 
-  if (!player || player.isBot) return res.status(404).json({ error: "Player not found" });
+    if (!player || player.isBot) return res.status(404).json({ error: "Player not found" });
 
-  const claimRows = await db
-    .select({ rewardAmount: challengeClaimsTable.rewardAmount })
-    .from(challengeClaimsTable)
-    .where(eq(challengeClaimsTable.playerId, id));
+    // Challenge stats — gracefully degrade if the table hasn't been migrated yet
+    let totalChallengesCompleted = 0;
+    let totalChipsFromChallenges = 0;
+    try {
+      const claimRows = await db
+        .select({ rewardAmount: challengeClaimsTable.rewardAmount })
+        .from(challengeClaimsTable)
+        .where(eq(challengeClaimsTable.playerId, id));
+      totalChallengesCompleted = claimRows.length;
+      totalChipsFromChallenges = claimRows.reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
+    } catch {
+      // challenge_claims table may not exist yet — return zero stats
+    }
 
-  const totalChallengesCompleted = claimRows.length;
-  const totalChipsFromChallenges = claimRows.reduce((s, r) => s + (r.rewardAmount ?? 0), 0);
+    const activePlayers = getActivePlayers();
+    const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
 
-  const activePlayers = getActivePlayers();
-  const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
-
-  return res.json({
-    id: player.id,
-    username: player.username,
-    stateId: player.stateId ?? null,
-    chips: player.chips,
-    avatarUrl: player.avatarUrl ?? null,
-    wins: Number(player.wins),
-    totalWon: Number(player.totalWon),
-    handsPlayed: player.handsPlayed,
-    createdAt: player.createdAt.toISOString(),
-    isOnline: activeMap.has(player.id),
-    currentGame: activeMap.get(player.id) ?? null,
-    challengeStats: {
-      completed: totalChallengesCompleted,
-      chipsEarned: totalChipsFromChallenges,
-    },
-  });
+    return res.json({
+      id: player.id,
+      username: player.username ?? "Unknown Player",
+      stateId: player.stateId ?? null,
+      chips: Number(player.chips ?? 0),
+      avatarUrl: player.avatarUrl ?? null,
+      wins: Number(player.wins ?? 0),
+      totalWon: Number(player.totalWon ?? 0),
+      handsPlayed: Number(player.handsPlayed ?? 0),
+      createdAt: player.createdAt?.toISOString() ?? new Date().toISOString(),
+      isOnline: activeMap.has(player.id),
+      currentGame: activeMap.get(player.id) ?? null,
+      challengeStats: {
+        completed: totalChallengesCompleted,
+        chipsEarned: totalChipsFromChallenges,
+      },
+    });
+  } catch (e: any) {
+    console.error("[public-profile] error:", e?.message ?? e);
+    return res.status(500).json({ error: "Failed to load profile" });
+  }
 });
 
 // ── Player-to-player chip transfer ───────────────────────────────────────────

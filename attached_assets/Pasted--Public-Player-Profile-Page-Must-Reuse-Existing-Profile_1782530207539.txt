@@ -1,0 +1,65 @@
+### Public Player Profile Page Must Reuse Existing Profile Design
+
+When a user clicks another player from the search dropdown, their public profile page should use the **same exact profile layout/design** as the current user profile page.
+
+Do **not** create a new-looking profile page or generic placeholder profile.
+
+The other player's profile should look visually identical to the existing Profile screen, including:
+
+* same header style
+* same profile card layout
+* same stat cards
+* same activity breakdown section
+* same fonts
+* same colors
+* same spacing
+* same sidebar/header structure
+
+Only replace the data with the selected player's public account data.
+
+For example, if the user opens RubyShark’s profile, the page should show RubyShark’s:
+
+* avatar
+* display name
+* member tier
+* member since date
+* state ID
+* referral code
+* credit score
+* chip balance
+* RTP
+* total wagered
+* total won
+* largest win
+* net result
+* rakeback
+* activity breakdown
+* public badges/items/prizes if available
+
+The profile route should work like:
+
+```js
+/players/:playerId
+```
+
+or use the existing route pattern, but it must load the selected player from the same player data service used by search.
+
+Important:
+
+* The current user’s own profile page should still work exactly as it does now.
+* Other users’ profiles should reuse the same Profile component if possible.
+* The component should accept a `playerId` or `profileUser` prop and render that player’s data.
+* Do not hardcode Jonah Hydell’s data inside the profile UI.
+* Move profile stats into player data objects or a player profile service.
+* If no playerId is provided, show the logged-in user’s profile.
+* If a playerId is provided, show that player’s public profile data.
+* Valid search results must never open `Player not found`.
+
+Acceptance criteria:
+
+* Clicking RubyShark opens a profile that looks exactly like the screenshot, but with RubyShark’s data.
+* Clicking PhantomEdge opens the same profile layout with PhantomEdge’s data.
+* Clicking Jonah Hydell opens Jonah’s data.
+* No profile field shows `undefined`.
+* No valid player from search shows `Player not found`.
+* The existing design remains unchanged.
