@@ -840,7 +840,7 @@ function EventCard({
 /* ── Bet slip ────────────────────────────────────────────────────── */
 function BetSlip({
   entries, popularEvents = [], onRemove, onClear, onPlace, onSelect,
-  chips, chipsKnown = false, placeError, placing = false,
+  chips, chipsKnown = false, placeError, placing = false, betLimits,
 }: {
   entries: BetSlipEntry[];
   popularEvents?: SbEvent[];
@@ -853,6 +853,7 @@ function BetSlip({
   chipsKnown?: boolean;
   placeError?: string;
   placing?: boolean;
+  betLimits?: { minBet: number; maxBet: number };
 }) {
   const [activeTab,    setActiveTab]    = useState<"parlay" | "singles">("parlay");
   const [parlayWager,  setParlayWager]  = useState("");
@@ -1082,6 +1083,13 @@ function BetSlip({
                   </div>
                 </div>
 
+                {/* Bet limits hint */}
+                {betLimits && (
+                  <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.22)" }}>
+                    Min ${betLimits.minBet.toLocaleString("en-US")} · Max ${betLimits.maxBet.toLocaleString("en-US")}
+                  </p>
+                )}
+
                 {/* Validation / place error */}
                 {(hasSameGame || placeError || (chipsKnown && parlayWagerNum > 0 && chips !== undefined && parlayWagerNum > chips)) && (
                   <p className="text-[9px] font-bold" style={{ color: "#ef4444" }}>
@@ -1188,6 +1196,13 @@ function BetSlip({
                         style={{ caretColor: "#00E676" }} />
                     </div>
                   </div>
+
+                  {/* Bet limits hint */}
+                  {betLimits && (
+                    <p className="text-[9px]" style={{ color: "rgba(255,255,255,0.22)" }}>
+                      Min ${betLimits.minBet.toLocaleString("en-US")} · Max ${betLimits.maxBet.toLocaleString("en-US")}
+                    </p>
+                  )}
 
                   {/* Payout / Place row */}
                   {(() => {
@@ -1550,6 +1565,14 @@ export function SportsbookPage() {
 
   const [placeError, setPlaceError] = useState<string | null>(null);
   const [placing,    setPlacing]    = useState(false);
+  const [betLimits,  setBetLimits]  = useState<{ minBet: number; maxBet: number } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/sportbets/settings")
+      .then(r => r.json())
+      .then(d => { if (d.minBet !== undefined) setBetLimits({ minBet: d.minBet, maxBet: d.maxBet }); })
+      .catch(() => {});
+  }, []);
 
   /* true once we have a real balance reading (WS or query) */
   const chipsKnown = liveChips !== null || currentPlayer !== undefined;
@@ -1565,6 +1588,8 @@ export function SportsbookPage() {
     console.log("[placeBets] wager=", wager, "w=", w, "betType=", betType, "picks=", picks.length);
     if (!sessionToken || !playerId) { setPlaceError("Not logged in"); return; }
     if (w <= 0) { setPlaceError("Enter a wager amount"); return; }
+    if (betLimits && w < betLimits.minBet) { setPlaceError(`Minimum bet is $${betLimits.minBet.toLocaleString("en-US")}`); return; }
+    if (betLimits && w > betLimits.maxBet) { setPlaceError(`Maximum bet is $${betLimits.maxBet.toLocaleString("en-US")}`); return; }
     if (chipsKnown && w > chips) { setPlaceError("Insufficient chips"); return; }
     setPlacing(true);
     setPlaceError(null);
@@ -1842,6 +1867,7 @@ export function SportsbookPage() {
               chipsKnown={chipsKnown}
               placeError={placeError}
               placing={placing}
+              betLimits={betLimits ?? undefined}
             />
           </div>
         </div>

@@ -11454,17 +11454,21 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
   }
 
   async function saveSbSettings() {
+    const min = parseInt(sbMinBet);
+    const max = parseInt(sbMaxBet);
+    if (!min || min <= 0) { setSbSettingsMsg({ text: "Min Bet must be greater than 0", ok: false }); return; }
+    if (!max || max <= min) { setSbSettingsMsg({ text: "Max Bet must be greater than Min Bet", ok: false }); return; }
     setSbSettingsSaving(true); setSbSettingsMsg(null);
     try {
       const r = await fetch(`${BASE_URL}/api/sportbets/settings`, {
         method: "POST",
         headers: { Authorization: `Bearer ${authToken}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ minBet: parseInt(sbMinBet) || 100, maxBet: parseInt(sbMaxBet) || 50000 }),
+        body: JSON.stringify({ minBet: min, maxBet: max }),
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "Failed");
       setSbMinBet(String(d.minBet)); setSbMaxBet(String(d.maxBet));
-      setSbSettingsMsg({ text: "Saved", ok: true });
+      setSbSettingsMsg({ text: "Saved ✓", ok: true });
     } catch (err: any) { setSbSettingsMsg({ text: err.message || "Failed", ok: false }); }
     setSbSettingsSaving(false);
     setTimeout(() => setSbSettingsMsg(null), 3000);

@@ -31,7 +31,26 @@ router.get("/settings", async (_req, res) => {
 router.post("/settings", requireSportbetsOrAbove, async (req, res) => {
   const { minBet, maxBet } = req.body;
   const min = Math.max(1, parseInt(minBet) || 100);
-  const max = Math.max(min, parseInt(maxBet) || 50000);
+  const max = Math.max(min + 1, parseInt(maxBet) || 50000);
+  await setSetting("sportbetsMinBet", String(min));
+  await setSetting("sportbetsMaxBet", String(max));
+  return res.json({ minBet: min, maxBet: max });
+});
+
+// GET /sportbets/admin/bet-limits — alias used by admin panel
+router.get("/admin/bet-limits", requireSportbetsOrAbove, async (_req, res) => {
+  const minBet = parseInt(await getSetting("sportbetsMinBet", "100"));
+  const maxBet = parseInt(await getSetting("sportbetsMaxBet", "50000"));
+  return res.json({ minBet, maxBet });
+});
+
+// PUT /sportbets/admin/bet-limits — alias used by admin panel
+router.put("/admin/bet-limits", requireSportbetsOrAbove, async (req, res) => {
+  const { minBet, maxBet } = req.body;
+  const min = parseInt(minBet);
+  const max = parseInt(maxBet);
+  if (!min || min <= 0) return res.status(400).json({ error: "Min Bet must be greater than 0" });
+  if (!max || max <= min) return res.status(400).json({ error: "Max Bet must be greater than Min Bet" });
   await setSetting("sportbetsMinBet", String(min));
   await setSetting("sportbetsMaxBet", String(max));
   return res.json({ minBet: min, maxBet: max });
@@ -754,6 +773,11 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
 
     const w = Math.floor(Number(wager));
     if (!w || w <= 0) return res.status(400).json({ error: "Wager must be greater than 0" });
+
+    const minBet = parseInt(await getSetting("sportbetsMinBet", "100"));
+    const maxBet = parseInt(await getSetting("sportbetsMaxBet", "50000"));
+    if (w < minBet) return res.status(400).json({ error: `Minimum bet is $${minBet.toLocaleString("en-US")}` });
+    if (w > maxBet) return res.status(400).json({ error: `Maximum bet is $${maxBet.toLocaleString("en-US")}` });
 
     const [player] = await db
       .select({ id: playersTable.id, username: playersTable.username, chips: playersTable.chips })
