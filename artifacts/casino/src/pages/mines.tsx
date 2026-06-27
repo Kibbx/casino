@@ -10,6 +10,7 @@ import { ChevronLeft } from "lucide-react";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
 import { awardXP } from "../lib/rewardsState";
 import { playSound } from "../lib/sounds";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const IMGS = import.meta.env.BASE_URL;
@@ -269,6 +270,8 @@ export default function Mines() {
         setTiles(t); setPhase("lost"); setPayout(0);
         setStatusMsg("💥 You hit a mine!"); setSession(null);
         playSound("mineBust");
+        fireChallengeEvent("mini_game_round_played");
+        fireChallengeEvent("bet_lost");
       } else {
         t[idx] = "safe";
         setTiles(t);
@@ -305,6 +308,8 @@ export default function Mines() {
       setStatusMsg(`✅ Cashed out at ${d.multiplier.toFixed(2)}× — +${d.payout.toLocaleString()} chips`);
       setSession(null); refetchPlayer();
       playSound("cashOut");
+      fireChallengeEvent("mini_game_round_played");
+      fireChallengeEvent("bet_won");
     } catch { setErrorMsg("Connection error"); }
     setIsLoading(false);
   }

@@ -10,6 +10,7 @@ import { playSound } from "../lib/sounds";
 import { awardXP } from "../lib/rewardsState";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
 import { PlayingCardImg, MiniPlayingCard } from "../components/PlayingCardImg";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -650,6 +651,15 @@ export default function BlackjackPage() {
         else if (r === "player_win" || r === "dealer_bust") playSound("win");
         else if (r === "player_bust" || r === "dealer_win") playSound("lose");
         else if (r === "push")                              playSound("check");
+
+        // ── Challenge events ──────────────────────────────────────────────────
+        fireChallengeEvent("blackjack_round_played");
+        if (mySeat.bet > 0) {
+          fireChallengeEvent("single_bet_placed", { amount: mySeat.bet });
+          fireChallengeEvent("bet_wagered", { amount: mySeat.bet });
+        }
+        const won = r === "player_blackjack" || r === "player_win" || r === "dealer_bust";
+        fireChallengeEvent(won ? "blackjack_win" : "bet_lost");
       }
     }
     prevPhaseRef.current = cur;

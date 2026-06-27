@@ -95,6 +95,7 @@ export function fireChallengeEvent(
       incrementProgress("d_high_roller");
       incrementProgress("w_high_roller");  // weekly Blackjack Devotee
       incrementProgress("m_marathon");      // monthly The Long Haul
+      incrementProgress("d_quick_gambler"); // daily Quick Gambler (any game)
       break;
 
     case "blackjack_win":
@@ -104,6 +105,8 @@ export function fireChallengeEvent(
 
     case "roulette_spin":
       incrementProgress("d_spin_doctor");
+      incrementProgress("m_marathon");      // monthly The Long Haul
+      incrementProgress("d_quick_gambler"); // daily Quick Gambler (any game)
       break;
 
     case "roulette_win":
@@ -134,6 +137,7 @@ export function fireChallengeEvent(
     case "mini_game_round_played":
       incrementProgress("w_mini_marathon");
       incrementProgress("m_marathon");
+      incrementProgress("d_quick_gambler"); // daily Quick Gambler (any game)
       break;
 
     case "full_table_played":
@@ -171,4 +175,33 @@ export function fireChallengeEvent(
       }
       break;
   }
+}
+
+/** Alias — same as fireChallengeEvent, satisfies the spec name. */
+export const updateChallengeProgress = fireChallengeEvent;
+
+// ── Dev-only test helpers (stripped in production builds) ─────────────────────
+if (import.meta.env.DEV) {
+  (window as any).testChallengeEvent = (
+    type: ChallengeEventType,
+    payload: ChallengeEventPayload = {},
+  ) => {
+    console.info("[challenge] testChallengeEvent:", type, payload);
+    fireChallengeEvent(type, payload);
+  };
+
+  (window as any).testChallengeReset = () => {
+    localStorage.removeItem("bab_challenges_v4");
+    window.location.reload();
+  };
+
+  console.info(
+    "[challenge] Dev helpers available:\n" +
+    "  window.testChallengeEvent(type, payload?)\n" +
+    "  window.testChallengeReset()\n" +
+    "Event types: blackjack_round_played | blackjack_win | roulette_spin |\n" +
+    "  roulette_win | single_bet_placed | bet_wagered | tournament_entered |\n" +
+    "  mini_game_round_played | full_table_played | case_opened |\n" +
+    "  any_game_round_played | bet_won | bet_lost | session_profit_updated"
+  );
 }

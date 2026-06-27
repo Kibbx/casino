@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -260,6 +261,14 @@ export default function Keno() {
 
       setPhase("result");
       setLastWin(payout);
+
+      // ── Challenge events ───────────────────────────────────────────────────
+      fireChallengeEvent("mini_game_round_played");
+      if (bet > 0) {
+        fireChallengeEvent("single_bet_placed", { amount: bet });
+        fireChallengeEvent("bet_wagered", { amount: bet });
+      }
+      fireChallengeEvent(payout > 0 ? "bet_won" : "bet_lost");
 
       // Win / loss sound
       if (multiplier >= 50 || payout >= bet * 30) {

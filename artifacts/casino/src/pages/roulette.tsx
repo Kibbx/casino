@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { awardXP } from "../lib/rewardsState";
 import { PromoZone } from "../components/PromoRegion";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { useGetPlayer, useGetRouletteStatus } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -986,6 +987,14 @@ export default function Roulette() {
           if (isStraightUp && won) playSound("jackpot");
           else if (won) playSound("win");
           else playSound("lose");
+
+          // ── Challenge events ───────────────────────────────────────────────
+          fireChallengeEvent("roulette_spin");
+          if (pr.totalBet > 0) {
+            fireChallengeEvent("single_bet_placed", { amount: pr.totalBet });
+            fireChallengeEvent("bet_wagered", { amount: pr.totalBet });
+          }
+          fireChallengeEvent(won ? "roulette_win" : "bet_lost");
           break;
         }
         case "roulette_error": {

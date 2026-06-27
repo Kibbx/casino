@@ -1,0 +1,145 @@
+Fix the global search/player profile flow.
+
+Do **not** change the visual design, layout, colors, fonts, spacing, sidebar, header, or dropdown styling. Only fix the broken data connection and routing.
+
+### Current Bugs
+
+1. Search results show player rows, but the right-side field says `undefined`.
+2. Clicking a player result opens a profile page that says `Player not found`.
+3. The selected player data is not being passed or resolved correctly.
+4. Search result IDs and profile route IDs appear mismatched.
+
+### Required Fix
+
+Make the search dropdown and player profile page use the same player data source and same player identifier.
+
+Each player must have a valid:
+
+* playerId
+* stateId
+* displayName
+* username
+* membershipTier
+* chips
+* avatar
+* onlineStatus
+
+Replace any broken fields that render as `undefined`.
+
+For each search result, display:
+
+* Player name
+* State ID
+* Membership tier
+* Chip balance
+* Avatar/initials
+
+Do not render any undefined values. If optional data is missing, use a clean fallback like `Bronze`, `0 chips`, or `Offline`.
+
+### Routing Fix
+
+When clicking a player search result:
+
+* Navigate to the correct player profile route.
+* Use one consistent identifier, preferably `playerId`.
+* The profile page should read the route param and find the matching player from the same player service.
+* If the route uses `stateId`, then search results must navigate using `stateId`.
+* Do not mix `id`, `playerId`, `stateId`, and `username` inconsistently.
+
+Example:
+
+```js
+navigate(`/players/${player.playerId}`);
+```
+
+Then:
+
+```js
+const player = playerService.getPlayerById(playerId);
+```
+
+Or, if using state ID:
+
+```js
+navigate(`/players/${player.stateId}`);
+const player = playerService.getPlayerByStateId(stateId);
+```
+
+Pick one approach and use it everywhere.
+
+### Player Service
+
+Create or fix a centralized `playerService`.
+
+It should include:
+
+```js
+getAllPlayers()
+searchPlayers(query)
+getPlayerById(playerId)
+getPlayerByStateId(stateId)
+```
+
+The search dropdown and profile page must both use this service.
+
+### Seed Data
+
+Make sure seeded players include complete valid data.
+
+Example:
+
+```js
+{
+  playerId: "player_001",
+  stateId: "DEMO012",
+  displayName: "RubyShark",
+  username: "RubyShark",
+  membershipTier: "Silver",
+  chips: 1250000,
+  avatar: null,
+  onlineStatus: "online"
+}
+```
+
+Add complete records for the players currently appearing in search:
+
+* RubyShark
+* PhantomEdge
+* ShadowAce
+* CardShark99
+* ShadowKing
+* CardShark_K
+
+Do not leave `membershipTier`, `chips`, or `stateId` undefined.
+
+### Profile Page
+
+Fix the public player profile page so it loads and displays the selected player.
+
+The profile page should show:
+
+* player name
+* state ID
+* membership tier
+* chip balance
+* avatar
+* online status
+* join date
+* public stats
+* recently played games
+* achievements or badges
+
+If a player truly does not exist, show the existing `Player not found` state. But valid search results must never lead to `Player not found`.
+
+### Acceptance Criteria
+
+* Search results no longer show `undefined`.
+* Clicking RubyShark opens RubyShark’s profile.
+* Clicking PhantomEdge opens PhantomEdge’s profile.
+* Clicking any listed player opens the correct profile.
+* Search by player name works.
+* Search by state ID works.
+* Search result data and profile data come from the same source.
+* No broken route params.
+* No undefined fields appear in the dropdown.
+* Existing UI design remains unchanged.

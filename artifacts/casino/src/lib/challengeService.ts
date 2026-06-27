@@ -14,7 +14,7 @@
 //  The rotation engine picks it up automatically next cycle.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_KEY = "bab_challenges_v3";
+const STORAGE_KEY = "bab_challenges_v4";
 export const CHALLENGES_EVENT = "bab:challenges:update";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export interface ChallengeState {
 }
 
 interface StoredState {
-  version: 3;
+  version: 4;
   playerId: number | null;
   // Rotation timestamps
   lastDailyReset:   string; // YYYY-MM-DD
@@ -253,25 +253,13 @@ const INITIAL_DAILY_IDS   = ["d_high_roller",   "d_spin_doctor",   "d_big_bettor
 const INITIAL_WEEKLY_IDS  = ["w_tourney",        "w_mini_marathon", "w_social"];
 const INITIAL_MONTHLY_IDS = ["m_marathon",       "m_fortune_seeker","m_case_connoisseur"];
 
-const SEED_PROGRESS: Record<string, number> = {
-  d_high_roller:       3,
-  d_spin_doctor:       3,
-  d_big_bettor:        0,
-  w_tourney:           1,
-  w_mini_marathon:     8,
-  w_social:            2,
-  m_marathon:          42,
-  m_fortune_seeker:    7,
-  m_case_connoisseur:  1,
-  s_diamond_run:       4,
-  s_on_fire:           620,
-};
+const SEED_PROGRESS: Record<string, number> = {};
 
 // ── Default / reset state ─────────────────────────────────────────────────────
 
 function defaultState(playerId: number | null = null): StoredState {
   return {
-    version: 3,
+    version: 4,
     playerId,
     lastDailyReset:   isoDate(),
     lastWeeklyReset:  isoWeek(),
@@ -282,10 +270,10 @@ function defaultState(playerId: number | null = null): StoredState {
     prevDailyIds:     [],
     prevWeeklyIds:    [],
     prevMonthlyIds:   [],
-    progress:         { ...SEED_PROGRESS },
+    progress:         {},
     claimed:          [],
-    consecutiveWins:  4,
-    sessionProfit:    620,
+    consecutiveWins:  0,
+    sessionProfit:    0,
   };
 }
 
@@ -297,9 +285,9 @@ function load(): StoredState {
     if (!raw) return defaultState();
     const p = JSON.parse(raw) as Partial<StoredState>;
     // Version guard — if schema mismatch, start fresh
-    if ((p as any).version !== 3) return defaultState(p.playerId ?? null);
+    if ((p as any).version !== 4) return defaultState(p.playerId ?? null);
     return {
-      version:         3,
+      version:         4,
       playerId:        p.playerId ?? null,
       lastDailyReset:  p.lastDailyReset   ?? isoDate(),
       lastWeeklyReset: p.lastWeeklyReset  ?? isoWeek(),
@@ -310,10 +298,10 @@ function load(): StoredState {
       prevDailyIds:    Array.isArray(p.prevDailyIds)     ? p.prevDailyIds     : [],
       prevWeeklyIds:   Array.isArray(p.prevWeeklyIds)    ? p.prevWeeklyIds    : [],
       prevMonthlyIds:  Array.isArray(p.prevMonthlyIds)   ? p.prevMonthlyIds   : [],
-      progress:        (typeof p.progress === "object" && p.progress) ? p.progress : { ...SEED_PROGRESS },
+      progress:        (typeof p.progress === "object" && p.progress) ? p.progress : {},
       claimed:         Array.isArray(p.claimed)           ? p.claimed          : [],
-      consecutiveWins: typeof p.consecutiveWins === "number" ? p.consecutiveWins : 4,
-      sessionProfit:   typeof p.sessionProfit   === "number" ? p.sessionProfit   : 620,
+      consecutiveWins: typeof p.consecutiveWins === "number" ? p.consecutiveWins : 0,
+      sessionProfit:   typeof p.sessionProfit   === "number" ? p.sessionProfit   : 0,
     };
   } catch {
     return defaultState();
