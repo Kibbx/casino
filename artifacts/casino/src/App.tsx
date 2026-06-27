@@ -22,7 +22,8 @@ import BankerDashboard from "@/pages/banker";
 import PokerLobby from "@/pages/poker-lobby";
 import CasesPage from "@/pages/cases";
 import MyRewardsPage from "@/pages/my-rewards";
-import ProfilePage from "@/pages/profile";
+import ProfilePageOld from "@/pages/profile";
+import { ProfilePage } from "@/pages/ProfilePage";
 import MinesPage from "@/pages/mines";
 import KenoPage from "@/pages/keno";
 import HighLow from "@/pages/high-low";
@@ -108,6 +109,7 @@ function Router() {
       <Route path="/cases" component={CasesPage} />
       <Route path="/my-rewards" component={MyRewardsPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/profileold" component={ProfilePageOld} />
       <Route path="/blackjack" component={Blackjack} />
       <Route path="/slots" component={Lobby} />
       <Route path="/roulette" component={Roulette} />
