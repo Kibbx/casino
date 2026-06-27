@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { CatalogCard, CatalogGame, CardGrid } from "./shared";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
@@ -152,6 +152,22 @@ function SectionHeader({ label, dotColor }: { label: string; dotColor: string })
   );
 }
 
+/* ─── Search items ────────────────────────────────────────────── */
+const SEARCH_ITEMS = [
+  { label: "Blackjack",    category: "Table Games",  route: "/blackjack" },
+  { label: "Roulette",     category: "Table Games",  route: "/roulette" },
+  { label: "Baccarat",     category: "Table Games",  route: "/baccarat" },
+  { label: "Slots",        category: "Slots",        route: "/slots" },
+  { label: "Poker",        category: "Games",        route: "/poker-tables" },
+  { label: "Horse Racing", category: "Mini Games",   route: "/horse-racing" },
+  { label: "Sportsbook",   category: "Sections",     route: "/sportsbook" },
+  { label: "Tournaments",  category: "Sections",     route: "/tournaments" },
+  { label: "Rewards",      category: "Sections",     route: "/rewards" },
+  { label: "Challenges",   category: "Sections",     route: "/challenges" },
+  { label: "Leaderboards", category: "Sections",     route: "/leaderboards" },
+  { label: "Profile",      category: "Account",      route: "/profile" },
+];
+
 /* ─── Lobby ───────────────────────────────────────────────────── */
 export function Lobby() {
   const { playerUsername, logoutPlayer, playerStaffRoles, playerId, sessionToken } = useStore();
@@ -178,6 +194,36 @@ export function Lobby() {
 
   const [mntToast,   setMntToast]   = useState<string | null>(null);
   const [mntExiting, setMntExiting] = useState(false);
+
+  // ── Search ────────────────────────────────────────────────────
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen,  setSearchOpen]  = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  const searchResults = searchQuery.trim().length > 0
+    ? SEARCH_ITEMS.filter(i => i.label.toLowerCase().includes(searchQuery.toLowerCase()))
+    : [];
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setSearchOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const goSearch = (route: string) => {
+    setSearchQuery("");
+    setSearchOpen(false);
+    setLocation(route);
+  };
+
+  const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") { setSearchOpen(false); return; }
+    if (e.key === "Enter" && searchResults.length > 0) goSearch(searchResults[0].route);
+  };
 
   // ── Rewards rank (live, from rewardsState) ────────────────────
   const [rewardsXP, setRewardsXP] = useState(() => getRewardsState().xp);
@@ -348,11 +394,59 @@ export function Lobby() {
         </div>
 
         {/* SEARCH — centered & flex-1 on desktop, full row on tablet/mobile */}
-        <div className="w-full order-3 md:order-4 lg:order-3 lg:w-auto lg:flex-1 lg:px-4">
+        <div className="w-full order-3 md:order-4 lg:order-3 lg:w-auto lg:flex-1 lg:px-4" ref={searchRef} style={{ position: "relative" }}>
           <div className="header-search lg:max-w-[350px] lg:mx-auto">
             <Search size={15} style={{ color: "#a855f7", flexShrink: 0 }} />
-            <input type="text" placeholder={appMode === "casino" ? "Search games, events, players..." : "Search listings, sellers, categories..."} />
+            <input
+              type="text"
+              placeholder={appMode === "casino" ? "Search games, events, players..." : "Search listings, sellers, categories..."}
+              value={searchQuery}
+              onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
+              onFocus={() => { if (searchQuery.trim()) setSearchOpen(true); }}
+              onKeyDown={handleSearchKey}
+            />
           </div>
+          {searchOpen && searchResults.length > 0 && (
+            <div
+              className="lg:max-w-[350px] lg:mx-auto"
+              style={{
+                position: "absolute",
+                top: "calc(100% + 4px)",
+                left: 0,
+                right: 0,
+                background: "rgba(12,10,10,0.98)",
+                border: "1px solid rgba(232,64,10,0.25)",
+                borderRadius: 8,
+                zIndex: 999,
+                overflow: "hidden",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
+              }}
+            >
+              {searchResults.map((item, idx) => (
+                <button
+                  key={idx}
+                  onMouseDown={() => goSearch(item.route)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    padding: "9px 14px",
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    borderBottom: idx < searchResults.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+                    textAlign: "left",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,64,10,0.1)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                >
+                  <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600 }}>{item.label}</span>
+                  <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.category}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* RIGHT — rank · chips · profile · logout (Git pill design) */}
