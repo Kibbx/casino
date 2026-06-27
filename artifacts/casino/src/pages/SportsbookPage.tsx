@@ -1074,8 +1074,9 @@ function BetSlip({
                   <div className="flex-1 min-w-0 flex items-center px-2 rounded-md"
                     style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
                     <span className="text-[10px] font-black shrink-0" style={{ color: "#8B8E98" }}>$</span>
-                    <input type="number" min={0} placeholder="0" value={parlayWager}
-                      onChange={ev => setParlayWager(ev.target.value)}
+                    <input type="text" inputMode="numeric" placeholder="0"
+                      value={parlayWager ? Number(parlayWager).toLocaleString("en-US") : ""}
+                      onChange={ev => setParlayWager(ev.target.value.replace(/[^0-9.]/g, ""))}
                       className="min-w-0 w-full bg-transparent text-[10px] font-bold text-white outline-none pl-1"
                       style={{ caretColor: "#00E676" }} />
                   </div>
@@ -1180,8 +1181,9 @@ function BetSlip({
                     <div className="flex-1 min-w-0 flex items-center px-2 rounded-md"
                       style={{ background: "#111217", border: "1px solid #2A2B32" }}>
                       <span className="text-[10px] font-black shrink-0" style={{ color: "#8B8E98" }}>$</span>
-                      <input type="number" min={0} placeholder="0" value={sw}
-                        onChange={ev => setSingleWager(e, ev.target.value)}
+                      <input type="text" inputMode="numeric" placeholder="0"
+                        value={sw ? Number(sw).toLocaleString("en-US") : ""}
+                        onChange={ev => setSingleWager(e, ev.target.value.replace(/[^0-9.]/g, ""))}
                         className="min-w-0 w-full bg-transparent text-[10px] font-bold text-white outline-none pl-1"
                         style={{ caretColor: "#00E676" }} />
                     </div>
