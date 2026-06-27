@@ -59,11 +59,12 @@ export function getRewardsState(): RewardsState {
 }
 
 export function awardXP(betAmount: number): void {
-  const xp = Math.floor(betAmount * 0.003);
+  const xp     = Math.floor(betAmount * 0.003);
+  const points = Math.floor(betAmount * 0.001);
   if (xp <= 0) return;
   const s = load();
   const newXP = s.xp + xp;
-  persist({ ...s, xp: newXP, tier: computeTier(newXP), points: s.points + xp });
+  persist({ ...s, xp: newXP, tier: computeTier(newXP), points: s.points + points });
 }
 
 export function claimReward(id: number, cost: number): boolean {
