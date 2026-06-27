@@ -720,24 +720,37 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
                   onClick={handleClaimRakeback}
                   disabled={rbClaiming || onCooldown || claimable === 0}
                   style={{
-                    marginTop: 8, padding: "5px 0", borderRadius: 6,
+                    marginTop: 8, padding: onCooldown && cdLabel ? "4px 0 5px" : "5px 0",
+                    borderRadius: 6,
                     background: (onCooldown || claimable === 0)
                       ? "rgba(255,255,255,0.04)"
                       : "rgba(34,197,94,0.14)",
                     border: `1px solid ${(onCooldown || claimable === 0) ? "rgba(255,255,255,0.08)" : "rgba(34,197,94,0.32)"}`,
-                    color: (onCooldown || claimable === 0) ? "rgba(255,255,255,0.22)" : "#22c55e",
-                    fontWeight: 700, fontSize: 9,
-                    letterSpacing: "0.08em", textTransform: "uppercase",
                     cursor: (rbClaiming || onCooldown || claimable === 0) ? "not-allowed" : "pointer",
                     fontFamily: "Rajdhani, sans-serif",
                     width: "100%",
+                    display: "flex", flexDirection: "column",
+                    alignItems: "center", justifyContent: "center", gap: 1,
                   }}
                 >
-                  {rbClaiming
-                    ? "Claiming…"
-                    : onCooldown && cdLabel
-                    ? `Cooldown · ${cdLabel}`
-                    : "Collect Rakeback"}
+                  {rbClaiming ? (
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "rgba(255,255,255,0.22)" }}>
+                      Claiming…
+                    </span>
+                  ) : onCooldown && cdLabel ? (
+                    <>
+                      <span style={{ fontSize: 8, fontWeight: 600, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.28)", lineHeight: 1 }}>
+                        Cooldown
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.05em", color: "rgba(255,255,255,0.55)", lineHeight: 1, fontFamily: "'Orbitron', monospace" }}>
+                        {cdLabel}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: claimable === 0 ? "rgba(255,255,255,0.22)" : "#22c55e" }}>
+                      Collect Rakeback
+                    </span>
+                  )}
                 </button>
               </div>
             );
