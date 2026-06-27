@@ -111,7 +111,7 @@ const navGroups: NavGroup[] = [
   {
     section: "Account",
     items: [
-      { id: "profile", label: "Profile", icon: User, route: "/profile" },
+      { id: "profile", label: "Profile", icon: User },
       { id: "staff", label: "Staff", icon: Crown, route: "/banker", staffOnly: true },
     ],
   },
