@@ -903,7 +903,7 @@ function BetSlip({
   /* Quick-add chip button */
   const QuickBtn = ({ label, onClick }: { label: string; onClick: () => void }) => (
     <button onClick={onClick}
-      className="flex-1 py-1.5 rounded-md text-[10px] font-black transition-opacity active:opacity-70"
+      className="shrink-0 px-2.5 py-1.5 rounded-md text-[10px] font-black transition-opacity active:opacity-70 whitespace-nowrap"
       style={{ background: "rgba(0,230,118,0.10)", border: "1px solid rgba(0,230,118,0.2)", color: "#00E676" }}>
       {label}
     </button>
@@ -1067,12 +1067,12 @@ function BetSlip({
                   <QuickBtn label="+$500"  onClick={() => addToParlay(500)}  />
                   <QuickBtn label="+$1k"   onClick={() => addToParlay(1000)} />
                   {/* Custom input */}
-                  <div className="flex-1 flex items-center px-2 rounded-md"
+                  <div className="flex-1 min-w-0 flex items-center px-2 rounded-md"
                     style={{ background: "#17181E", border: "1px solid #2A2B32" }}>
-                    <span className="text-[10px] font-black" style={{ color: "#8B8E98" }}>$</span>
-                    <input type="number" min={0} placeholder="0.00" value={parlayWager}
+                    <span className="text-[10px] font-black shrink-0" style={{ color: "#8B8E98" }}>$</span>
+                    <input type="number" min={0} placeholder="0" value={parlayWager}
                       onChange={ev => setParlayWager(ev.target.value)}
-                      className="w-full bg-transparent text-[11px] font-bold text-white outline-none pl-1"
+                      className="min-w-0 w-full bg-transparent text-[10px] font-bold text-white outline-none pl-1"
                       style={{ caretColor: "#00E676" }} />
                   </div>
                 </div>
@@ -1172,12 +1172,12 @@ function BetSlip({
                     <QuickBtn label="+$100"  onClick={() => addToSingle(e, 100)}  />
                     <QuickBtn label="+$500"  onClick={() => addToSingle(e, 500)}  />
                     <QuickBtn label="+$1k"   onClick={() => addToSingle(e, 1000)} />
-                    <div className="flex-1 flex items-center px-2 rounded-md"
+                    <div className="flex-1 min-w-0 flex items-center px-2 rounded-md"
                       style={{ background: "#111217", border: "1px solid #2A2B32" }}>
-                      <span className="text-[10px] font-black" style={{ color: "#8B8E98" }}>$</span>
+                      <span className="text-[10px] font-black shrink-0" style={{ color: "#8B8E98" }}>$</span>
                       <input type="number" min={0} placeholder="0" value={sw}
                         onChange={ev => setSingleWager(e, ev.target.value)}
-                        className="w-full bg-transparent text-[10px] font-bold text-white outline-none pl-1"
+                        className="min-w-0 w-full bg-transparent text-[10px] font-bold text-white outline-none pl-1"
                         style={{ caretColor: "#00E676" }} />
                     </div>
                   </div>
