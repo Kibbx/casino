@@ -169,9 +169,6 @@ export function RewardsPage() {
         })}
       </CardGrid>
 
-      <p className="text-center text-[11px] mt-8" style={{ color: "rgba(255,255,255,0.20)" }}>
-        Earn reward points by gambling — every chip wagered awards 0.1 XP &amp; points
-      </p>
     </PageWrapper>
   );
 }
