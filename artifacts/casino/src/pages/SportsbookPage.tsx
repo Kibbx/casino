@@ -1453,7 +1453,7 @@ export function SportsbookPage() {
     });
 
   const filteredEvents = upcomingEvents
-    .filter(e => sport !== "Live" || isLiveNow(e))
+    .filter(e => sport === "Live" ? isLiveNow(e) : !isLiveNow(e))
     .filter(e => {
       if (!search.trim()) return true;
       const q = search.toLowerCase();
