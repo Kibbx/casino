@@ -39,6 +39,110 @@ function safePlayer(p: typeof playersTable.$inferSelect) {
   };
 }
 
+// ── Shared stat aggregation — single source of truth used by leaderboard
+//    AND public-profile endpoint so both return identical numbers.
+//
+//    WAGER_AMT_T  — transactions that represent money the player SPENT (bet/wagered)
+//    WIN_AMT_T    — transactions that represent money the player RECEIVED (wins + rakeback)
+//    WIN_CNT_T    — transactions that count as a game WIN for win-rate purposes.
+//                   Rakeback is excluded here: it is a loyalty payout, not a game win,
+//                   and the profile activity breakdown shows it as a separate row.
+//
+//    handsPlayed  — DB column incremented server-side for every game round (slots,
+//                   blackjack, roulette, crash, baccarat, horse racing, high-low,
+//                   cases, sports betting, tournaments). Used as the games denominator
+//                   so the leaderboard matches the "Rounds Played" card on the profile.
+const WAGER_AMT_T = new Set([
+  "loss",                              // blackjack, roulette, crash, horse racing, mines, generic slots
+  "fortuna-bet", "fortuna-bonus-buy",  // Fortuna slots
+  "rome-slots-bet",                    // Rome slots
+  "western-slots-bet",                 // Western slots
+  "highlow_bet",                       // High-Low
+  "baccarat",                          // Baccarat
+  "sport_bet",                         // Sports betting
+]);
+const WIN_AMT_T = new Set([
+  "win", "tournament_win", "fortuna-win", "rome-slots-win", "western-slots-win", "rakeback",
+]);
+const WIN_CNT_T = new Set([
+  "win", "tournament_win", "fortuna-win", "rome-slots-win", "western-slots-win",
+  // "rakeback" intentionally excluded — loyalty payout, not a game-round win
+]);
+
+function isPokerTxShared(type: string, description: string): boolean {
+  const d = (description ?? "").toLowerCase();
+  return type === "buyin" || type === "poker_win" || type === "cashout" ||
+    d.startsWith("poker") || d.startsWith("won pot") ||
+    d.startsWith("rake collected at") || d.startsWith("buy-in to table") ||
+    d.startsWith("left table") || d.startsWith("afk kicked from table");
+}
+
+function getTierFromXP(handsPlayed: number, netResult: number): string {
+  const xp = Math.floor(Math.max(0, netResult) * 0.003) + Math.floor(handsPlayed * 3);
+  if (xp >= 100000) return "Diamond";
+  if (xp >= 40000)  return "Platinum";
+  if (xp >= 15000)  return "Gold";
+  if (xp >= 5000)   return "Silver";
+  return "Bronze";
+}
+
+interface TxRow { type: string; amount: number; description: string | null; }
+
+/** Compute stat card values from a player's transaction list.
+ *  Pass `handsPlayed` from the players table for the games counter. */
+function computeTxStats(txs: TxRow[], handsPlayed: number) {
+  let wagered  = 0;
+  let won      = 0;
+  let winCount = 0;
+  let biggestWin = 0;
+  const byType: Record<string, { spent: number; received: number; count: number }> = {};
+
+  for (const t of txs) {
+    if (isPokerTxShared(t.type, t.description ?? "")) continue;
+
+    if (!byType[t.type]) byType[t.type] = { spent: 0, received: 0, count: 0 };
+    byType[t.type].count++;
+
+    if (WAGER_AMT_T.has(t.type)) {
+      wagered += t.amount;
+      byType[t.type].spent += t.amount;
+    }
+    if (WIN_AMT_T.has(t.type)) {
+      won += t.amount;
+      byType[t.type].received += t.amount;
+      if (t.amount > biggestWin) biggestWin = t.amount;
+    }
+    if (WIN_CNT_T.has(t.type)) {
+      winCount++;
+    }
+  }
+
+  const netResult = won - wagered;
+  const rtp       = wagered > 0 ? (won / wagered) * 100 : 0;
+  const winRate   = handsPlayed > 0 ? Math.round((winCount / handsPlayed) * 100) : 0;
+  const tier      = getTierFromXP(handsPlayed, netResult);
+
+  const activityBreakdown = Object.entries(byType)
+    .map(([type, s]) => ({ type, ...s }))
+    .sort((a, b) => (b.spent + b.received) - (a.spent + a.received));
+
+  return {
+    games:     handsPlayed,          // "Rounds Played" — same as profile stat card
+    wins:      winCount,             // game-round wins, excl. rakeback
+    winRate,                         // wins / handsPlayed × 100
+    wagered,                         // total chips bet
+    won,                             // total chips received (incl. rakeback)
+    netResult,                       // won − wagered  (= profile "Net Result")
+    biggestWin,
+    rtp,                             // won / wagered × 100 (= profile "RTP")
+    tier,
+    activityBreakdown,
+    betCount: Object.entries(byType) // raw wager-tx count (kept for callers that need it)
+      .filter(([tp]) => WAGER_AMT_T.has(tp))
+      .reduce((s, [, v]) => s + v.count, 0),
+  };
+}
+
 // List all players — security and above (pit boss, security guard, dealer, banker, owner)
 router.get("/", requireSecurityOrAbove, async (_req, res) => {
   const players = await db.select().from(playersTable).orderBy(playersTable.username);
@@ -289,38 +393,22 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
       // challenge_claims table may not exist yet — return zero stats
     }
 
-    // Transaction-derived stats for the profile page stat cards
-    const WAGER_T = new Set(["loss", "fortuna-bet", "fortuna-bonus-buy", "rome-slots-bet", "western-slots-bet", "highlow_bet", "baccarat", "sport_bet"]);
-    const WIN_T   = new Set(["win", "tournament_win", "fortuna-win", "rome-slots-win", "western-slots-win", "rakeback"]);
-    function isPokerRow(t: { type: string; description: string }) {
-      const d = t.description.toLowerCase();
-      return t.type === "buyin" || t.type === "poker_win" || t.type === "cashout" ||
-        d.startsWith("poker") || d.startsWith("won pot") || d.startsWith("rake collected at") ||
-        d.startsWith("buy-in to table") || d.startsWith("left table");
-    }
+    // Transaction-derived stats — uses the shared computeTxStats helper so
+    // values are identical to what the leaderboard endpoint returns.
     const allTxs = await db
       .select({ type: transactionsTable.type, amount: transactionsTable.amount, description: transactionsTable.description })
       .from(transactionsTable)
       .where(eq(transactionsTable.playerId, id));
-    const wagerTxs  = allTxs.filter(t => WAGER_T.has(t.type) && !isPokerRow(t));
-    const winTxArr  = allTxs.filter(t => WIN_T.has(t.type)   && !isPokerRow(t));
-    const statWagered  = wagerTxs.reduce((s, t) => s + t.amount, 0);
-    const statWon      = winTxArr.reduce((s, t) => s + t.amount, 0);
-    const statBiggest  = winTxArr.reduce((max, t) => t.amount > max ? t.amount : max, 0);
-    const statNet      = statWon - statWagered;
-    const statRtp      = statWagered > 0 ? statWon / statWagered * 100 : 0;
-    const statBetCount = wagerTxs.length;
-    const statWinCount = winTxArr.length;
-    const byType: Record<string, { spent: number; received: number; count: number }> = {};
-    for (const t of allTxs) {
-      if (!byType[t.type]) byType[t.type] = { spent: 0, received: 0, count: 0 };
-      byType[t.type].count++;
-      if (WIN_T.has(t.type)) byType[t.type].received += t.amount;
-      else byType[t.type].spent += t.amount;
-    }
-    const activityBreakdown = Object.entries(byType)
-      .map(([type, s]) => ({ type, ...s }))
-      .sort((a, b) => (b.spent + b.received) - (a.spent + a.received));
+    const handsPlayedNum = Number(player.handsPlayed ?? 0);
+    const txStats = computeTxStats(allTxs, handsPlayedNum);
+    const statWagered      = txStats.wagered;
+    const statWon          = txStats.won;
+    const statBiggest      = txStats.biggestWin;
+    const statNet          = txStats.netResult;
+    const statRtp          = txStats.rtp;
+    const statBetCount     = txStats.betCount;
+    const statWinCount     = txStats.wins;
+    const activityBreakdown = txStats.activityBreakdown;
 
     const activePlayers = getActivePlayers();
     const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
@@ -434,33 +522,16 @@ router.post("/change-pin", requirePlayer, async (req, res) => {
 });
 
 // ── Public leaderboard — must be before /:playerId wildcard ──────────────────
+// Uses the shared computeTxStats helper (defined above safePlayer) so every
+// field is derived identically to what the profile page and public-profile
+// endpoint show.
 router.get("/leaderboard", async (_req, res) => {
-  const WAGER_T = new Set(["loss", "fortuna-bet", "fortuna-bonus-buy", "rome-slots-bet", "western-slots-bet", "highlow_bet", "baccarat", "sport_bet"]);
-  const WIN_T   = new Set(["win", "tournament_win", "fortuna-win", "rome-slots-win", "western-slots-win", "rakeback"]);
-
-  function isPokerRow(type: string, description: string) {
-    const d = (description ?? "").toLowerCase();
-    return type === "buyin" || type === "poker_win" || type === "cashout" ||
-      d.startsWith("poker") || d.startsWith("won pot") ||
-      d.startsWith("rake collected at") || d.startsWith("buy-in to table") || d.startsWith("left table");
-  }
-
-  function getTierFromXP(netResult: number, handsPlayed: number): string {
-    const xp = Math.floor(Math.max(0, netResult) * 0.003) + Math.floor((handsPlayed ?? 0) * 3);
-    if (xp >= 100000) return "Diamond";
-    if (xp >= 40000)  return "Platinum";
-    if (xp >= 15000)  return "Gold";
-    if (xp >= 5000)   return "Silver";
-    return "Bronze";
-  }
-
   const [players, allTxs] = await Promise.all([
     db.select({
       id:          playersTable.id,
       username:    playersTable.username,
       chips:       playersTable.chips,
       handsPlayed: playersTable.handsPlayed,
-      wins:        playersTable.wins,
       avatarUrl:   playersTable.avatarUrl,
       staffRole:   playersTable.staffRole,
     }).from(playersTable).where(eq(playersTable.isBot, false)),
@@ -473,32 +544,28 @@ router.get("/leaderboard", async (_req, res) => {
     }).from(transactionsTable),
   ]);
 
-  type TxStats = { wagered: number; won: number; betCount: number; winCount: number };
-  const txByPlayer = new Map<number, TxStats>();
+  // Group transactions by player
+  const txByPlayer = new Map<number, TxRow[]>();
   for (const tx of allTxs) {
-    if (!txByPlayer.has(tx.playerId)) txByPlayer.set(tx.playerId, { wagered: 0, won: 0, betCount: 0, winCount: 0 });
-    const s = txByPlayer.get(tx.playerId)!;
-    if (isPokerRow(tx.type, tx.description)) continue;
-    if (WAGER_T.has(tx.type)) { s.wagered += tx.amount; s.betCount++; }
-    if (WIN_T.has(tx.type))   { s.won     += tx.amount; s.winCount++; }
+    if (!txByPlayer.has(tx.playerId)) txByPlayer.set(tx.playerId, []);
+    txByPlayer.get(tx.playerId)!.push({ type: tx.type, amount: tx.amount, description: tx.description });
   }
 
   const result = players.map(p => {
-    const stats     = txByPlayer.get(p.id) ?? { wagered: 0, won: 0, betCount: 0, winCount: 0 };
-    const games     = stats.betCount;
-    const wins      = stats.winCount;
-    const winRate   = games > 0 ? Math.round((wins / games) * 100) : 0;
-    const netResult = stats.won - stats.wagered;
-    const chips     = Number(p.chips);
+    const handsPlayed = Number(p.handsPlayed ?? 0);
+    const stats = computeTxStats(txByPlayer.get(p.id) ?? [], handsPlayed);
+
+    console.log(`[leaderboard] ${p.username}: games=${stats.games} wins=${stats.wins} winRate=${stats.winRate}% wagered=${stats.wagered} won=${stats.won} net=${stats.netResult} tier=${stats.tier}`);
+
     return {
       id:        p.id,
       username:  p.username,
-      games,
-      wins,
-      winRate,
-      totalWon:  netResult,
-      chips,
-      tier:      getTierFromXP(netResult, Number(p.handsPlayed ?? 0)),
+      games:     stats.games,       // handsPlayed — same as profile "Rounds Played"
+      wins:      stats.wins,        // WIN_CNT_T count — excl. rakeback
+      winRate:   stats.winRate,     // wins / handsPlayed × 100
+      totalWon:  stats.netResult,   // won − wagered — same as profile "Net Result"
+      chips:     Number(p.chips),
+      tier:      stats.tier,
       avatarUrl: p.avatarUrl ?? null,
       staffRole: p.staffRole ?? null,
     };
