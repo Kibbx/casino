@@ -1,0 +1,86 @@
+Prompt:
+
+The top navigation/header needs a complete visual polish. Right now the "BIG HOUSE CASINO" branding feels amateur because the spacing, alignment, and proportions are inconsistent. Redesign the entire top navbar to look like a premium AAA gaming platform (similar to Stake, Duelbits, Roobet, Steam, or Riot Games).
+
+Brand Title
+Make BIG HOUSE white and CASINO the accent orange (#FF6B1A or current theme color).
+Reduce the gap between "BIG HOUSE" and "CASINO" so they read as one cohesive logo.
+Increase letter spacing slightly (around 0.08–0.12em) while reducing excessive padding around the text.
+Use a heavier font weight (700-800).
+Vertically center the logo perfectly with the hamburger menu and navigation tabs.
+Add subtle hover opacity or glow—not an overpowering effect.
+Keep the logo height consistent with the rest of the navbar.
+Top Navigation Layout
+
+Completely rebalance the spacing.
+
+Current issues:
+
+Elements feel randomly spaced.
+Search bar is slightly oversized.
+Right-side items feel cramped together.
+Navigation tabs don't align cleanly with the logo.
+
+Fix by:
+
+Use a consistent horizontal spacing system (24px or 32px between major groups).
+Vertically align every element to the exact center.
+Reduce unnecessary left/right padding.
+Ensure equal spacing between:
+Hamburger
+Logo
+Casino / Market tabs
+Search
+Rank
+Chips
+Profile
+
+Everything should sit on one visual baseline.
+
+Search Bar
+Reduce width by about 10–15%.
+Reduce height slightly.
+Center it perfectly.
+Make border glow more subtle.
+Add smoother rounded corners.
+Increase internal left/right padding.
+Casino / Market Tabs
+Make both buttons equal width.
+Add consistent padding.
+Improve hover animation.
+Active tab should feel premium with a cleaner orange highlight.
+Increase spacing from the logo.
+Right Side
+
+Improve spacing between:
+
+Silver II badge
+Chips balance
+User profile
+Logout/settings icon
+
+Nothing should feel compressed.
+
+Overall Navbar
+Navbar height should be approximately 64–68px.
+Every component should have equal vertical padding.
+Improve visual hierarchy.
+Keep everything aligned to an invisible 12-column grid.
+Increase breathing room without making the navbar taller.
+Maintain the existing black/gold/orange luxury casino aesthetic.
+Design Goal
+
+The navbar should immediately feel like a polished production UI instead of a collection of separate components. Everything should appear intentional, evenly spaced, balanced, and premium while preserving the existing theme.
+
+Do not change functionality. Only improve:
+
+typography
+spacing
+alignment
+sizing
+padding
+margins
+hover effects
+visual consistency
+
+Refactor the navbar CSS/components as needed to achieve a clean, professional, high-end casino interface.

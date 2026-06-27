@@ -346,33 +346,33 @@ export function Lobby() {
 
       {/* ── Top nav (responsive) ── */}
       <nav
-        className="shrink-0 z-20 flex flex-wrap items-center gap-x-2 gap-y-2 px-3 py-2 lg:flex-nowrap lg:gap-x-0 lg:py-0 lg:h-[52px]"
+        className="shrink-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 lg:flex-nowrap lg:gap-x-0 lg:py-0 lg:h-[64px]"
         style={{
           background: "rgba(5,3,3,0.97)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          borderBottom: "1px solid rgba(232,64,10,0.1)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
+          borderBottom: "1px solid rgba(232,64,10,0.12)",
           boxSizing: "border-box",
         }}
       >
-        {/* LEFT — hamburger + brand + volume */}
-        <div className="flex items-center gap-2 shrink-0 order-1">
+        {/* LEFT — hamburger + brand */}
+        <div className="flex items-center gap-3 shrink-0 order-1">
           <button onClick={() => setCollapsed(c => !c)} className="nav-icon-btn">
-            <Menu size={17} style={{ color: "rgba(255,255,255,0.48)" }} />
+            <Menu size={17} style={{ color: "rgba(255,255,255,0.45)" }} />
           </button>
-          <div className="w-px h-5 shrink-0 hidden sm:block" style={{ background: "rgba(255,255,255,0.09)" }} />
-          <h1 className="font-rajdhani font-black tracking-[0.15em] uppercase shrink-0"
-            style={{ color: "rgba(255,255,255,0.9)", whiteSpace: "nowrap", fontSize: "clamp(13px, 1vw, 15px)" }}>
+          <div className="w-px h-5 shrink-0 hidden sm:block" style={{ background: "rgba(255,255,255,0.08)" }} />
+          <h1 className="font-rajdhani font-black uppercase shrink-0"
+            style={{ color: "#fff", whiteSpace: "nowrap", fontSize: "clamp(14px, 1.1vw, 16px)", letterSpacing: "0.09em", lineHeight: 1 }}>
             {appMode === "casino"
-              ? <>Big House <span style={{ color: "#e8400a", textShadow: "0 0 14px rgba(232,64,10,0.75)" }}>Casino</span></>
-              : <>Big House <span style={{ color: "#f5c518", textShadow: "0 0 14px rgba(245,197,24,0.65)" }}>Market</span></>
+              ? <>BIG HOUSE&nbsp;<span style={{ color: "#e8400a", textShadow: "0 0 12px rgba(232,64,10,0.55)" }}>CASINO</span></>
+              : <>BIG HOUSE&nbsp;<span style={{ color: "#f5c518", textShadow: "0 0 12px rgba(245,197,24,0.5)" }}>MARKET</span></>
             }
           </h1>
-          <div className="w-px h-5 shrink-0 hidden lg:block" style={{ background: "rgba(255,255,255,0.09)" }} />
+          <div className="w-px h-5 shrink-0 hidden lg:block" style={{ background: "rgba(255,255,255,0.08)" }} />
         </div>
 
         {/* MODE TOGGLE — inline on desktop/tablet, own row on mobile */}
-        <div className="mode-switcher shrink-0 order-4 md:order-2 lg:mx-2">
+        <div className="mode-switcher shrink-0 order-4 md:order-2 lg:mx-4">
           <button className={`mode-tab${appMode === "casino" ? " active" : ""}`} onClick={() => switchMode("casino")}>Casino</button>
           <button className={`mode-tab${appMode === "marketplace" ? " active" : ""}`} onClick={() => switchMode("marketplace")}>Market</button>
         </div>
@@ -433,8 +433,8 @@ export function Lobby() {
           )}
         </div>
 
-        {/* RIGHT — rank · chips · profile · logout (Git pill design) */}
-        <div className="flex items-center shrink-0 ml-auto order-2 md:order-3 lg:order-4 lg:pr-1" style={{ gap: 12 }}>
+        {/* RIGHT — rank · chips · profile · logout */}
+        <div className="flex items-center shrink-0 ml-auto order-2 md:order-3 lg:order-4 lg:pr-2" style={{ gap: 10 }}>
           {/* Rank pill — hidden on mobile */}
           <div className="nav-pill nav-pill-rank hidden md:flex">
             <Star size={12} style={{ color: subRank.tierColor, fill: subRank.tierColor, flexShrink: 0 }} />

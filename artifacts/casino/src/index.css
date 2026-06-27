@@ -993,82 +993,84 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: 44px;
-  background: #08080d;
-  border: 1px solid rgba(168, 85, 247, 0.65);
-  border-radius: 14px;
-  padding: 0 14px;
+  height: 36px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 10px;
+  padding: 0 16px;
   gap: 10px;
-  box-shadow: 0 0 10px rgba(168, 85, 247, 0.35);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  box-shadow: 0 0 6px rgba(168, 85, 247, 0.12);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .header-search::before, .header-search::after { display: none; }
 .header-search:hover {
-  border-color: rgba(168, 85, 247, 0.95);
-  box-shadow: 0 0 16px rgba(168, 85, 247, 0.55);
+  border-color: rgba(168, 85, 247, 0.55);
+  box-shadow: 0 0 10px rgba(168, 85, 247, 0.22);
+  background: rgba(255,255,255,0.04);
 }
 .header-search:focus-within {
-  border-color: rgba(168, 85, 247, 0.95);
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.65);
+  border-color: rgba(168, 85, 247, 0.75);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.3);
+  background: rgba(255,255,255,0.05);
   outline: none;
 }
 .header-search input {
   flex: 1; background: transparent; border: none; outline: none;
-  color: rgba(255,255,255,0.9); font-size: 14px; font-family: inherit; padding: 0;
+  color: rgba(255,255,255,0.9); font-size: 13px; font-family: inherit; padding: 0;
   line-height: 1;
 }
-.header-search input::placeholder { color: rgba(255, 255, 255, 0.45); }
+.header-search input::placeholder { color: rgba(255, 255, 255, 0.35); }
 
 /* ── Nav icon button ─────────────────────────────────────────────── */
 .nav-icon-btn {
-  padding: 6px; border-radius: 6px;
+  padding: 7px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; cursor: pointer;
   flex-shrink: 0; transition: background 0.15s, color 0.15s;
 }
-.nav-icon-btn:hover { background: rgba(255,255,255,0.06); }
+.nav-icon-btn:hover { background: rgba(255,255,255,0.07); }
 .nav-logout-btn { color: rgba(255,255,255,0.3); }
 .nav-logout-btn:hover { color: rgba(239,68,68,0.7); }
 
 /* ── Nav pill ────────────────────────────────────────────────────── */
 .nav-pill {
-  display: flex; align-items: center; gap: 7px;
-  padding: 5px 13px; border-radius: 8px;
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px; border-radius: 10px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
+  border: 1px solid rgba(255,255,255,0.08);
   cursor: default; white-space: nowrap;
   transition: border-color 0.15s, background 0.15s;
 }
-.nav-pill:hover { border-color: rgba(255,255,255,0.17); background: rgba(255,255,255,0.06); }
-.nav-pill-gold { border-color: rgba(245,197,24,0.24); background: rgba(245,197,24,0.05); }
-.nav-pill-gold:hover { border-color: rgba(245,197,24,0.42); background: rgba(245,197,24,0.09); }
+.nav-pill:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
+.nav-pill-gold { border-color: rgba(245,197,24,0.22); background: rgba(245,197,24,0.04); }
+.nav-pill-gold:hover { border-color: rgba(245,197,24,0.4); background: rgba(245,197,24,0.08); }
 
 /* ── Nav user chip ───────────────────────────────────────────────── */
 .nav-user-chip {
-  display: flex; align-items: center; gap: 9px;
-  padding: 4px 12px 4px 5px; border-radius: 8px;
+  display: flex; align-items: center; gap: 10px;
+  padding: 5px 14px 5px 6px; border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.08);
   background: rgba(255,255,255,0.03);
   cursor: pointer; transition: border-color 0.15s, background 0.15s;
 }
-.nav-user-chip:hover { border-color: rgba(232,64,10,0.38); background: rgba(232,64,10,0.06); }
+.nav-user-chip:hover { border-color: rgba(232,64,10,0.35); background: rgba(232,64,10,0.05); }
 
 /* ── Mode switcher ───────────────────────────────────────────────── */
 .mode-switcher {
   display: flex; align-items: center;
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.09);
-  border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; overflow: hidden; flex-shrink: 0;
 }
 .mode-tab {
-  padding: 4px 12px; font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 5px 16px; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.07em;
   border: none; cursor: pointer; white-space: nowrap;
-  color: rgba(255,255,255,0.45); background: transparent;
-  transition: color 0.15s, background 0.15s;
+  color: rgba(255,255,255,0.42); background: transparent;
+  transition: color 0.18s, background 0.18s;
 }
-.mode-tab:hover:not(.active) { color: rgba(255,255,255,0.7); }
-.mode-tab.active { background: rgba(232,64,10,0.85); color: #fff; text-shadow: 0 0 8px rgba(232,64,10,0.6); }
+.mode-tab:hover:not(.active) { color: rgba(255,255,255,0.72); background: rgba(255,255,255,0.04); }
+.mode-tab.active { background: rgba(232,64,10,0.88); color: #fff; text-shadow: 0 0 10px rgba(232,64,10,0.5); }
 
 /* ── Nav volume slider ───────────────────────────────────────────── */
 .nav-volume-slider {
@@ -1095,10 +1097,10 @@
 }
 
 /* ── Nav rank pill + bar ─────────────────────────────────────────── */
-.nav-pill-rank { border-color: rgba(156,163,175,0.2); background: rgba(156,163,175,0.04); }
-.nav-pill-rank:hover { border-color: rgba(245,197,24,0.3); background: rgba(245,197,24,0.06); }
-.nav-rank-bar { width: 80px; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.1); overflow: hidden; flex-shrink: 0; }
-.nav-rank-fill { height: 100%; border-radius: 2px; background: linear-gradient(to right,#f5c518,#e8400a); }
+.nav-pill-rank { border-color: rgba(156,163,175,0.18); background: rgba(156,163,175,0.04); }
+.nav-pill-rank:hover { border-color: rgba(245,197,24,0.28); background: rgba(245,197,24,0.05); }
+.nav-rank-bar { width: 68px; height: 2.5px; border-radius: 2px; background: rgba(255,255,255,0.1); overflow: hidden; flex-shrink: 0; }
+.nav-rank-fill { height: 100%; border-radius: 2px; background: linear-gradient(to right,#f5c518,#e8400a); transition: width 0.4s ease; }
 
 /* ── Divider dot ─────────────────────────────────────────────────── */
 .divider-dot { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; margin: 0 12px; }
