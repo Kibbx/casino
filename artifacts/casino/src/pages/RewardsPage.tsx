@@ -90,13 +90,13 @@ export function RewardsPage({ rpBalance = 0 }: { rpBalance?: number }) {
           </div>
           <div className="ml-auto text-right">
             <p className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Reward Points</p>
-            <p className="text-2xl font-black tabular-nums" style={{ color: "#f5c518", fontFamily: "'Orbitron', sans-serif" }}>
+            <p className="text-2xl font-black tabular-nums" style={{ color: "#a855f7", fontFamily: "'Orbitron', sans-serif" }}>
               {rpBalance.toLocaleString()}
             </p>
           </div>
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Total XP</p>
-            <p className="text-xl font-black tabular-nums" style={{ color: "rgba(255,255,255,0.55)", fontFamily: "'Orbitron', sans-serif" }}>
+            <p className="text-xl font-black tabular-nums" style={{ color: "#22c55e", fontFamily: "'Orbitron', sans-serif" }}>
               {state.xp.toLocaleString()}
             </p>
           </div>
