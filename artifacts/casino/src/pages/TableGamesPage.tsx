@@ -314,7 +314,7 @@ export function TableGamesPage() {
         <p className="text-sm text-center mb-4" style={{ color: "#f87171" }}>{error}</p>
       )}
 
-      <CardGrid>
+      <CardGrid minItemWidth={260} maxItemWidth={320}>
         {/* Dynamic blackjack tables */}
         {openTables.map((table, i) => (
           <BJTableCard key={table.id} table={table} onClick={() => handleBJClick(table)} delay={`${-i}s`} />
