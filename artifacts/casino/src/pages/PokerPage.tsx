@@ -134,7 +134,7 @@ export function PokerPage() {
         )}
 
         {!loading && !error && tables.length > 0 && (
-          <CardGrid>
+          <CardGrid minItemWidth={260} maxItemWidth={320}>
             {tables.map((t, i) => (
               <CatalogCard
                 key={t.id}
