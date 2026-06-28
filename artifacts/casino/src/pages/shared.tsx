@@ -211,10 +211,6 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
         >
           {game.name}
         </h3>
-        <p className="text-[11px] mb-2 leading-snug" style={{ color: "rgba(255,255,255,0.40)", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-          {game.description.replace(/\s*·?\s*\d+\s*\/\s*\d+\s*(seated|players?|occupied)/gi, "").replace(/\s*·?\s*(seated|players?|occupied)\s*\d+\s*\/\s*\d+/gi, "").trim().replace(/\s*·\s*$/, "")}
-        </p>
-
         {(game.players || game.betRange) && (
           <div className="flex items-center gap-3 mb-2">
             {game.players && (
