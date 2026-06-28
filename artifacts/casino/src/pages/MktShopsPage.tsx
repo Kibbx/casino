@@ -152,7 +152,8 @@ const MOCK_HISTORY = [
 type Filter = { category: string; rarity: string; sort: string };
 
 function ShopDetailPage({ shop, onBack }: { shop: Shop; onBack: () => void }) {
-  const [filter, setFilter] = useState<Filter>({ category: "All", rarity: "All", sort: "Newest" });
+  const [filter, setFilter]         = useState<Filter>({ category: "All", rarity: "All", sort: "Newest" });
+  const [searchText, setSearchText] = useState("");
   const cc = CAT_COLOR[shop.category];
 
   const shopItems = ITEMS.filter(i => i.seller === shop.seller);
@@ -161,6 +162,12 @@ function ShopDetailPage({ shop, onBack }: { shop: Shop; onBack: () => void }) {
   const filteredItems = shopItems.filter(i => {
     if (filter.category !== "All" && i.category !== filter.category) return false;
     if (filter.rarity   !== "All" && i.rarity   !== filter.rarity)   return false;
+    const q = searchText.trim().toLowerCase();
+    if (q) {
+      const playerName = i.seller.toLowerCase();
+      const cardTitle  = i.name.toLowerCase();
+      if (!playerName.includes(q) && !cardTitle.includes(q)) return false;
+    }
     return true;
   });
 
@@ -308,8 +315,19 @@ function ShopDetailPage({ shop, onBack }: { shop: Shop; onBack: () => void }) {
             <h2 className="font-orbitron text-sm font-black uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.8)" }}>
               All Listings <span className="text-[11px] ml-2" style={{ color: "rgba(255,255,255,0.3)" }}>({filteredItems.length})</span>
             </h2>
-            {/* Filters */}
-            <div className="flex items-center gap-2">
+            {/* Search + Filters */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Text search */}
+              <div className="relative">
+                <Search size={11} className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "rgba(255,255,255,0.28)" }} />
+                <input
+                  value={searchText}
+                  onChange={e => setSearchText(e.target.value)}
+                  placeholder="Search listings or sellers..."
+                  className="pl-7 pr-3 py-1.5 rounded-lg text-[10px] font-bold"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.7)", outline: "none", width: 200 }}
+                />
+              </div>
               {[
                 { label: "Category", key: "category" as keyof Filter, opts: categories },
                 { label: "Rarity",   key: "rarity"   as keyof Filter, opts: rarities   },
@@ -331,7 +349,7 @@ function ShopDetailPage({ shop, onBack }: { shop: Shop; onBack: () => void }) {
           </div>
 
           {filteredItems.length === 0 ? (
-            <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.25)" }}>No listings match your filters.</p>
+            <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.25)" }}>No results found.</p>
           ) : (
             <div className="flex flex-col gap-2">
               {filteredItems.map(item => {
@@ -444,9 +462,13 @@ export function MktShopsPage() {
   const cats = ["All", "Sneakers", "Watches", "Trading Cards", "Electronics", "Apparel", "Car Parts"];
 
   const filtered = shops.filter(s => {
-    const q = query.toLowerCase();
-    const matchQ = !q || s.name.toLowerCase().includes(q) || s.seller.toLowerCase().includes(q);
+    const q = query.trim().toLowerCase();
     const matchC = catFilter === "All" || s.category === catFilter;
+    if (!q) return matchC;
+    const shopItems = ITEMS.filter(i => i.seller === s.seller);
+    const playerName = s.seller.toLowerCase();
+    const cardTitleMatch = shopItems.some(i => i.name.toLowerCase().includes(q));
+    const matchQ = s.name.toLowerCase().includes(q) || playerName.includes(q) || cardTitleMatch;
     return matchQ && matchC;
   });
 
@@ -495,7 +517,7 @@ export function MktShopsPage() {
             <input
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Search shops or sellers..."
+              placeholder="Search shops, sellers, or listings..."
               className="w-full pl-9 pr-4 py-2 rounded-xl text-[12px]"
               style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "rgba(255,255,255,0.8)", outline: "none" }}
             />
@@ -524,7 +546,7 @@ export function MktShopsPage() {
         {/* Shop grid */}
         {filtered.length === 0 ? (
           <div className="text-center py-20" style={{ color: "rgba(255,255,255,0.25)" }}>
-            <p className="text-lg font-black uppercase">No shops found</p>
+            <p className="text-lg font-black uppercase">No results found.</p>
             <p className="text-[12px] mt-2">Try adjusting your search or filters.</p>
           </div>
         ) : (
