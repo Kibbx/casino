@@ -54,6 +54,7 @@ function bjTableToGame(table: BJTable): CatalogGame {
 /* ─── Dynamic Blackjack Table Card ───────────────────────────────────── */
 export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick: () => void; delay: string }) {
   const [hov, setHov] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const th = THEME_CFG[table.theme as keyof typeof THEME_CFG] ?? THEME_CFG.velvet;
   const fmtBet = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
 
@@ -83,12 +84,14 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
         <img
           src={`${IMGS}images/card-blackjack.webp`}
           alt="Blackjack"
+          onLoad={() => setImgLoaded(true)}
           style={{
             position: "absolute", inset: 0,
             width: "100%", height: "100%",
             objectFit: "cover", objectPosition: "center",
             transform: hov && table.isOpen ? "scale(1.07)" : "scale(1)",
-            transition: "transform 0.4s ease",
+            opacity: imgLoaded ? 1 : 0,
+            transition: "transform 0.4s ease, opacity 0.4s ease",
           }}
         />
         {/* Brightness lift on hover */}

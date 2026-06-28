@@ -86,6 +86,7 @@ export interface CatalogGame {
 export function CatalogCard({ game, delay = "0s", route, onClick }: { game: CatalogGame; delay?: string; route?: string; onClick?: () => void }) {
   const [, setLocation] = useLocation();
   const [hov, setHov] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
   const handleClick = onClick ?? (route ? () => setLocation(route) : undefined);
   return (
     <div
@@ -109,6 +110,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
           <img
             src={game.image}
             alt={game.name}
+            onLoad={() => setImgLoaded(true)}
             style={{
               position: "absolute",
               inset: 0,
@@ -117,7 +119,8 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
               objectFit: "cover",
               objectPosition: "center",
               transform: hov ? "scale(1.07)" : "scale(1)",
-              transition: "transform 0.4s ease",
+              opacity: imgLoaded ? 1 : 0,
+              transition: "transform 0.4s ease, opacity 0.4s ease",
             }}
           />
         )}
