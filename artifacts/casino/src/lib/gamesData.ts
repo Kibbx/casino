@@ -148,7 +148,7 @@ export const slotsData: GameDef[] = [
     players: "Solo", betRange: "$50 – $1,000",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#a855f7",
     route: "/rome-slots", tokenId: "slots",
-    image: `${IMGS}images/card-slots.webp`, gameKey: "slots",
+    image: `${IMGS}images/card-fortuna.png`, gameKey: "slots",
     displayCategory: "SLOTS",
   },
   {
@@ -161,7 +161,7 @@ export const slotsData: GameDef[] = [
     players: "Solo", betRange: "$50 – $1,000",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#22c55e",
     route: "/western-slots", tokenId: "slots",
-    image: `${IMGS}images/card-slots.webp`, gameKey: "slots",
+    image: `${IMGS}images/card-deadwood.png`, gameKey: "slots",
     displayCategory: "SLOTS",
   },
 ];

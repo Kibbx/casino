@@ -162,6 +162,18 @@ uri = "file://artifacts/casino/public/images/lottery-bg.png"
 type = "image"
 title = "dark casino background texture"
 
+[[generated]]
+id = "fNe9qTlWtJKuuQk5wNYAT"
+uri = "file://artifacts/casino/public/images/card-fortuna.png"
+type = "image"
+title = "fortuna roman slots card"
+
+[[generated]]
+id = "nMQWbeg2U1J4WdVNnhlBO"
+uri = "file://artifacts/casino/public/images/card-deadwood.png"
+type = "image"
+title = "deadwood western cowboy slots card"
+
 [[outputs]]
 id = "DbgwaG89PRXbNnswoOcc2"
 uri = "file://artifacts/casino/public/images/card-mines.png"
