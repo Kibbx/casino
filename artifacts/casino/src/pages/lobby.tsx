@@ -154,22 +154,6 @@ function SectionHeader({ label, dotColor }: { label: string; dotColor: string })
   );
 }
 
-/* ─── Search items ────────────────────────────────────────────── */
-const SEARCH_ITEMS = [
-  { label: "Blackjack",    category: "Table Games",  route: "/blackjack" },
-  { label: "Roulette",     category: "Table Games",  route: "/roulette" },
-  { label: "Baccarat",     category: "Table Games",  route: "/baccarat" },
-  { label: "Slots",        category: "Slots",        route: "/slots" },
-  { label: "Poker",        category: "Games",        route: "/poker-tables" },
-  { label: "Horse Racing", category: "Mini Games",   route: "/horse-racing" },
-  { label: "Sportsbook",   category: "Sections",     route: "/sportsbook" },
-  { label: "Tournaments",  category: "Sections",     route: "/tournaments" },
-  { label: "Rewards",      category: "Sections",     route: "/rewards" },
-  { label: "Challenges",   category: "Sections",     route: "/challenges" },
-  { label: "Leaderboards", category: "Sections",     route: "/leaderboards" },
-  { label: "Profile",      category: "Account",      route: "/profile" },
-];
-
 /* ─── Lobby ───────────────────────────────────────────────────── */
 export function Lobby() {
   const { playerUsername, logoutPlayer, playerStaffRoles, playerId, sessionToken } = useStore();
@@ -220,10 +204,6 @@ export function Lobby() {
   const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
   const [viewedPlayerId, setViewedPlayerId] = useState<number | null>(null);
 
-  const searchResults = searchQuery.trim().length > 0
-    ? SEARCH_ITEMS.filter(i => i.label.toLowerCase().includes(searchQuery.toLowerCase()))
-    : [];
-
   // Debounced player search against the API
   useEffect(() => {
     const q = searchQuery.trim();
@@ -244,13 +224,6 @@ export function Lobby() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const goSearch = (route: string) => {
-    setSearchQuery("");
-    setSearchOpen(false);
-    setPlayerResults([]);
-    setLocation(route);
-  };
-
   const goPlayer = (id: number) => {
     setSearchQuery("");
     setSearchOpen(false);
@@ -263,7 +236,6 @@ export function Lobby() {
   const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") { setSearchOpen(false); return; }
     if (e.key === "Enter") {
-      if (searchResults.length > 0) { goSearch(searchResults[0].route); return; }
       if (playerResults.length > 0) { goPlayer(playerResults[0].id); }
     }
   };
@@ -441,14 +413,14 @@ export function Lobby() {
             <Search size={15} style={{ color: "#a855f7", flexShrink: 0 }} />
             <input
               type="text"
-              placeholder={appMode === "casino" ? "Search games, events, players..." : "Search listings, sellers, categories..."}
+              placeholder={appMode === "casino" ? "Search players by name or ID..." : "Search listings, sellers, categories..."}
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
               onFocus={() => { if (searchQuery.trim()) setSearchOpen(true); }}
               onKeyDown={handleSearchKey}
             />
           </div>
-          {searchOpen && (searchResults.length > 0 || playerResults.length > 0) && (
+          {searchOpen && searchQuery.trim().length >= 2 && (
             <div
               className="lg:max-w-[350px] lg:mx-auto"
               style={{
@@ -464,86 +436,59 @@ export function Lobby() {
                 boxShadow: "0 8px 32px rgba(0,0,0,0.6)",
               }}
             >
-              {/* Game / page results */}
-              {searchResults.map((item, idx) => (
-                <button
-                  key={idx}
-                  onMouseDown={() => goSearch(item.route)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    width: "100%",
-                    padding: "9px 14px",
-                    background: "transparent",
-                    border: "none",
-                    cursor: "pointer",
-                    borderBottom: idx < searchResults.length - 1 || playerResults.length > 0 ? "1px solid rgba(255,255,255,0.05)" : "none",
-                    textAlign: "left",
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = "rgba(232,64,10,0.1)")}
-                  onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                >
-                  <span style={{ color: "rgba(255,255,255,0.9)", fontSize: 13, fontWeight: 600 }}>{item.label}</span>
-                  <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em" }}>{item.category}</span>
-                </button>
-              ))}
-
-              {/* Player results */}
-              {playerResults.length > 0 && (
-                <>
-                  {searchResults.length > 0 && (
-                    <div style={{ padding: "5px 14px 4px", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "rgba(255,255,255,0.2)" }}>Players</div>
-                  )}
-                  {playerResults.map((p, idx) => {
-                    const initials = (p.username ?? "?").charAt(0).toUpperCase();
-                    return (
-                      <button
-                        key={p.id}
-                        onMouseDown={() => goPlayer(p.id)}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          width: "100%",
-                          padding: "8px 14px",
-                          background: "transparent",
-                          border: "none",
-                          cursor: "pointer",
-                          borderBottom: idx < playerResults.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
-                          textAlign: "left",
-                        }}
-                        onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.08)")}
-                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                      >
-                        {/* Avatar */}
-                        <div style={{ position: "relative", flexShrink: 0 }}>
-                          {p.avatarUrl ? (
-                            <img src={p.avatarUrl} alt={p.username} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
-                          ) : (
-                            <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#a855f7" }}>
-                              {initials}
-                            </div>
-                          )}
-                          <div style={{ position: "absolute", bottom: 0, right: 0, width: 8, height: 8, borderRadius: "50%", background: p.isOnline ? "#22c55e" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(12,10,10,1)", boxShadow: p.isOnline ? "0 0 4px rgba(34,197,94,0.7)" : "none" }} />
-                        </div>
-                        {/* Name + state ID */}
-                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
-                          <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username ?? "Unknown Player"}</span>
-                          {p.stateId ? (
-                            <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 10, fontWeight: 500 }}>#{p.stateId}</span>
-                          ) : (
-                            <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 10, fontWeight: 500 }}>
-                              {p.isOnline ? "● Online" : "Offline"}
-                            </span>
-                          )}
-                        </div>
-                        {/* Online indicator dot (right-aligned) */}
-                        <div style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: p.isOnline ? "#22c55e" : "rgba(255,255,255,0.15)", boxShadow: p.isOnline ? "0 0 5px rgba(34,197,94,0.6)" : "none" }} />
-                      </button>
-                    );
-                  })}
-                </>
+              {playerResults.length === 0 ? (
+                <div style={{ padding: "14px 16px", color: "rgba(255,255,255,0.3)", fontSize: 13, textAlign: "center" }}>
+                  No players found.
+                </div>
+              ) : (
+                playerResults.map((p, idx) => {
+                  const initials = (p.username ?? "?").charAt(0).toUpperCase();
+                  return (
+                    <button
+                      key={p.id}
+                      onMouseDown={() => goPlayer(p.id)}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        width: "100%",
+                        padding: "8px 14px",
+                        background: "transparent",
+                        border: "none",
+                        cursor: "pointer",
+                        borderBottom: idx < playerResults.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                        textAlign: "left",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(168,85,247,0.08)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* Avatar */}
+                      <div style={{ position: "relative", flexShrink: 0 }}>
+                        {p.avatarUrl ? (
+                          <img src={p.avatarUrl} alt={p.username} style={{ width: 28, height: 28, borderRadius: "50%", objectFit: "cover" }} />
+                        ) : (
+                          <div style={{ width: 28, height: 28, borderRadius: "50%", background: "rgba(168,85,247,0.2)", border: "1px solid rgba(168,85,247,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "#a855f7" }}>
+                            {initials}
+                          </div>
+                        )}
+                        <div style={{ position: "absolute", bottom: 0, right: 0, width: 8, height: 8, borderRadius: "50%", background: p.isOnline ? "#22c55e" : "rgba(255,255,255,0.15)", border: "1.5px solid rgba(12,10,10,1)", boxShadow: p.isOnline ? "0 0 4px rgba(34,197,94,0.7)" : "none" }} />
+                      </div>
+                      {/* Name + state ID */}
+                      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 1 }}>
+                        <span style={{ color: "rgba(255,255,255,0.88)", fontSize: 13, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.username ?? "Unknown Player"}</span>
+                        {p.stateId ? (
+                          <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 10, fontWeight: 500 }}>#{p.stateId}</span>
+                        ) : (
+                          <span style={{ color: "rgba(255,255,255,0.15)", fontSize: 10, fontWeight: 500 }}>
+                            {p.isOnline ? "● Online" : "Offline"}
+                          </span>
+                        )}
+                      </div>
+                      {/* Online indicator dot (right-aligned) */}
+                      <div style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: p.isOnline ? "#22c55e" : "rgba(255,255,255,0.15)", boxShadow: p.isOnline ? "0 0 5px rgba(34,197,94,0.6)" : "none" }} />
+                    </button>
+                  );
+                })
               )}
             </div>
           )}
