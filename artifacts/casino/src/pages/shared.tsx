@@ -65,137 +65,6 @@ export function PageWrapper({
   );
 }
 
-/* ── Mini Games themed backgrounds ────────────────────────────── */
-/* Fixed breathing glow dots per theme — no movement, opacity only */
-const MINI_GLOW_DOTS: Record<string, Array<{ x: string; y: string; s: number; d: string; dur: string }>> = {
-  mines:       [{ x:"30%",y:"36%",s:3,d:"0s",  dur:"6s"  },{x:"71%",y:"37%",s:2,d:"2.5s",dur:"7.5s"},{x:"91%",y:"70%",s:4,d:"4.5s",dur:"8s"}],
-  keno:        [{ x:"20%",y:"39%",s:4,d:"1s",  dur:"7s"  },{x:"86%",y:"59%",s:4,d:"0s",  dur:"8.5s"}],
-  "mob-tower": [{ x:"13%",y:"6%", s:2,d:"0s",  dur:"6s"  },{x:"87%",y:"5%", s:2,d:"3.5s",dur:"7s"}],
-  cases:       [{ x:"23%",y:"42%",s:2,d:"0.5s",dur:"7s"  },{x:"76%",y:"44%",s:2,d:"2s",  dur:"8s"  },{x:"50%",y:"18%",s:3,d:"4s",dur:"6.5s"}],
-};
-
-function MinesSvg({ c }: { c: string }) {
-  return (
-    <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <g stroke={c} strokeWidth="0.4" opacity="0.38">
-        <line x1="55"  y1="0"  x2="55"  y2="140"/>
-        <line x1="110" y1="0"  x2="110" y2="140"/>
-        <line x1="165" y1="0"  x2="165" y2="140"/>
-        <line x1="0"   y1="46" x2="220" y2="46"/>
-        <line x1="0"   y1="92" x2="220" y2="92"/>
-      </g>
-      <polygon points="155,18 180,52 155,86 130,52" stroke={c} strokeWidth="1.2" fill="none" opacity="0.72"/>
-      <polygon points="24,28 38,48 24,68 10,48"     stroke={c} strokeWidth="0.9" fill="none" opacity="0.58"/>
-      <polygon points="200,98 212,116 200,134 188,116" stroke={c} strokeWidth="0.8" fill="none" opacity="0.52"/>
-      <g stroke={c} strokeWidth="0.9" opacity="0.7">
-        <line x1="66" y1="46" x2="66" y2="54"/>
-        <line x1="62" y1="50" x2="70" y2="50"/>
-      </g>
-      <circle cx="66" cy="50" r="1.5" fill={c} opacity="0.55"/>
-      <g stroke={c} strokeWidth="0.8" opacity="0.58">
-        <line x1="188" y1="27" x2="188" y2="33"/>
-        <line x1="185" y1="30" x2="191" y2="30"/>
-      </g>
-    </svg>
-  );
-}
-
-function KenoSvg({ c }: { c: string }) {
-  return (
-    <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <circle cx="44"  cy="54"  r="27" stroke={c}       strokeWidth="1.1" fill="none" opacity="0.72"/>
-      <circle cx="118" cy="32"  r="21" stroke={c}       strokeWidth="0.9" fill="none" opacity="0.62"/>
-      <circle cx="188" cy="82"  r="28" stroke={c}       strokeWidth="1.1" fill="none" opacity="0.56"/>
-      <circle cx="82"  cy="114" r="17" stroke="#9333ea" strokeWidth="0.9" fill="none" opacity="0.55"/>
-      <circle cx="188" cy="82"  r="38" stroke={c}       strokeWidth="0.4" fill="none" opacity="0.28"/>
-      <circle cx="188" cy="82"  r="48" stroke={c}       strokeWidth="0.3" fill="none" opacity="0.16"/>
-      <text x="34"  y="59"  fontSize="12" fill={c}       opacity="0.55" fontFamily="monospace" fontWeight="bold">07</text>
-      <text x="109" y="37"  fontSize="10" fill={c}       opacity="0.5"  fontFamily="monospace" fontWeight="bold">23</text>
-      <text x="177" y="87"  fontSize="13" fill={c}       opacity="0.48" fontFamily="monospace" fontWeight="bold">41</text>
-      <text x="75"  y="119" fontSize="9"  fill="#9333ea" opacity="0.48" fontFamily="monospace" fontWeight="bold">15</text>
-    </svg>
-  );
-}
-
-function MobTowerSvg({ c }: { c: string }) {
-  return (
-    <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <rect x="95" y="14" width="30"  height="6" rx="1" fill={c} opacity="0.55"/>
-      <rect x="88" y="26" width="44"  height="6" rx="1" fill={c} opacity="0.46"/>
-      <rect x="81" y="38" width="58"  height="6" rx="1" fill={c} opacity="0.38"/>
-      <rect x="74" y="50" width="72"  height="6" rx="1" fill={c} opacity="0.3"/>
-      <rect x="67" y="62" width="86"  height="6" rx="1" fill={c} opacity="0.22"/>
-      <rect x="60" y="74" width="100" height="6" rx="1" fill={c} opacity="0.15"/>
-      <rect x="28"  y="0"  width="1.5" height="140" fill={c} opacity="0.22"/>
-      <rect x="190" y="0"  width="1.5" height="140" fill={c} opacity="0.18"/>
-      <rect x="109" y="83" width="1"   height="57"  fill={c} opacity="0.32"/>
-      <rect x="0"   y="100" width="20" height="40"  fill={c} opacity="0.09"/>
-      <rect x="196" y="92"  width="24" height="48"  fill={c} opacity="0.09"/>
-    </svg>
-  );
-}
-
-function CasesSvg({ c }: { c: string }) {
-  return (
-    <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <rect x="18"  y="28" width="54" height="54" rx="2" stroke={c}       strokeWidth="1.1" fill="none" opacity="0.68"/>
-      <line x1="18" y1="55"  x2="72"  y2="55"  stroke={c} strokeWidth="0.6" opacity="0.52"/>
-      <line x1="45" y1="28"  x2="45"  y2="82"  stroke={c} strokeWidth="0.6" opacity="0.52"/>
-      <rect x="150" y="56" width="58" height="58" rx="2" stroke={c}       strokeWidth="1"   fill="none" opacity="0.58"/>
-      <line x1="150" y1="85"  x2="208" y2="85"  stroke={c} strokeWidth="0.5" opacity="0.44"/>
-      <line x1="179" y1="56"  x2="179" y2="114" stroke={c} strokeWidth="0.5" opacity="0.44"/>
-      <rect x="92"  y="16" width="38" height="38" stroke="#0891b2" strokeWidth="1"   fill="none" opacity="0.62"/>
-      <rect x="102" y="26" width="38" height="38" stroke={c}       strokeWidth="0.8" fill="none" opacity="0.5"/>
-      <line x1="92"  y1="16" x2="102" y2="26" stroke={c} strokeWidth="0.6" opacity="0.5"/>
-      <line x1="130" y1="16" x2="140" y2="26" stroke={c} strokeWidth="0.6" opacity="0.5"/>
-      <line x1="92"  y1="54" x2="102" y2="64" stroke={c} strokeWidth="0.6" opacity="0.5"/>
-      <line x1="130" y1="54" x2="140" y2="64" stroke={c} strokeWidth="0.6" opacity="0.5"/>
-      <line x1="0"   y1="0"  x2="38"  y2="140" stroke={c}       strokeWidth="0.8" opacity="0.16"/>
-      <line x1="178" y1="0"  x2="220" y2="95"  stroke="#0891b2" strokeWidth="0.8" opacity="0.13"/>
-    </svg>
-  );
-}
-
-function MiniGameBg({ theme, color }: { theme: string; color: string }) {
-  const dots = MINI_GLOW_DOTS[theme] ?? [];
-  const ill =
-    theme === "mines"     ? <MinesSvg c={color} />     :
-    theme === "keno"      ? <KenoSvg c={color} />      :
-    theme === "mob-tower" ? <MobTowerSvg c={color} />  :
-    theme === "cases"     ? <CasesSvg c={color} />     : null;
-  return (
-    <>
-      {/* Themed SVG: slight blur softens edges, breathing animation varies opacity */}
-      {ill && (
-        <div className="mini-bg-illus" style={{ position: "absolute", inset: 0, filter: "blur(4px)", pointerEvents: "none" }}>
-          {ill}
-        </div>
-      )}
-      {/* Radial depth glow from center */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        background: `radial-gradient(ellipse 75% 55% at 50% 40%, ${color}18 0%, transparent 70%)`,
-      }} />
-      {/* Very subtle grid texture */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `linear-gradient(${color}07 1px, transparent 1px), linear-gradient(90deg, ${color}07 1px, transparent 1px)`,
-        backgroundSize: "10px 10px",
-      }} />
-      {/* Fixed-position glow dots — opacity breathing only, no movement */}
-      {dots.map((p, i) => (
-        <div key={i} className="mini-glow-dot" style={{
-          left: p.x, top: p.y, width: p.s, height: p.s,
-          background: color, animationDelay: p.d, animationDuration: p.dur,
-          boxShadow: `0 0 ${p.s * 3}px ${color}`,
-        }} />
-      ))}
-      {/* Hover shimmer — appears only on card hover */}
-      <div className="mini-hover-shimmer" />
-    </>
-  );
-}
-
 /* ── Catalog game card ─────────────────────────────────────────── */
 export interface CatalogGame {
   id: string;
@@ -212,20 +81,11 @@ export interface CatalogGame {
   statusLabel?: string;
   statusColor?: string;
   image?: string;
-  /** Override the large watermark text (defaults to first word of name) */
-  bgTitle?: string;
-  /** Enable the neon float + glow animation on the watermark text */
-  bgGlowAnim?: boolean;
-  /** Themed background visual: "mines" | "keno" | "mob-tower" | "cases" */
-  bgTheme?: string;
 }
 
 export function CatalogCard({ game, delay = "0s", route, onClick }: { game: CatalogGame; delay?: string; route?: string; onClick?: () => void }) {
   const [, setLocation] = useLocation();
   const [hov, setHov] = useState(false);
-  const wmText = game.bgTitle ?? game.name.split(" ")[0].toUpperCase();
-  const wmSize = wmText.length > 6 ? 30 : 46;
-  const glowKey = game.neonClass.replace("neon-", "");
   const handleClick = onClick ?? (route ? () => setLocation(route) : undefined);
   return (
     <div
@@ -244,15 +104,31 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
           background: game.gradient,
         }}
       >
-        {/* Themed background visuals (Mini Games only) */}
-        {game.bgTheme && <MiniGameBg theme={game.bgTheme} color={game.neonColor} />}
-        {/* Gradient fill */}
+        {/* Themed artwork image */}
+        {game.image && (
+          <img
+            src={game.image}
+            alt={game.name}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              transform: hov ? "scale(1.07)" : "scale(1)",
+              transition: "transform 0.4s ease",
+            }}
+          />
+        )}
+        {/* Gradient colour tint overlay (maintains themed palette over the image) */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             background: game.gradient,
-            opacity: game.bgTheme ? 0.7 : 1,
+            opacity: game.image ? 0.38 : 1,
+            transition: "opacity 0.2s",
           }}
         />
         {/* Brightness lift on hover */}
@@ -267,19 +143,17 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
         />
         {/* Ghost watermark text */}
         <div
-          className={`absolute inset-0 flex items-center justify-center select-none${game.bgGlowAnim ? " mini-watermark-anim" : ""}`}
+          className="absolute inset-0 flex items-center justify-center select-none"
           style={{
             fontFamily: "'Orbitron', sans-serif",
-            fontSize: wmSize,
+            fontSize: 46,
             fontWeight: 900,
-            color: `${game.neonColor}22`,
+            color: game.image ? `${game.neonColor}1a` : `${game.neonColor}22`,
             letterSpacing: "0.04em",
             pointerEvents: "none",
           }}
         >
-          {game.bgGlowAnim
-            ? <span className="mini-watermark-text" data-glow={glowKey}>{wmText}</span>
-            : wmText}
+          {game.name.split(" ")[0].toUpperCase()}
         </div>
         {/* Bottom fade into card body */}
         <div
