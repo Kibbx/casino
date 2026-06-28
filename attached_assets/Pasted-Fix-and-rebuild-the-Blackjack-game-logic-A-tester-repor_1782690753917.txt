@@ -1,0 +1,131 @@
+Fix and rebuild the Blackjack game logic. A tester reported that Blackjack is not behaving like real Blackjack, the odds feel broken, and setting RTP to 99.5% does not produce fair gameplay.
+
+Current issue:
+Blackjack appears to be using incorrect game logic, incorrect payout logic, bad dealer behavior, or broken RTP/house-edge handling. The game needs a full audit and correction.
+
+Do not just tweak random odds. Rebuild the Blackjack logic around real Blackjack rules.
+
+### Required Blackjack rules
+
+Implement standard Blackjack behavior:
+
+* Use a real shuffled deck or shoe.
+* Cards must be dealt from the shoe, not randomly generated independently each draw.
+* Support correct card values:
+
+  * 2–10 = face value
+  * J/Q/K = 10
+  * Ace = 11 or 1 depending on hand total
+* Player and dealer each receive two cards at start.
+* Dealer has one visible card and one hidden card until dealer turn.
+* Player can:
+
+  * Hit
+  * Stand
+  * Double down, if existing UI supports it
+  * Split, only if existing UI already supports it
+* Dealer must draw until at least 17.
+* Decide whether dealer hits or stands on soft 17, then keep it consistent and visible in code/config.
+* Blackjack should beat normal 21.
+* Player bust over 21 loses immediately.
+* Dealer bust pays player.
+* Push returns the bet.
+* Natural blackjack should pay correctly, preferably 3:2 unless the current game rules intentionally use 6:5.
+* Normal wins should pay 1:1.
+* Losses should deduct the wager only once.
+
+### Fix RTP handling
+
+The game currently has an RTP setting of 99.5%, but Blackjack should not manipulate individual hands in an obvious or unfair way.
+
+Do not rig outcomes hand-by-hand.
+
+Instead:
+
+* Use correct Blackjack rules first.
+* Calculate expected house edge from the rules.
+* If an RTP target is required, tune only rule configuration, such as:
+
+  * blackjack payout ratio
+  * dealer hit/stand on soft 17
+  * number of decks
+  * double/split availability
+* Do not force dealer draws to beat the player.
+* Do not change card draws after the result is known.
+* Do not secretly bias the shoe against the player.
+
+If exact 99.5% RTP is not mathematically achievable with current simplified rules, document the closest achievable RTP and the rule set used.
+
+### Audit existing code
+
+Inspect:
+
+* Blackjack game state model
+* Deck/shuffle logic
+* Hit/stand/dealer turn logic
+* Hand value calculation
+* Ace handling
+* Natural blackjack detection
+* Payout calculation
+* Chip debit/credit flow
+* RTP config
+* Frontend state updates
+* Backend API routes for game actions
+
+### Chip handling requirements
+
+* Deduct the wager once when the hand starts.
+* On win, credit bet + winnings.
+* On blackjack, credit bet + blackjack payout.
+* On push, refund the bet.
+* On loss, do not deduct again if the bet was already deducted.
+* Prevent negative chips.
+* Use backend as the source of truth.
+* Keep chip updates atomic with game result settlement.
+
+### Add test coverage
+
+Add or update tests for:
+
+* Ace as 1 or 11
+* Natural blackjack
+* Normal 21 vs blackjack
+* Player bust
+* Dealer bust
+* Push
+* Dealer drawing rules
+* Dealer soft 17 behavior
+* Win payout
+* Blackjack payout
+* Push refund
+* Loss only deducts once
+* Double down payout if supported
+* Split payout if supported
+* Multiple hands in a row using valid deck/shoe logic
+
+### Add simulation check
+
+Add a developer-only simulation script for Blackjack that runs at least 100,000 hands using the configured rules and outputs:
+
+* Player win rate
+* Dealer win rate
+* Push rate
+* Blackjack rate
+* Estimated RTP
+* Estimated house edge
+
+This script should not run in production automatically. It is only for testing and verification.
+
+### Expected result
+
+Blackjack should feel and behave like real Blackjack:
+
+* Correct rules
+* Correct dealer behavior
+* Correct ace handling
+* Correct payouts
+* Correct chip balance updates
+* No unfair forced outcomes
+* RTP/house edge is explainable and verifiable through simulation
+
+Fix the live production behavior to match the corrected Replit behavior after implementation.

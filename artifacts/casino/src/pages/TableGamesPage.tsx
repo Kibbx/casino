@@ -370,9 +370,11 @@ export function TableGamesPage() {
               trackRecentGame(g.lobbyKey ?? g.id, g.name);
               const def = GAMES[g.id];
               if (def) {
-                enter(def, live?.hasPassword ?? false);
+                // Pass undefined when meta hasn't loaded yet so enter() safely
+                // queries /api/game-password-tokens instead of assuming no password.
+                enter(def, gamesMeta[g.id] !== undefined ? gamesMeta[g.id].hasPassword : undefined);
               } else {
-                if (g.tokenId) setAccessToken(g.tokenId, "open");
+                console.warn(`[launcher] table-games: ${g.id} has no GAMES entry — navigating without password gate`);
                 setLocation(g.route);
               }
             }} />

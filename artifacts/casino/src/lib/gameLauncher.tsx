@@ -65,6 +65,7 @@ function GamePasswordModal({
     e.preventDefault();
     if (!password.trim()) { setError("Please enter the room password"); return; }
     setLoading(true); setError("");
+    console.log(`[launcher] submitting password for /${apiPath}/verify-password`);
     try {
       const r = await fetch(`${BASE}/api/${apiPath}/verify-password`, {
         method: "POST",
@@ -72,10 +73,15 @@ function GamePasswordModal({
         body: JSON.stringify({ password }),
       });
       const d = await r.json();
-      if (!r.ok) { setError(d.error || "Incorrect password"); setLoading(false); return; }
+      if (!r.ok) {
+        console.log(`[launcher] password verification FAILED for ${apiPath}: ${d.error}`);
+        setError(d.error || "Incorrect password"); setLoading(false); return;
+      }
+      console.log(`[launcher] password verified OK for ${apiPath} — token received=${!!d.token}`);
       setAccessToken(storageKey, d.token ?? "open");
       onSuccess();
     } catch {
+      console.log(`[launcher] network error verifying password for ${apiPath}`);
       setError("Could not verify password"); setLoading(false);
     }
   }
@@ -126,9 +132,16 @@ export function useGameLauncher() {
   const [modal, setModal] = useState<{ apiPath: string; storageKey: string; label: string; onSuccess: () => void } | null>(null);
 
   function gate(game: GameDef, hasPassword: boolean) {
-    if (!hasPassword) { setAccessToken(game.key, "open"); setLocation(game.route); return; }
+    console.log(`[launcher] gate game=${game.key} hasPassword=${hasPassword}`);
+    if (!hasPassword) {
+      console.log(`[launcher] no password — open token set, navigating to ${game.route}`);
+      setAccessToken(game.key, "open"); setLocation(game.route); return;
+    }
     const stored = getAccessToken(game.key);
-    if (stored !== null && stored !== "open") { setLocation(game.route); return; }
+    const hasValidToken = stored !== null && stored !== "open";
+    console.log(`[launcher] has password — stored token valid=${hasValidToken} (stored=${stored === null ? "null" : stored === "open" ? '"open"' : "uuid"})`);
+    if (hasValidToken) { setLocation(game.route); return; }
+    console.log(`[launcher] opening password modal for ${game.label} (apiPath=${game.apiPath})`);
     setModal({
       apiPath: game.apiPath,
       storageKey: game.key,
@@ -138,19 +151,26 @@ export function useGameLauncher() {
   }
 
   async function enter(game: GameDef, hasPassword?: boolean) {
+    console.log(`[launcher] enter game=${game.key} hasPassword=${hasPassword} direct=${!!game.direct}`);
     if (game.direct) { setLocation(game.route); return; }
     if (hasPassword !== undefined) { gate(game, hasPassword); return; }
-    // Unknown status (lobby launch): consult the live token map. A non-null entry
-    // means the game currently has a password. On error, fall through to the modal
-    // rather than assuming the game is open.
+    // Unknown status (meta not yet loaded, or lobby launch): consult the live token
+    // map. A non-null entry means the game currently has a password. On error, fall
+    // through to the modal rather than assuming the game is open.
+    console.log(`[launcher] hasPassword unknown — querying /api/game-password-tokens for ${game.key}`);
     let pw = true;
     try {
       const r = await fetch(`${BASE}/api/game-password-tokens`);
       if (r.ok) {
         const tokens: Record<string, string | null> = await r.json();
         pw = !!tokens[game.key];
+        console.log(`[launcher] game-password-tokens responded — ${game.key} hasPassword=${pw}`);
+      } else {
+        console.log(`[launcher] game-password-tokens returned ${r.status} — defaulting to password=true (safe)`);
       }
-    } catch { /* keep pw = true → modal */ }
+    } catch {
+      console.log(`[launcher] game-password-tokens fetch error — defaulting to password=true (safe)`);
+    }
     gate(game, pw);
   }
 

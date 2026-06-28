@@ -102,6 +102,7 @@ router.get("/game-password-tokens", async (_req, res) => {
     mines:       map["minesPasswordToken"]      || null,
     keno:        map["kenoPasswordToken"]       || null,
     highlow:     map["highlowPasswordToken"]    || null,
+    cases:       map["casesPasswordToken"]      || null,
   });
 });
 

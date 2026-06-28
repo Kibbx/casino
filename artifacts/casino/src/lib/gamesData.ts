@@ -115,7 +115,7 @@ export const miniGamesData: GameDef[] = [
     displayCategory: "MINI GAMES",
   },
   {
-    id: "case-opening",
+    id: "cases",
     name: "Case Opening",
     description: "Open cases to reveal rare items and exclusive collectibles.",
     gradient: "linear-gradient(135deg, #001525 0%, #002035 60%, #003055 100%)",

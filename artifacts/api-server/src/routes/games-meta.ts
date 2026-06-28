@@ -98,6 +98,14 @@ router.get("/", async (_req, res) => {
       status: bool("slotsEnabled", false) ? "open" : "closed",
       hasPassword: !!s["slotsPassword"],
     },
+    cases: {
+      currentPlayers: count("cases"),
+      minBet: 0,
+      maxBet: 0,
+      // cases.enabled defaults to true (enabled unless explicitly disabled)
+      status: (s["cases.enabled"] ?? "true") === "true" ? "open" : "closed",
+      hasPassword: !!s["casesPassword"],
+    },
   };
 
   res.setHeader("Cache-Control", "no-store");
