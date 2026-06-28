@@ -553,12 +553,6 @@ export function Lobby() {
             </div>
           </div>
 
-          {/* Reward Points pill — hidden on small screens */}
-          {rpBalance > 0 && (
-            <div className="hidden sm:flex">
-              <ActiveRPDisplay rp={rpBalance} />
-            </div>
-          )}
 
           {/* Wallet / Chips pill */}
           <ActiveChipsDisplay chips={chips} label={appMode === "marketplace" ? "Wallet" : "Chips"} />
