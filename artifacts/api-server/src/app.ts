@@ -19,7 +19,20 @@ fs.mkdirSync(SECURITY_PHOTOS_DIR, { recursive: true });
 const app: Express = express();
 
 app.use(compression());
-app.use(cors());
+
+// Explicit CORS — must be before all routes so preflight OPTIONS responses are
+// handled by Express rather than falling through to Nginx or other proxies.
+// `origin: true` reflects the request Origin back (required when credentials are
+// sent). `credentials: true` is needed so Authorization headers are permitted.
+app.use(cors({
+  origin: true,
+  credentials: true,
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  exposedHeaders: ["Content-Type"],
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+  optionsSuccessStatus: 204,
+}));
+
 app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 app.use(reqStatsMiddleware);

@@ -769,30 +769,51 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
       picks?: { teamName?: string }[];
     };
 
-    console.log(`[live-bet] player=${playerId} wager=${wager} betType=${betType}`);
+    console.log(
+      `[live-bet] ROUTE HIT player=${playerId} wager=${wager} betType=${betType}` +
+      ` picks=${Array.isArray(picks) ? picks.length : "none"}` +
+      ` origin=${req.headers.origin ?? "none"} auth=${req.headers.authorization ? "present" : "missing"}`
+    );
 
     const w = Math.floor(Number(wager));
-    if (!w || w <= 0) return res.status(400).json({ error: "Wager must be greater than 0" });
+    if (!w || w <= 0) {
+      console.log(`[live-bet] rejected: wager invalid (${wager})`);
+      return res.status(400).json({ error: "Wager must be greater than 0" });
+    }
 
     const minBet = parseInt(await getSetting("sportbetsMinBet", "100"));
     const maxBet = parseInt(await getSetting("sportbetsMaxBet", "50000"));
-    if (w < minBet) return res.status(400).json({ error: `Minimum bet is $${minBet.toLocaleString("en-US")}` });
-    if (w > maxBet) return res.status(400).json({ error: `Maximum bet is $${maxBet.toLocaleString("en-US")}` });
+    if (w < minBet) {
+      console.log(`[live-bet] rejected: wager ${w} below min ${minBet}`);
+      return res.status(400).json({ error: `Minimum bet is $${minBet.toLocaleString("en-US")}` });
+    }
+    if (w > maxBet) {
+      console.log(`[live-bet] rejected: wager ${w} above max ${maxBet}`);
+      return res.status(400).json({ error: `Maximum bet is $${maxBet.toLocaleString("en-US")}` });
+    }
 
     const [player] = await db
       .select({ id: playersTable.id, username: playersTable.username, chips: playersTable.chips })
       .from(playersTable)
       .where(eq(playersTable.id, playerId));
 
-    if (!player) return res.status(404).json({ error: "Player not found" });
+    if (!player) {
+      console.log(`[live-bet] rejected: player ${playerId} not found in DB`);
+      return res.status(404).json({ error: "Player not found" });
+    }
 
     const currentChips = Number(player.chips);
-    console.log(`[live-bet] player=${player.username} chips=${currentChips} wager=${w}`);
+    console.log(`[live-bet] player=${player.username} currentChips=${currentChips} wager=${w}`);
 
-    if (currentChips < w) return res.status(400).json({ error: "Insufficient chips" });
+    if (currentChips < w) {
+      console.log(`[live-bet] rejected: insufficient chips (have=${currentChips} need=${w})`);
+      return res.status(400).json({ error: "Insufficient chips" });
+    }
 
     const newChips = currentChips - w;
+    console.log(`[live-bet] deducting chips: ${currentChips} → ${newChips}`);
     await db.update(playersTable).set({ chips: newChips }).where(eq(playersTable.id, playerId));
+    console.log(`[live-bet] chips updated OK`);
     broadcastPlayerBalance(playerId, newChips);
 
     const pickList = Array.isArray(picks) ? picks as { teamName?: string; odds?: number; matchup?: string }[] : [];
@@ -853,9 +874,11 @@ router.post("/public/live-bet", requirePlayer, async (req, res) => {
 
     console.log(`[live-bet] success — player=${player.username} newChips=${newChips}`);
     return res.json({ success: true, newChips });
-  } catch (err) {
-    console.error("[live-bet] unhandled error:", err);
-    return res.status(500).json({ error: "Internal server error" });
+  } catch (err: any) {
+    const msg = err?.message ?? String(err);
+    const code = err?.code ?? "";
+    console.error(`[live-bet] UNHANDLED ERROR code=${code} message=${msg}`, err?.stack ?? "");
+    return res.status(500).json({ error: `Internal server error: ${msg}` });
   }
 });
 

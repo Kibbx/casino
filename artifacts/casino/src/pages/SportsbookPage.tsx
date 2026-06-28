@@ -1642,9 +1642,25 @@ export function SportsbookPage() {
         },
         body: JSON.stringify({ wager: w, betType, picks }),
       });
-      const data = await res.json() as { success?: boolean; error?: string };
+
+      // Parse JSON safely — a non-JSON body (e.g. HTML from a proxy/SPA fallback)
+      // used to throw and get caught as "Network error". Now it surfaces the real status.
+      let data: { success?: boolean; error?: string; newChips?: number } = {};
+      try {
+        data = await res.json();
+      } catch (jsonErr) {
+        console.warn("[placeBets] response not JSON — status:", res.status, jsonErr);
+        setPlaceError(`Bet failed (HTTP ${res.status}) — check server logs`);
+        return;
+      }
+
       console.log("[placeBets] response status=", res.status, "data=", data);
-      if (!res.ok) { setPlaceError(data.error ?? "Failed to place bet"); return; }
+
+      if (!res.ok) {
+        setPlaceError(data.error ?? `Bet failed (HTTP ${res.status})`);
+        return;
+      }
+
       setPlaced(true);
       if (isSingle) {
         // Remove only this pick; keep the rest of the slip intact
@@ -1654,9 +1670,10 @@ export function SportsbookPage() {
         clearSlip();
       }
       setTimeout(() => setPlaced(false), 3500);
-    } catch (err) {
-      console.error("[placeBets] fetch error:", err);
-      setPlaceError("Network error — try again");
+    } catch (err: any) {
+      // This only fires for true network failures (DNS, timeout, CORS preflight block)
+      console.error("[placeBets] fetch error:", err?.message ?? err);
+      setPlaceError(`Network error — ${err?.message ?? "check connection and try again"}`);
     } finally {
       setPlacing(false);
     }
