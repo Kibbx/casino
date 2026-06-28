@@ -21,6 +21,8 @@ export interface BJTable {
   phase: string;
 }
 
+const IMGS = import.meta.env.BASE_URL;
+
 /* ─── Theme config ────────────────────────────────────────────────────── */
 const THEME_CFG = {
   velvet:  { gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)", neonClass: "neon-green",  neonColor: "#39ff14", label: "Classic" },
@@ -44,6 +46,7 @@ function bjTableToGame(table: BJTable): CatalogGame {
     actionLabel: table.hasPassword ? "Join Private" : "Join Table",
     statusLabel: "OPEN",
     statusColor: "#22c55e",
+    image: `${IMGS}images/card-blackjack.webp`,
   };
 }
 
@@ -69,28 +72,38 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
-      {/* Gradient image area */}
+      {/* Artwork header */}
       <div style={{
-        height: 128,
+        height: 140,
         background: th.gradient,
         position: "relative",
         overflow: "hidden",
-        transition: "filter 0.2s",
-        filter: hov && table.isOpen ? "brightness(1.2)" : "brightness(1)",
       }}>
-        {/* Watermark */}
-        <div
-          className="absolute inset-0 flex items-center justify-center select-none"
-          style={{ fontFamily: "'Orbitron', sans-serif", fontSize: 62, fontWeight: 900, color: th.neonColor, opacity: 0.11, letterSpacing: 2 }}
-        >♠</div>
-
-        {/* Neon radial glow */}
-        <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 60%, ${th.neonColor}20 0%, transparent 70%)` }} />
+        {/* Blackjack artwork image */}
+        <img
+          src={`${IMGS}images/card-blackjack.webp`}
+          alt="Blackjack"
+          style={{
+            position: "absolute", inset: 0,
+            width: "100%", height: "100%",
+            objectFit: "cover", objectPosition: "center",
+            transform: hov && table.isOpen ? "scale(1.07)" : "scale(1)",
+            transition: "transform 0.4s ease",
+          }}
+        />
+        {/* Themed colour tint overlay */}
+        <div style={{ position: "absolute", inset: 0, background: th.gradient, opacity: 0.38, transition: "opacity 0.2s" }} />
+        {/* Brightness lift on hover */}
+        <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.06)", opacity: hov && table.isOpen ? 1 : 0, transition: "opacity 0.2s" }} />
+        {/* Bottom fade */}
+        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 56, background: "linear-gradient(transparent, rgba(10,8,8,0.95))" }} />
+        {/* Neon edge glow */}
+        <div style={{ position: "absolute", bottom: 0, left: "15%", right: "15%", height: 1, background: `linear-gradient(90deg, transparent, ${th.neonColor}66, transparent)`, opacity: hov ? 1 : 0.4, transition: "opacity 0.2s" }} />
 
         {/* Top-left: category badge */}
         <div className="absolute top-2.5 left-2.5">
           <span className="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider"
-            style={{ background: "rgba(0,0,0,0.75)", color: "rgba(255,255,255,0.62)", border: "1px solid rgba(255,255,255,0.14)" }}>
+            style={{ background: "rgba(0,0,0,0.65)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.18)" }}>
             BLACKJACK
           </span>
         </div>
@@ -112,9 +125,6 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
             {table.isOpen ? "OPEN" : "CLOSED"}
           </span>
         </div>
-
-        {/* Bottom fade */}
-        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(8,5,5,0.85) 0%, transparent 60%)" }} />
       </div>
 
       {/* Body */}

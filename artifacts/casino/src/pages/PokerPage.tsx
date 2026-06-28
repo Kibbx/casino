@@ -61,6 +61,7 @@ function tableToGame(table: PokerTable): CatalogGame {
     actionLabel: "Join Table",
     statusLabel: isPlaying ? "IN PROGRESS" : "OPEN",
     statusColor: isPlaying ? "#fbbf24" : "#22c55e",
+    image: `${BASE}images/card-poker.webp`,
   };
 }
 
