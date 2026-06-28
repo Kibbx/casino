@@ -104,24 +104,13 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
           background: game.gradient,
         }}
       >
-        {/* Themed artwork image */}
+        {/* Themed artwork image — zoom is CSS-only (.card-art-img) to avoid
+            React re-render flicker and parent-filter stacking-context conflicts */}
         {game.image && (
           <img
             src={game.image}
             alt={game.name}
-            style={{
-              display: "block",
-              position: "absolute",
-              inset: 0,
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              objectPosition: "center",
-              transform: hov ? "translateZ(0) scale(1.03)" : "translateZ(0) scale(1)",
-              transition: "transform 250ms ease",
-              willChange: "transform",
-              backfaceVisibility: "hidden",
-            }}
+            className="card-art-img"
           />
         )}
         {/* Gradient colour tint overlay (maintains themed palette over the image) */}
