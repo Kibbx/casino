@@ -93,8 +93,6 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
         />
         {/* Brightness lift on hover */}
         <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.06)", opacity: hov && table.isOpen ? 1 : 0, transition: "opacity 0.2s" }} />
-        {/* Bottom fade */}
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 56, background: "linear-gradient(transparent, rgba(10,8,8,0.95))" }} />
         {/* Neon edge glow */}
         <div style={{ position: "absolute", bottom: 0, left: "15%", right: "15%", height: 1, background: `linear-gradient(90deg, transparent, ${th.neonColor}66, transparent)`, opacity: hov ? 1 : 0.4, transition: "opacity 0.2s" }} />
 

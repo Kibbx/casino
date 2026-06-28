@@ -158,11 +158,6 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             {game.name.split(" ")[0].toUpperCase()}
           </div>
         )}
-        {/* Bottom fade into card body */}
-        <div
-          className="absolute bottom-0 left-0 right-0"
-          style={{ height: 56, background: "linear-gradient(transparent, rgba(10,8,8,0.95))" }}
-        />
         {/* Neon edge glow along bottom */}
         <div
           style={{
