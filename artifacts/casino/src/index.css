@@ -969,6 +969,70 @@
   filter: brightness(1.35) saturate(1.15);
 }
 
+/* ── Mini Games watermark neon animations ─────────────────────── */
+@keyframes mini-wm-float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+@keyframes mini-wm-glow-green {
+  0%, 100% { text-shadow: 0 0 6px #39ff1440, 0 0 16px #39ff141a; }
+  50%       { text-shadow: 0 0 12px #39ff147a, 0 0 28px #39ff144d, 0 0 48px #39ff1426; }
+}
+@keyframes mini-wm-glow-pink {
+  0%, 100% { text-shadow: 0 0 6px #ec489940, 0 0 16px #ec48991a; }
+  50%       { text-shadow: 0 0 12px #ec48997a, 0 0 28px #ec48994d, 0 0 48px #ec489926; }
+}
+@keyframes mini-wm-glow-orange {
+  0%, 100% { text-shadow: 0 0 6px #f9731640, 0 0 16px #f973161a; }
+  50%       { text-shadow: 0 0 12px #f973167a, 0 0 28px #f973164d, 0 0 48px #f9731626; }
+}
+@keyframes mini-wm-glow-blue {
+  0%, 100% { text-shadow: 0 0 6px #06b6d440, 0 0 16px #06b6d41a; }
+  50%       { text-shadow: 0 0 12px #06b6d47a, 0 0 28px #06b6d44d, 0 0 48px #06b6d426; }
+}
+
+/* Float wrapper — only drives translateY */
+.mini-watermark-anim {
+  animation: mini-wm-float 4s ease-in-out infinite;
+}
+
+/* Inner glow + scale target */
+.mini-watermark-text {
+  display: inline-block;
+  transform: scale(1);
+  transition: transform 0.25s ease;
+}
+.mini-watermark-text[data-glow="green"]  { animation: mini-wm-glow-green  3s ease-in-out infinite; }
+.mini-watermark-text[data-glow="pink"]   { animation: mini-wm-glow-pink   3s ease-in-out infinite; }
+.mini-watermark-text[data-glow="orange"] { animation: mini-wm-glow-orange 3s ease-in-out infinite; }
+.mini-watermark-text[data-glow="blue"]   { animation: mini-wm-glow-blue   3s ease-in-out infinite; }
+
+/* Hover: scale up + stronger static glow */
+.neon-card:hover .mini-watermark-text {
+  transform: scale(1.03);
+}
+.neon-card:hover .mini-watermark-text[data-glow="green"]  {
+  text-shadow: 0 0 14px #39ff1499, 0 0 32px #39ff1466, 0 0 56px #39ff1433;
+}
+.neon-card:hover .mini-watermark-text[data-glow="pink"]   {
+  text-shadow: 0 0 14px #ec489999, 0 0 32px #ec489966, 0 0 56px #ec489933;
+}
+.neon-card:hover .mini-watermark-text[data-glow="orange"] {
+  text-shadow: 0 0 14px #f9731699, 0 0 32px #f9731666, 0 0 56px #f9731633;
+}
+.neon-card:hover .mini-watermark-text[data-glow="blue"]   {
+  text-shadow: 0 0 14px #06b6d499, 0 0 32px #06b6d466, 0 0 56px #06b6d433;
+}
+
+/* Reduced motion — disable all animation, keep hover scale */
+@media (prefers-reduced-motion: reduce) {
+  .mini-watermark-anim { animation: none; }
+  .mini-watermark-text[data-glow="green"],
+  .mini-watermark-text[data-glow="pink"],
+  .mini-watermark-text[data-glow="orange"],
+  .mini-watermark-text[data-glow="blue"] { animation: none; }
+  .neon-card:hover .mini-watermark-text { transform: scale(1.03); }
+}
 
 /* ── Section title ───────────────────────────────────────────────── */
 .section-title {

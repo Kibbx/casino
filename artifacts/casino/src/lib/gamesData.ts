@@ -94,6 +94,7 @@ export const miniGamesData: GameDef[] = [
     route: "/mines", tokenId: "mines",
     image: `${IMGS}images/card-mines.webp`, gameKey: "mines",
     displayCategory: "MINI GAMES",
+    bgGlowAnim: true,
   },
   {
     id: "keno",
@@ -106,6 +107,7 @@ export const miniGamesData: GameDef[] = [
     route: "/keno", tokenId: "keno",
     image: `${IMGS}images/card-mini-games.png`,
     displayCategory: "MINI GAMES",
+    bgGlowAnim: true,
   },
   {
     id: "mob-tower", lobbyKey: "mob_tower",
@@ -119,6 +121,7 @@ export const miniGamesData: GameDef[] = [
     route: "/mob-tower",
     image: `${IMGS}images/card-mob-tower.png`, gameKey: "mobtower",
     displayCategory: "MINI GAMES",
+    bgGlowAnim: true, bgTitle: "MOB TOWER",
   },
   {
     id: "case-opening",
@@ -131,6 +134,7 @@ export const miniGamesData: GameDef[] = [
     route: "/cases",
     image: `${IMGS}images/card-cases.webp`,
     displayCategory: "MINI GAMES",
+    bgGlowAnim: true, bgTitle: "CASES",
   },
 ];
 

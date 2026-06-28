@@ -81,11 +81,18 @@ export interface CatalogGame {
   statusLabel?: string;
   statusColor?: string;
   image?: string;
+  /** Override the large watermark text (defaults to first word of name) */
+  bgTitle?: string;
+  /** Enable the neon float + glow animation on the watermark text */
+  bgGlowAnim?: boolean;
 }
 
 export function CatalogCard({ game, delay = "0s", route, onClick }: { game: CatalogGame; delay?: string; route?: string; onClick?: () => void }) {
   const [, setLocation] = useLocation();
   const [hov, setHov] = useState(false);
+  const wmText = game.bgTitle ?? game.name.split(" ")[0].toUpperCase();
+  const wmSize = wmText.length > 6 ? 30 : 46;
+  const glowKey = game.neonClass.replace("neon-", "");
   const handleClick = onClick ?? (route ? () => setLocation(route) : undefined);
   return (
     <div
@@ -124,17 +131,19 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
         />
         {/* Ghost watermark text */}
         <div
-          className="absolute inset-0 flex items-center justify-center select-none"
+          className={`absolute inset-0 flex items-center justify-center select-none${game.bgGlowAnim ? " mini-watermark-anim" : ""}`}
           style={{
             fontFamily: "'Orbitron', sans-serif",
-            fontSize: 46,
+            fontSize: wmSize,
             fontWeight: 900,
-            color: game.image ? `${game.neonColor}1a` : `${game.neonColor}22`,
+            color: `${game.neonColor}22`,
             letterSpacing: "0.04em",
             pointerEvents: "none",
           }}
         >
-          {game.name.split(" ")[0].toUpperCase()}
+          {game.bgGlowAnim
+            ? <span className="mini-watermark-text" data-glow={glowKey}>{wmText}</span>
+            : wmText}
         </div>
         {/* Bottom fade into card body */}
         <div
