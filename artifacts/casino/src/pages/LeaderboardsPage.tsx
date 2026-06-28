@@ -209,7 +209,7 @@ function LeaderboardPagination({
 
 /* ── Main component ──────────────────────────────────────────────────────────── */
 export function LeaderboardsPage() {
-  const { playerId, playerUsername } = useStore();
+  const { playerId, playerUsername, sessionToken } = useStore();
   const [data, setData]         = useState<ApiEntry[]>([]);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState<string | null>(null);
@@ -219,15 +219,25 @@ export function LeaderboardsPage() {
   const snapshotSaved = useRef(false);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  /* fetch — public endpoint, no auth required */
+  /* fetch — public endpoint; send session token when available so older
+     server builds (where /:playerId wildcard catches this path) still work */
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`${BASE}/api/players/leaderboard`)
-      .then(r => r.ok ? r.json() : r.json().then((e: any) => Promise.reject(e?.error ?? "Failed")))
+    const headers: Record<string, string> = {};
+    if (sessionToken) headers["Authorization"] = `Bearer ${sessionToken}`;
+    fetch(`${BASE}/api/players/leaderboard`, { headers })
+      .then(r => {
+        if (r.ok) return r.json();
+        return r.json().then((e: any) => {
+          const msg = e?.error ?? "Failed to load leaderboard";
+          console.warn("[leaderboard] API error", r.status, msg);
+          return Promise.reject(msg);
+        });
+      })
       .then((rows: ApiEntry[]) => { setData(rows); setLoading(false); setCurrentPage(1); })
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load"); setLoading(false); });
-  }, []);
+  }, [sessionToken]);
 
   /* sorted + ranked + trend — biggestWin DESC → wins DESC → games DESC */
   const ranked = useMemo((): RankedEntry[] => {

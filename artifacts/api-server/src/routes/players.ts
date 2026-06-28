@@ -517,11 +517,17 @@ router.post("/change-pin", requirePlayer, async (req, res) => {
   return res.json({ success: true });
 });
 
-// ── Public leaderboard — must be before /:playerId wildcard ──────────────────
+// ── Public leaderboard — NO auth required, must be before /:playerId wildcard ─
 // biggestWin is computed live from transactions so it auto-updates on every new
 // win without requiring gameplay routes to maintain the column.
 // Sorted server-side: biggest_win DESC → wins DESC → hands_played DESC.
-router.get("/leaderboard", async (_req, res) => {
+// NOTE: accepting an optional Bearer token here is harmless — requireAuth is NOT
+// applied. The token is ignored even if the frontend sends one for compatibility.
+router.get("/leaderboard", async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    const hasAuth = !!req.headers.authorization;
+    console.log(`[leaderboard] request from ${req.ip} auth_header=${hasAuth}`);
+  }
   const rows = await db.execute(sqlFn`
     SELECT
       p.id,
