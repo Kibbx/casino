@@ -161,7 +161,7 @@ export const slotsData: GameDef[] = [
     players: "Solo", betRange: "$50 – $1,000",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#22c55e",
     route: "/western-slots", tokenId: "slots",
-    image: `${IMGS}images/card-deadwood.png`, gameKey: "slots",
+    image: `${IMGS}images/card-deadwood.png?v=2`, gameKey: "slots",
     displayCategory: "SLOTS",
   },
 ];
