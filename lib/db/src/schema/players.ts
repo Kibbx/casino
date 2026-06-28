@@ -37,6 +37,7 @@ export const playersTable = pgTable("players", {
   excludeFromLoginLogs: boolean("exclude_from_login_logs").notNull().default(false),
   wins: bigint("wins", { mode: "number" }).notNull().default(0),
   totalWon: bigint("total_won", { mode: "number" }).notNull().default(0),
+  biggestWin: bigint("biggest_win", { mode: "number" }).notNull().default(0),
   rewardPoints: integer("reward_points").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

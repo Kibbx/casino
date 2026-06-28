@@ -13,7 +13,7 @@ type ApiEntry = {
   games: number;
   wins: number;
   winRate: number;
-  totalWon: number;
+  biggestWin: number;
   chips: number;
   avatarUrl: string | null;
   staffRole: string | null;
@@ -32,13 +32,10 @@ const RANK_2_GRADIENT = "linear-gradient(135deg, rgba(192,192,192,0.14) 0%, rgba
 const RANK_3_GRADIENT = "linear-gradient(135deg, rgba(205,127,50,0.16) 0%, rgba(205,127,50,0.03) 100%)";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────────── */
-function fmtProfit(n: number): string {
-  const abs = Math.abs(n);
-  let s: string;
-  if (abs >= 1_000_000) s = "$" + (abs / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  else if (abs >= 1_000)  s = "$" + (abs / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
-  else                    s = "$" + abs.toLocaleString();
-  return (n >= 0 ? "+" : "-") + s;
+function fmtBiggestWin(n: number): string {
+  if (n >= 1_000_000) return "$" + (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1_000)     return "$" + (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  return "$" + n.toLocaleString();
 }
 
 function fmtGames(n: number): string {
@@ -232,9 +229,13 @@ export function LeaderboardsPage() {
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load"); setLoading(false); });
   }, []);
 
-  /* sorted + ranked + trend — always by total winnings */
+  /* sorted + ranked + trend — biggestWin DESC → wins DESC → games DESC */
   const ranked = useMemo((): RankedEntry[] => {
-    const copy = [...data].sort((a, b) => b.totalWon - a.totalWon);
+    const copy = [...data].sort((a, b) =>
+      b.biggestWin !== a.biggestWin ? b.biggestWin - a.biggestWin :
+      b.wins !== a.wins             ? b.wins - a.wins :
+                                      b.games - a.games
+    );
     const snapshot = loadSnapshot();
     return copy.map((entry, i) => {
       const rank = i + 1;
@@ -341,7 +342,7 @@ export function LeaderboardsPage() {
           <span>Player</span>
           <span>Games</span>
           <span>Win %</span>
-          <span style={{ textAlign: "right" }}>Profit</span>
+          <span style={{ textAlign: "right" }}>Biggest Win</span>
           <span style={{ textAlign: "center" }}>Trend</span>
         </div>
 
@@ -393,8 +394,8 @@ export function LeaderboardsPage() {
                 else if (entry.rank === 2) rowBg = RANK_2_GRADIENT;
                 else if (entry.rank === 3) rowBg = RANK_3_GRADIENT;
 
-                const profitColor = entry.totalWon >= 0 ? "#22c55e" : "#ef4444";
-                const profitGlow  = entry.totalWon >= 0 ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)";
+                const profitColor = "#22c55e";
+                const profitGlow  = "rgba(34,197,94,0.3)";
 
                 let winRateColor = "rgba(255,255,255,0.5)";
                 if (entry.winRate >= 65)      winRateColor = "#22c55e";
@@ -488,14 +489,14 @@ export function LeaderboardsPage() {
                       {entry.games > 0 ? entry.winRate + "%" : "—"}
                     </span>
 
-                    {/* Profit */}
+                    {/* Biggest Win */}
                     <div style={{ textAlign: "right" }}>
                       <span style={{
                         fontSize: 13, fontWeight: 900, fontVariantNumeric: "tabular-nums",
-                        color: entry.games > 0 ? profitColor : "rgba(255,255,255,0.2)",
-                        textShadow: entry.games > 0 && isHov ? `0 0 12px ${profitGlow}` : undefined,
+                        color: entry.biggestWin > 0 ? profitColor : "rgba(255,255,255,0.2)",
+                        textShadow: entry.biggestWin > 0 && isHov ? `0 0 12px ${profitGlow}` : undefined,
                       }}>
-                        {entry.games > 0 ? fmtProfit(entry.totalWon) : "—"}
+                        {entry.biggestWin > 0 ? fmtBiggestWin(entry.biggestWin) : "—"}
                       </span>
                     </div>
 

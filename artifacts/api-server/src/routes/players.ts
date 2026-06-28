@@ -522,36 +522,45 @@ router.post("/change-pin", requirePlayer, async (req, res) => {
 });
 
 // ── Public leaderboard — must be before /:playerId wildcard ──────────────────
-// Reads wins + total_won directly from the players table (kept in sync by
-// gameplay code for real players; pre-seeded for demo accounts).
-// The detailed profile page still uses computeTxStats for per-transaction breakdown.
+// biggestWin is computed live from transactions so it auto-updates on every new
+// win without requiring gameplay routes to maintain the column.
+// Sorted server-side: biggest_win DESC → wins DESC → hands_played DESC.
 router.get("/leaderboard", async (_req, res) => {
-  const players = await db.select({
-    id:          playersTable.id,
-    username:    playersTable.username,
-    chips:       playersTable.chips,
-    handsPlayed: playersTable.handsPlayed,
-    wins:        playersTable.wins,
-    totalWon:    playersTable.totalWon,
-    avatarUrl:   playersTable.avatarUrl,
-    staffRole:   playersTable.staffRole,
-  }).from(playersTable).where(eq(playersTable.isBot, false));
+  const rows = await db.execute(sqlFn`
+    SELECT
+      p.id,
+      p.username,
+      p.chips,
+      p.hands_played,
+      p.wins,
+      p.avatar_url,
+      p.staff_role,
+      COALESCE((
+        SELECT MAX(t.amount)
+        FROM transactions t
+        WHERE t.player_id = p.id
+          AND t.type IN ('win','tournament_win','fortuna-win','rome-slots-win','western-slots-win')
+      ), 0) AS biggest_win
+    FROM players p
+    WHERE p.is_bot = false
+    ORDER BY biggest_win DESC, p.wins DESC, p.hands_played DESC
+  `);
 
-  const result = players.map(p => {
-    const games   = Number(p.handsPlayed ?? 0);
+  const result = ((rows as any).rows as any[]).map(p => {
+    const games   = Number(p.hands_played ?? 0);
     const wins    = Number(p.wins ?? 0);
     const winRate = games > 0 ? Math.round(wins / games * 100) : 0;
 
     return {
-      id:        p.id,
-      username:  p.username,
+      id:         Number(p.id),
+      username:   String(p.username),
       games,
       wins,
       winRate,
-      totalWon:  Number(p.totalWon ?? 0),
-      chips:     Number(p.chips),
-      avatarUrl: p.avatarUrl ?? null,
-      staffRole: p.staffRole ?? null,
+      biggestWin: Number(p.biggest_win ?? 0),
+      chips:      Number(p.chips),
+      avatarUrl:  p.avatar_url ? String(p.avatar_url) : null,
+      staffRole:  p.staff_role ? String(p.staff_role) : null,
     };
   });
 

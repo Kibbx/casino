@@ -1448,6 +1448,23 @@ export async function runMigrations(): Promise<void> {
       `,
     },
     {
+      name: "players.biggest_win column",
+      sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS biggest_win BIGINT NOT NULL DEFAULT 0`,
+    },
+    {
+      name: "backfill players.biggest_win from transactions",
+      sql: `
+        UPDATE players p
+        SET biggest_win = (
+          SELECT COALESCE(MAX(t.amount), 0)
+          FROM transactions t
+          WHERE t.player_id = p.id
+            AND t.type IN ('win','tournament_win','fortuna-win','rome-slots-win','western-slots-win')
+        )
+        WHERE p.is_bot IS NOT TRUE
+      `,
+    },
+    {
       name: "sport_bet_events.sport column",
       sql: `ALTER TABLE sport_bet_events ADD COLUMN IF NOT EXISTS sport TEXT`,
     },
