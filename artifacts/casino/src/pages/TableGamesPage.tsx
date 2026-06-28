@@ -91,8 +91,6 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
             transition: "transform 0.4s ease",
           }}
         />
-        {/* Themed colour tint overlay */}
-        <div style={{ position: "absolute", inset: 0, background: th.gradient, opacity: 0.38, transition: "opacity 0.2s" }} />
         {/* Brightness lift on hover */}
         <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.06)", opacity: hov && table.isOpen ? 1 : 0, transition: "opacity 0.2s" }} />
         {/* Bottom fade */}

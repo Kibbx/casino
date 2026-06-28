@@ -121,16 +121,17 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             }}
           />
         )}
-        {/* Gradient colour tint overlay (maintains themed palette over the image) */}
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: game.gradient,
-            opacity: game.image ? 0.38 : 1,
-            transition: "opacity 0.2s",
-          }}
-        />
+        {/* Gradient colour tint overlay — only shown when there is no artwork image */}
+        {!game.image && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: game.gradient,
+              opacity: 1,
+            }}
+          />
+        )}
         {/* Brightness lift on hover */}
         <div
           style={{
