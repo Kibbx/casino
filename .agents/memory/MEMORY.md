@@ -3,3 +3,4 @@
 - [Casino lobby import pattern](casino-lobby-import.md) — how the Big House redesign pages (github.com/Kibbx/Redesign) were imported and wired into the casino project.
 - [Casino game launcher & password gating](casino-game-launcher.md) — game launching/password-gating is centralized in the casino artifact; invariants that must hold.
 - [FiveM CEF render constraints](fivem-cef-constraints.md) — CSS properties and Tailwind patterns that break inside FiveM's CEF (Chromium) browser.
+- [Preview stale-render trap](preview-stale-render.md) — app_preview screenshot tab can render stale JS (CSS HMR applies, Fast Refresh fails); verify served output via curl to Vite port/proxy, don't chase a phantom.

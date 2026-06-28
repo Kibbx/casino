@@ -1,0 +1,37 @@
+Update the entire casino website so all player counts, active-user counts, and bet ranges are live and accurate across every game category, not only Table Games.
+
+Scope:
+
+* Table Games
+* Mini Games
+* Slots
+* Poker
+
+Requirements:
+
+1. Remove game description text from game cards where requested, 
+2. Replace all hard-coded player counts, seat counts, “X playing” labels, active-user labels, and bet ranges with backend/API-driven data.
+3. The displayed player count must reflect real users currently playing, seated, queued, or actively connected to that exact game depending on the game type.
+4. The displayed bet range must come from the actual min/max limits enforced by the game logic, not duplicated frontend text.
+5. Create a shared backend source of truth for every game:
+
+   * gameId
+   * gameType
+   * title
+   * currentPlayers
+   * maxPlayers or seats, if applicable
+   * minBet
+   * maxBet
+   * status: open, live, closed, maintenance
+   * isLive
+6. Add or update a universal endpoint, for example:
+   GET /api/games
+   returning live metadata for all games across all categories.
+7. Frontend game cards should render counts and limits from this endpoint only.
+8. Remove all hard-coded fallback values such as “0/6”, “8 playing”, “$100 – $10k”, “$1 – $1,000”, etc.
+9. Add realtime updates using WebSockets, Supabase realtime, Firebase listeners, polling, or the project’s existing realtime system so the numbers stay current without page reloads.
+10. Make sure player counts update when users join, leave, disconnect, refresh, sit at a table, leave a table, start a slot/mini game session, enter a tournament, or place sportsbook/horse racing/bingo/lottery activity where applicable.
+11. Audit the full codebase for hard-coded game metadata and replace it with centralized backend config plus live session data.
+12. Ensure the backend validation for bet amounts uses the same minBet/maxBet source that the frontend displays.
+13. Add loading and error states so game cards do not show fake numbers while data is loading.
+14. Keep the existing visual design, spacing, neon borders, and card layout unless changes are required to remove descriptions.

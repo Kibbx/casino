@@ -91,7 +91,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
   return (
     <div
       className={`rounded-2xl overflow-hidden neon-card ${game.neonClass}`}
-      style={{ "--pulse-delay": delay, width: "220px", flexShrink: 0, cursor: handleClick ? "pointer" : "default" } as React.CSSProperties}
+      style={{ "--pulse-delay": delay, width: "100%", minWidth: 0, height: "100%", display: "flex", flexDirection: "column", cursor: handleClick ? "pointer" : "default" } as React.CSSProperties}
       onClick={handleClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -99,7 +99,8 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
       {/* Artwork header */}
       <div
         style={{
-          height: 140,
+          height: "clamp(132px, 10vw, 164px)",
+          flexShrink: 0,
           position: "relative",
           overflow: "hidden",
           background: game.gradient,
@@ -203,7 +204,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
       </div>
 
       {/* Body */}
-      <div className="px-4 py-3" style={{ background: "#0c0a0a" }}>
+      <div className="px-4 py-3" style={{ background: "#0c0a0a", flex: 1, display: "flex", flexDirection: "column" }}>
         <h3
           className="font-rajdhani font-black text-base uppercase tracking-wider mb-0.5 text-center"
           style={{ color: "#f0f0f0" }}
@@ -232,6 +233,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
         <button
           className="w-full py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150"
           style={{
+            marginTop: "auto",
             background: hov ? game.neonColor : "transparent",
             color: hov ? "#060404" : game.neonColor,
             border: `1px solid ${game.neonColor}55`,
@@ -249,28 +251,38 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
 export function CardGrid({
   children,
   gap = 20,
+  minItemWidth,
+  maxItemWidth,
   className = "",
 }: {
   children: React.ReactNode;
   gap?: number;
+  minItemWidth?: number;
+  maxItemWidth?: number;
   className?: string;
 }) {
-  return (
-    <div
-      className={className}
-      style={{
-        display: "flex",
-        flexWrap: "wrap",
-        justifyContent: "center",
-        gap: `${gap}px`,
-        width: "100%",
-        maxWidth: `${4 * 220 + 3 * gap}px`,
-        margin: "0 auto",
-      }}
-    >
-      {children}
-    </div>
-  );
+  // Variable-size grids (marketplace, challenges, staff, auctions) — fluid
+  // auto-fit columns that honour the requested item sizing and never overflow.
+  if (minItemWidth) {
+    return (
+      <div
+        className={className}
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(auto-fit, minmax(min(${minItemWidth}px, 100%), ${maxItemWidth ?? minItemWidth}px))`,
+          justifyContent: "center",
+          gap: `${gap}px`,
+          width: "100%",
+          minWidth: 0,
+          margin: "0 auto",
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+  // Default game-card grid — exact 4 / 3 / 2 / 1 responsive columns.
+  return <div className={`casino-card-grid ${className}`.trim()}>{children}</div>;
 }
 
 /* ── Section sub-header ────────────────────────────────────────── */

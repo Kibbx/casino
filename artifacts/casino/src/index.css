@@ -1200,3 +1200,61 @@ body::-webkit-scrollbar,
   width: 0 !important;
   height: 0 !important;
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   Responsive system — browser widths 1920/1440/1024/768/430/375.
+   Plain CSS media queries only (CEF-safe; no Tailwind sm:/md:/lg:).
+   Mobile-only behaviours are gated < 768px so FiveM in-game
+   resolutions (typically ≥ 1024px) keep the existing inline layout.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Global overflow / box guards (all widths) ─────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* ── Responsive game-card grid: 1 → 2 → 3 → 4 columns ──────────── */
+.casino-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(0.875rem, 1.4vw, 1.25rem);
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .casino-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) {
+  .casino-card-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .casino-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* ── Sidebar: inline+collapsible ≥768, overlay drawer <768 ─────── */
+.casino-drawer-backdrop { display: none; }
+@media (max-width: 767px) {
+  .casino-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    width: min(82vw, 280px) !important;
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
+  }
+  .casino-sidebar.open { transform: translateX(0); }
+  .casino-drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 55;
+  }
+}

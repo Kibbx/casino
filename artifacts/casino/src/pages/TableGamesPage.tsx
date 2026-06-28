@@ -62,8 +62,11 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
     <div
       className={`rounded-2xl overflow-hidden group neon-card ${th.neonClass}`}
       style={{
-        width: "220px",
-        flexShrink: 0,
+        width: "100%",
+        minWidth: 0,
+        height: "100%",
+        display: "flex",
+        flexDirection: "column",
         background: "rgba(10,7,7,0.92)",
         animationDelay: delay,
         opacity: table.isOpen ? 1 : 0.45,
@@ -75,7 +78,8 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
     >
       {/* Artwork header */}
       <div style={{
-        height: 140,
+        height: "clamp(132px, 10vw, 164px)",
+        flexShrink: 0,
         background: th.gradient,
         position: "relative",
         overflow: "hidden",
@@ -127,7 +131,7 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
       </div>
 
       {/* Body */}
-      <div className="px-4 py-3" style={{ background: "#0c0a0a" }}>
+      <div className="px-4 py-3" style={{ background: "#0c0a0a", flex: 1, display: "flex", flexDirection: "column" }}>
         <h3 className="font-rajdhani font-black text-base uppercase tracking-wider mb-0.5 text-center" style={{ color: "#f0f0f0" }}>
           {table.name}
         </h3>
@@ -147,6 +151,7 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
         <button
           className="w-full py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all duration-200"
           style={{
+            marginTop: "auto",
             background: table.isOpen ? `${th.neonColor}18` : "rgba(255,255,255,0.04)",
             border: `1px solid ${table.isOpen ? `${th.neonColor}55` : "rgba(255,255,255,0.12)"}`,
             color: table.isOpen ? th.neonColor : "rgba(255,255,255,0.3)",

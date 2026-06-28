@@ -162,6 +162,8 @@ export function Lobby() {
   const isStaff = (playerStaffRoles?.length ?? 0) > 0;
 
   const [collapsed,     setCollapsed]     = useState(false);
+  const [drawerOpen,    setDrawerOpen]    = useState(false);
+  const [isMobile,      setIsMobile]      = useState(false);
   const [activeNav,     setActiveNav]     = useState("home");
   const [displayedNav,  setDisplayedNav]  = useState("home");
   const [sectionPhase,  setSectionPhase]  = useState<"idle"|"exit"|"enter">("idle");
@@ -221,6 +223,21 @@ export function Lobby() {
     ];
     return () => sectionTimers.current.forEach(clearTimeout);
   }, [activeNav]);
+
+  // ── Responsive: detect mobile (< 768px) for the sidebar drawer ──
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    // Use modern listener when available, fall back to legacy addListener
+    // (older FiveM CEF/Chromium builds lack MediaQueryList.addEventListener).
+    if (typeof mq.addEventListener === "function") {
+      mq.addEventListener("change", update);
+      return () => mq.removeEventListener("change", update);
+    }
+    mq.addListener(update);
+    return () => mq.removeListener(update);
+  }, []);
 
   // Debounced player search against the API
   useEffect(() => {
@@ -380,6 +397,8 @@ export function Lobby() {
     setLocation("/");
   }
 
+  const sidebarCollapsed = isMobile ? false : collapsed;
+
   return (
     <div className="h-screen w-screen overflow-hidden flex flex-col font-sans" style={{ background: "#050303" }}>
 
@@ -396,7 +415,7 @@ export function Lobby() {
       >
         {/* LEFT — hamburger + brand */}
         <div className="flex items-center gap-3 shrink-0 order-1">
-          <button onClick={() => setCollapsed(c => !c)} className="nav-icon-btn">
+          <button onClick={() => { if (isMobile) setDrawerOpen(o => !o); else setCollapsed(c => !c); }} className="nav-icon-btn">
             <Menu size={17} style={{ color: "rgba(255,255,255,0.45)" }} />
           </button>
           <div className="w-px h-5 shrink-0 hidden sm:block" style={{ background: "rgba(255,255,255,0.08)" }} />
@@ -573,15 +592,18 @@ export function Lobby() {
       {/* ── Body ── */}
       <div className="flex flex-1 overflow-hidden">
 
+        {/* ── Mobile drawer backdrop ── */}
+        {drawerOpen && <div className="casino-drawer-backdrop" onClick={() => setDrawerOpen(false)} />}
+
         {/* ── Sidebar ── */}
         <aside
-          className="shrink-0 flex flex-col overflow-x-hidden transition-[width] duration-300 ease-in-out z-10"
-          style={{ width: collapsed ? "52px" : "170px", background: "#060404", borderRight: "1px solid rgba(255,255,255,0.07)" }}
+          className={`casino-sidebar shrink-0 flex flex-col overflow-x-hidden transition-[width] duration-300 ease-in-out z-10${drawerOpen ? " open" : ""}`}
+          style={{ width: sidebarCollapsed ? "52px" : "170px", background: "#060404", borderRight: "1px solid rgba(255,255,255,0.07)" }}
         >
           <nav className="flex flex-col py-3 overflow-y-auto overflow-x-hidden flex-1" tabIndex={-1} onFocus={(e) => e.currentTarget.blur()} style={{ outline: "none" }}>
             {(appMode === "casino" ? navGroups : marketNavGroups).map((group, gi) => (
               <div key={gi}>
-                {group.section && !collapsed && (
+                {group.section && !sidebarCollapsed && (
                   <p
                     className="px-4 pt-4 pb-1.5 text-[10px] font-bold uppercase tracking-widest select-none"
                     style={{ color: "rgba(255,255,255,0.22)", letterSpacing: "0.12em" }}
@@ -589,7 +611,7 @@ export function Lobby() {
                     {group.section}
                   </p>
                 )}
-                {group.section && collapsed && gi > 0 && (
+                {group.section && sidebarCollapsed && gi > 0 && (
                   <div className="mx-3 my-2" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }} />
                 )}
                 {group.items.filter(item => !item.staffOnly || isStaff).map((item) => {
@@ -601,20 +623,20 @@ export function Lobby() {
                   return (
                     <div key={item.id} className="relative group/nav px-2">
                       <button
-                        onClick={item.disabled ? undefined : () => { if ((item as any).launchKey) { enter(GAMES[(item as any).launchKey]); return; } if (item.tokenId) setAccessToken(item.tokenId, "open"); item.route ? setLocation(item.route) : navigate(item.id); }}
+                        onClick={item.disabled ? undefined : () => { setDrawerOpen(false); if ((item as any).launchKey) { enter(GAMES[(item as any).launchKey]); return; } if (item.tokenId) setAccessToken(item.tokenId, "open"); item.route ? setLocation(item.route) : navigate(item.id); }}
                         onMouseEnter={() => setHoveredNav(item.id)}
                         onMouseLeave={() => setHoveredNav(null)}
                         className="relative w-full flex items-center rounded-lg py-[7px] transition-colors duration-150"
                         style={{
-                          gap: collapsed ? 0 : 10,
-                          paddingLeft: collapsed ? 0 : 10,
-                          justifyContent: collapsed ? "center" : "flex-start",
+                          gap: sidebarCollapsed ? 0 : 10,
+                          paddingLeft: sidebarCollapsed ? 0 : 10,
+                          justifyContent: sidebarCollapsed ? "center" : "flex-start",
                           background: active
                             ? (isStaffItem ? "rgba(212,170,0,0.12)" : "rgba(232,64,10,0.12)")
                             : hovered ? (isStaffItem ? "rgba(212,170,0,0.08)" : "rgba(232,64,10,0.07)") : undefined,
                         }}
                       >
-                        {active && !collapsed && (
+                        {active && !sidebarCollapsed && (
                           <span
                             className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-[16px] rounded-r-full"
                             style={{ background: isStaffItem ? "#d4aa00" : "#e8400a", boxShadow: isStaffItem ? "0 0 6px #d4aa00" : "0 0 6px #e8400a" }}
@@ -631,7 +653,7 @@ export function Lobby() {
                             filter: isStaffItem ? "drop-shadow(0 0 4px rgba(212,170,0,0.6))" : undefined,
                           }}
                         />
-                        {!collapsed && (
+                        {!sidebarCollapsed && (
                           <span
                             className="flex-1 text-left text-[13px] whitespace-nowrap overflow-hidden"
                             style={{
@@ -647,7 +669,7 @@ export function Lobby() {
                           </span>
                         )}
                       </button>
-                      {collapsed && (
+                      {sidebarCollapsed && (
                         <div
                           className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-white whitespace-nowrap opacity-0 group-hover/nav:opacity-100 transition-opacity duration-150 z-50"
                           style={{ background: "#1c1c1c", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 4px 14px rgba(0,0,0,0.5)" }}
