@@ -44,6 +44,7 @@ import { SportsbookPage }    from "./SportsbookPage";
 import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 import { GAME_CFG, GAME_DISPLAY } from "../lib/gamesData";
 import { getRecentlyPlayed, RecentlyPlayedEntry } from "../lib/recentlyPlayed";
+import { useGamesMeta, formatBetRange } from "../lib/useGamesMeta";
 import { searchPlayers, PlayerSearchResult } from "../lib/playerSearchService";
 
 const IMGS = import.meta.env.BASE_URL;
@@ -284,6 +285,7 @@ export function Lobby() {
   const subRank = getSubRank(rewardsXP);
 
   // ── Recently Played ───────────────────────────────────────────
+  const { meta: gamesMeta } = useGamesMeta();
   const [recentlyPlayed, setRecentlyPlayed] = useState<RecentlyPlayedEntry[]>(getRecentlyPlayed);
 
   useEffect(() => {
@@ -697,8 +699,12 @@ export function Lobby() {
                   <SectionHeader label="Recently Played" dotColor="#d946ef" />
                   {recentlyPlayed.length > 0 ? (
                     <CardGrid>
-                      {recentlyPlayed.map((entry) => (
-                        <CatalogCard key={entry.id} game={entry.game} onClick={() => {
+                      {recentlyPlayed.map((entry) => {
+                        const live = gamesMeta[entry.id];
+                        const game = live
+                          ? { ...entry.game, players: `${live.currentPlayers} playing`, betRange: formatBetRange(live.minBet, live.maxBet) }
+                          : { ...entry.game, players: undefined, betRange: undefined };
+                        return <CatalogCard key={entry.id} game={game} onClick={() => {
                           if (entry.launchData?.tableId !== undefined) {
                             setAccessToken("blackjack", "open");
                             sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: entry.launchData.tableId, password: entry.launchData.password ?? null }));
@@ -707,8 +713,8 @@ export function Lobby() {
                             if (entry.tokenId) setAccessToken(entry.tokenId, "open");
                             setLocation(entry.route);
                           }
-                        }} />
-                      ))}
+                        }} />;
+                      })}
                     </CardGrid>
                   ) : (
                     <p className="text-sm py-4 text-center" style={{ color: "rgba(255,255,255,0.22)" }}>
