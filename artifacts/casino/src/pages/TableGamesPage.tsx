@@ -136,7 +136,7 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
         <h3 className="font-rajdhani font-black text-base uppercase tracking-wider mb-0.5 text-center" style={{ color: "#f0f0f0" }}>
           {table.name}
         </h3>
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center justify-center gap-3 mb-2">
           <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.42)" }}>
             👥 {table.seatedCount}/{table.numSeats}
           </span>

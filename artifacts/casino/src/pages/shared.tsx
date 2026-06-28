@@ -212,7 +212,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
           {game.name}
         </h3>
         {(game.players || game.betRange) && (
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center justify-center gap-3 mb-2">
             {game.players && (
               <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.42)" }}>
                 👥 {game.players}
