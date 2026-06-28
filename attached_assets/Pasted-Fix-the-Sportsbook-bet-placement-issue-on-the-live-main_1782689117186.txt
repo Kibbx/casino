@@ -1,0 +1,62 @@
+Fix the Sportsbook bet placement issue on the live/main app.
+
+Current problem:
+When placing a sports bet or parlay, the frontend shows “Network error — try again.” The bet should submit successfully and deduct the wager amount from the user’s chip balance.
+
+Please inspect the existing code and reuse the current sportsbook/betting/chips logic instead of rebuilding it.
+
+Investigate:
+
+* Frontend sportsbook bet slip submit handler
+* API route used when clicking “Place Parlay” or placing a single bet
+* Backend sportsbook bet placement route
+* Auth/session handling for the bet placement request
+* CORS/credentials settings if this only fails on the live server
+* Production API base URL
+* Request payload shape for singles vs parlays
+* Backend validation for selected picks, odds, wager amount, and user balance
+* Chip balance update logic
+* Database transaction or atomic update behavior
+* Any route mismatch between Replit and production
+
+Expected behavior:
+
+* User selects sportsbook picks.
+* User enters a wager.
+* Clicking Place Bet / Place Parlay sends the correct request to the backend.
+* Backend validates the user is logged in.
+* Backend confirms the user has enough chips.
+* Backend creates the sports bet record.
+* Backend deducts the wager amount from the user’s chips.
+* Frontend immediately updates the displayed chip balance.
+* Frontend shows a success message instead of “Network error.”
+* If the bet fails, show the real backend error message instead of a generic network error.
+
+Important:
+Do not deduct chips on the frontend only. Chip deduction must happen on the backend in the same successful flow that creates the bet.
+
+Add safe debug logs for:
+
+* sportsbook bet route hit
+* authenticated user ID
+* received bet payload
+* wager amount
+* current chip balance before bet
+* bet creation success/failure
+* chip deduction success/failure
+
+Also check production-specific issues:
+
+* Missing environment variables
+* Incorrect API URL
+* Missing credentials/include on fetch
+* Cookie SameSite/Secure settings
+* Backend route not deployed or mounted on live server
+* Database schema mismatch on production
+* CORS blocking POST requests
+* Preflight OPTIONS failure
+
+After fixing, verify both:
+
+1. Single bet placement works and deducts chips.
+2. Parlay placement works and deducts chips.

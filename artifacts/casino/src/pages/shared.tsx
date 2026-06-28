@@ -81,17 +81,20 @@ export interface CatalogGame {
   statusLabel?: string;
   statusColor?: string;
   image?: string;
+  disabled?: boolean;
+  hasPassword?: boolean;
 }
 
 export function CatalogCard({ game, delay = "0s", route, onClick }: { game: CatalogGame; delay?: string; route?: string; onClick?: () => void }) {
   const [, setLocation] = useLocation();
   const [hov, setHov] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
-  const handleClick = onClick ?? (route ? () => setLocation(route) : undefined);
+  const closed = !!game.disabled;
+  const handleClick = closed ? undefined : (onClick ?? (route ? () => setLocation(route) : undefined));
   return (
     <div
       className={`rounded-2xl overflow-hidden neon-card ${game.neonClass}`}
-      style={{ "--pulse-delay": delay, width: "100%", minWidth: 0, height: "100%", display: "flex", flexDirection: "column", cursor: handleClick ? "pointer" : "default" } as React.CSSProperties}
+      style={{ "--pulse-delay": delay, width: "100%", minWidth: 0, height: "100%", display: "flex", flexDirection: "column", cursor: closed ? "not-allowed" : (handleClick ? "pointer" : "default"), opacity: closed ? 0.5 : 1 } as React.CSSProperties}
       onClick={handleClick}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -185,6 +188,14 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
               {game.badge}
             </span>
           )}
+          {game.hasPassword && !closed && (
+            <span
+              className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest"
+              style={{ background: "rgba(251,191,36,0.15)", color: "#fbbf24", border: "1px solid rgba(251,191,36,0.4)" }}
+            >
+              🔒
+            </span>
+          )}
         </div>
         {/* Status pill top-right */}
         {game.statusLabel && (
@@ -230,13 +241,14 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
           className="w-full py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150"
           style={{
             marginTop: "auto",
-            background: hov ? game.neonColor : "transparent",
-            color: hov ? "#060404" : game.neonColor,
-            border: `1px solid ${game.neonColor}55`,
-            boxShadow: hov ? `0 0 16px ${game.neonColor}55` : "none",
+            background: closed ? "rgba(255,255,255,0.04)" : (hov ? game.neonColor : "transparent"),
+            color: closed ? "rgba(255,255,255,0.28)" : (hov ? "#060404" : game.neonColor),
+            border: `1px solid ${closed ? "rgba(255,255,255,0.12)" : game.neonColor + "55"}`,
+            boxShadow: !closed && hov ? `0 0 16px ${game.neonColor}55` : "none",
+            cursor: closed ? "not-allowed" : "pointer",
           }}
         >
-          {game.actionLabel ?? "Play Now"}
+          {closed ? "Unavailable" : (game.actionLabel ?? "Play Now")}
         </button>
       </div>
     </div>

@@ -1,0 +1,45 @@
+Fix the game availability display for all casino games.
+
+Current issue:
+When there are no live tables available (for example Blackjack) or when a game has been disabled in the admin panel, the game card still appears playable. Instead, unavailable games should clearly appear as closed.
+
+Please reuse the existing game enable/disable system and live table status logic. Do not build a new availability system.
+
+Requirements:
+
+Detect when a game is unavailable because:
+The game is disabled by an admin.
+There are no active/live tables available.
+The backend reports the game as offline or unavailable.
+Update the game card UI.
+Fade the entire card (reduce opacity).
+Apply a grayscale or darkened overlay.
+Replace any "LIVE", "OPEN", "JOIN TABLE", or "PLAY NOW" badges/buttons with a red "CLOSED" badge.
+Disable hover animations and click interactions.
+Prevent navigation into the game.
+Button behavior.
+Replace:
+JOIN TABLE → CLOSED
+PLAY NOW → CLOSED
+Closed button should be disabled and not clickable.
+Status priority.
+If a game is disabled by the admin, always show CLOSED.
+If the game is enabled but has no live tables, show CLOSED.
+Only show LIVE/OPEN when:
+the game is enabled, and
+at least one playable table exists.
+Keep the frontend synchronized.
+If an admin enables/disables a game, update immediately without requiring a page refresh.
+If live table status changes, update the card automatically.
+Reuse existing code.
+Find the current enabled/disabled game logic.
+Find the existing live table availability checks.
+Wire them into the game cards instead of creating duplicate logic.
+
+Expected result:
+
+Enabled + live tables → Full color with LIVE/OPEN badge and active button.
+Enabled + no live tables → Faded card with CLOSED badge and disabled button.
+Disabled by admin → Faded card with CLOSED badge and disabled button regardless of live tables.
+
+Please inspect the current components first and reuse the existing backend API responses and availability logic instead of introducing a new status system.

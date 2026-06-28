@@ -5,6 +5,7 @@ export interface GameMeta {
   minBet: number;
   maxBet: number;
   status: "open" | "live" | "closed";
+  hasPassword: boolean;
 }
 
 const BASE = import.meta.env.BASE_URL;

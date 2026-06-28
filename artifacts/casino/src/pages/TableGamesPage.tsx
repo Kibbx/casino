@@ -7,6 +7,7 @@ import { trackRecentGame } from "../lib/recentGames";
 import { addRecentlyPlayed } from "../lib/recentlyPlayed";
 import { Lock } from "lucide-react";
 import { useGamesMeta, formatBetRange } from "../lib/useGamesMeta";
+import { useGameLauncher, GAMES } from "../lib/gameLauncher";
 
 /* ─── Types ───────────────────────────────────────────────────────────── */
 export interface BJTable {
@@ -252,6 +253,7 @@ export function TableGamesPage() {
   const [, setLocation] = useLocation();
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
   const { meta: gamesMeta, loading: gamesLoading } = useGamesMeta();
+  const { enter, modalNode } = useGameLauncher();
 
   const [bjTables, setBjTables] = useState<BJTable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -297,6 +299,7 @@ export function TableGamesPage() {
 
   return (
     <PageWrapper title="Table Games" breadcrumb="Casino / Table Games" accentColor="#39ff14">
+      {modalNode}
       {/* Password modal */}
       {pendingTable && (
         <BJPasswordModal
@@ -330,18 +333,29 @@ export function TableGamesPage() {
         {/* Static games — player counts + bet ranges from live API */}
         {tableGamesData.map((g, i) => {
           const live = gamesMeta[g.id];
+          const closed = live?.status === "closed";
           const isLoading = gamesLoading && !live;
           const game = {
             ...g,
             players: isLoading ? "…" : live ? `${live.currentPlayers} playing` : g.players,
             betRange: isLoading ? undefined : live ? formatBetRange(live.minBet, live.maxBet) : g.betRange,
+            disabled: closed,
+            hasPassword: live?.hasPassword ?? false,
+            statusLabel: closed ? "CLOSED" : g.statusLabel,
+            statusColor: closed ? "#ef4444" : g.statusColor,
           };
           return (
             <CatalogCard key={g.id} game={game} delay={`${-(openTables.length + i)}s`} onClick={() => {
+              if (closed) return;
               addRecentlyPlayed({ id: g.id, game: g, route: g.route, tokenId: g.tokenId });
               trackRecentGame(g.lobbyKey ?? g.id, g.name);
-              if (g.tokenId) setAccessToken(g.tokenId, "open");
-              setLocation(g.route);
+              const def = GAMES[g.id];
+              if (def) {
+                enter(def, live?.hasPassword ?? false);
+              } else {
+                if (g.tokenId) setAccessToken(g.tokenId, "open");
+                setLocation(g.route);
+              }
             }} />
           );
         })}

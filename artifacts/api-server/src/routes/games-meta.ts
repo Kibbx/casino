@@ -10,6 +10,7 @@ export interface GameMeta {
   minBet: number;
   maxBet: number;
   status: "open" | "live" | "closed";
+  hasPassword: boolean;
 }
 
 router.get("/", async (_req, res) => {
@@ -36,48 +37,56 @@ router.get("/", async (_req, res) => {
       minBet: int("rouletteMinBet", 50),
       maxBet: int("rouletteMaxBet", 5000),
       status: bool("rouletteEnabled", false) ? "live" : "open",
+      hasPassword: !!s["roulettePassword"],
     },
     baccarat: {
       currentPlayers: count("baccarat"),
       minBet: int("baccaratMinBet", 100),
       maxBet: int("baccaratMaxBet", 10000),
       status: "open",
+      hasPassword: !!s["baccaratPassword"],
     },
     highlow: {
       currentPlayers: count("high-low"),
       minBet: int("highlowMinBet", 100),
       maxBet: int("highlowMaxBet", 50000),
       status: bool("highlowEnabled", true) ? "open" : "closed",
+      hasPassword: !!s["highlowPassword"],
     },
     mines: {
       currentPlayers: count("mines"),
       minBet: int("minesMinBet", 50),
       maxBet: int("minesMaxBet", 10000),
       status: bool("minesEnabled", false) ? "open" : "closed",
+      hasPassword: !!s["minesPassword"],
     },
     keno: {
       currentPlayers: count("keno"),
       minBet: int("kenoMinBet", 100),
       maxBet: int("kenoMaxBet", 50000),
       status: bool("kenoEnabled", false) ? "live" : "closed",
+      hasPassword: !!s["kenoPassword"],
     },
     "mob-tower": {
       currentPlayers: count("mob-tower"),
       minBet: int("mobTowerMinBet", 100),
       maxBet: int("mobTowerMaxBet", 50000),
       status: bool("mobTowerEnabled", false) ? "open" : "closed",
+      hasPassword: false,
     },
     fortuna: {
       currentPlayers: count("rome-slots"),
       minBet: int("slotsMinBet", 50),
       maxBet: int("slotsMaxBet", 5000),
       status: bool("slotsEnabled", false) ? "open" : "closed",
+      hasPassword: !!s["slotsPassword"],
     },
     "deadwood-dollars": {
       currentPlayers: count("western-slots"),
       minBet: int("slotsMinBet", 50),
       maxBet: int("slotsMaxBet", 5000),
       status: bool("slotsEnabled", false) ? "open" : "closed",
+      hasPassword: !!s["slotsPassword"],
     },
   };
 
