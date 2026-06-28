@@ -34,6 +34,7 @@ import { db, settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireBankerOrOwner } from "../middleware/auth.js";
 import { getActivePlayers } from "../lib/player-activity.js";
+import gamesMetaRouter from "./games-meta.js";
 
 const SERVER_START = Date.now();
 
@@ -135,6 +136,7 @@ router.use("/mob-tower", mobTowerRouter);
 router.use("/bingo", bingoRouter);
 router.use("/lottery", lotteryRouter);
 router.use("/challenges", challengesRouter);
+router.use("/games", gamesMetaRouter);
 
 // ── Player self-service kill switches (Banker-accessible) ──────────────────────
 router.get("/settings/player-controls", requireBankerOrOwner, async (_req, res) => {

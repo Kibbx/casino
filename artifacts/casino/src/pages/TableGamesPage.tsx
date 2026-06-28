@@ -6,6 +6,7 @@ import { setAccessToken } from "../lib/gamePasswordGuard";
 import { trackRecentGame } from "../lib/recentGames";
 import { addRecentlyPlayed } from "../lib/recentlyPlayed";
 import { Lock } from "lucide-react";
+import { useGamesMeta, formatBetRange } from "../lib/useGamesMeta";
 
 /* ─── Types ───────────────────────────────────────────────────────────── */
 export interface BJTable {
@@ -254,6 +255,7 @@ export function BJPasswordModal({ table, onClose, onSuccess }: {
 export function TableGamesPage() {
   const [, setLocation] = useLocation();
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+  const { meta: gamesMeta, loading: gamesLoading } = useGamesMeta();
 
   const [bjTables, setBjTables] = useState<BJTable[]>([]);
   const [loading, setLoading] = useState(true);
@@ -329,15 +331,24 @@ export function TableGamesPage() {
           </div>
         )}
 
-        {/* Static games */}
-        {tableGamesData.map((g, i) => (
-          <CatalogCard key={g.id} game={g} delay={`${-(openTables.length + i)}s`} onClick={() => {
-            addRecentlyPlayed({ id: g.id, game: g, route: g.route, tokenId: g.tokenId });
-            trackRecentGame(g.lobbyKey ?? g.id, g.name);
-            if (g.tokenId) setAccessToken(g.tokenId, "open");
-            setLocation(g.route);
-          }} />
-        ))}
+        {/* Static games — player counts + bet ranges from live API */}
+        {tableGamesData.map((g, i) => {
+          const live = gamesMeta[g.id];
+          const isLoading = gamesLoading && !live;
+          const game = {
+            ...g,
+            players: isLoading ? "…" : live ? `${live.currentPlayers} playing` : g.players,
+            betRange: isLoading ? undefined : live ? formatBetRange(live.minBet, live.maxBet) : g.betRange,
+          };
+          return (
+            <CatalogCard key={g.id} game={game} delay={`${-(openTables.length + i)}s`} onClick={() => {
+              addRecentlyPlayed({ id: g.id, game: g, route: g.route, tokenId: g.tokenId });
+              trackRecentGame(g.lobbyKey ?? g.id, g.name);
+              if (g.tokenId) setAccessToken(g.tokenId, "open");
+              setLocation(g.route);
+            }} />
+          );
+        })}
       </CardGrid>
     </PageWrapper>
   );
