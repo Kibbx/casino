@@ -104,7 +104,7 @@ export const miniGamesData: GameDef[] = [
     players: "Multiplayer", betRange: "$1 – $200",
     actionLabel: "Play Now", statusLabel: "LIVE DRAW", statusColor: "#ec4899",
     route: "/keno", tokenId: "keno",
-    image: `${IMGS}images/card-mini-games.png`,
+    image: `${IMGS}images/card-keno.png`,
     displayCategory: "MINI GAMES",
   },
   {
