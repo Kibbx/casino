@@ -110,14 +110,17 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             src={game.image}
             alt={game.name}
             style={{
+              display: "block",
               position: "absolute",
               inset: 0,
               width: "100%",
               height: "100%",
               objectFit: "cover",
               objectPosition: "center",
-              transform: hov ? "scale(1.07)" : "scale(1)",
-              transition: "transform 0.4s ease",
+              transform: hov ? "translateZ(0) scale(1.03)" : "translateZ(0) scale(1)",
+              transition: "transform 250ms ease",
+              willChange: "transform",
+              backfaceVisibility: "hidden",
             }}
           />
         )}
