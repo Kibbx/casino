@@ -12,7 +12,7 @@ export function SlotsPage() {
 
   return (
     <PageWrapper title="Slots" breadcrumb="Casino / Slots" accentColor="#a855f7">
-      <CardGrid>
+      <CardGrid minItemWidth={260} maxItemWidth={320}>
         {slotsData.map((g, i) => {
           const live = meta[g.id];
           const isLoading = loading && !live;
