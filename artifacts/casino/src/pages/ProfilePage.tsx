@@ -127,7 +127,7 @@ function creditLabel(score: number) {
 }
 
 interface PublicProfileData {
-  id: number; username: string; stateId: string | null; chips: number; avatarUrl: string | null;
+  id: number; username: string; stateId: string | null; avatarUrl: string | null;
   createdAt: string; referralCode: string | null; creditScore: number | null;
   wins: number; totalWon: number; handsPlayed: number; isOnline: boolean; currentGame: string | null;
   challengeStats: { completed: number; chipsEarned: number };
@@ -392,10 +392,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
   const displayUsername  = isViewing ? (pubData!.username ?? "Unknown Player") : player!.username;
   const displayAvatarUrl = isViewing ? (pubData!.avatarUrl ?? null) : avatarUrl;
 
-  // Live chips from socket (own profile), or static chips from public API
-  const chips = isViewing
-    ? Number(pubData!.chips ?? 0)
-    : (liveChips ?? Number(player!.chips ?? 0));
+  // Live chips from socket — own profile only; never read from public API (not returned)
+  const chips = isViewing ? null : (liveChips ?? Number(player!.chips ?? 0));
   const roundsPlayed = isViewing ? Number(pubData!.handsPlayed ?? 0) : (player!.handsPlayed ?? 0);
 
   // Transaction-derived stats
@@ -426,7 +424,7 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
     ["Stat ID",      pStateId ? `#${pStateId}` : "—"],
     ...(pReferral ? [["Referral", pReferral] as [string, string]] : []),
     ...(cs !== undefined ? [["Credit Score", `${cs} — ${csInfo!.label}`, "credit"] as [string, string, string]] : []),
-    ["Chips", fmt(chips), "gold"],
+    ...(chips !== null ? [["Chips", fmt(chips), "gold"] as [string, string, string]] : []),
   ];
 
   const currentRtp = isViewing

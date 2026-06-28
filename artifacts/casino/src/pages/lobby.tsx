@@ -497,10 +497,6 @@ export function Lobby() {
                   )}
                   {playerResults.map((p, idx) => {
                     const initials = (p.username ?? "?").charAt(0).toUpperCase();
-                    const fmtChips = (n: number | null | undefined) => {
-                      const num = typeof n === "number" ? n : Number(n ?? 0) || 0;
-                      return num >= 1_000_000 ? `${(num / 1_000_000).toFixed(1)}M` : num >= 1_000 ? `${(num / 1_000).toFixed(0)}K` : String(num);
-                    };
                     return (
                       <button
                         key={p.id}
@@ -542,8 +538,8 @@ export function Lobby() {
                             </span>
                           )}
                         </div>
-                        {/* Chips */}
-                        <span style={{ color: "#f5c518", fontSize: 11, fontWeight: 700, flexShrink: 0 }}>{fmtChips(p.chips)}</span>
+                        {/* Online indicator dot (right-aligned) */}
+                        <div style={{ width: 7, height: 7, borderRadius: "50%", flexShrink: 0, background: p.isOnline ? "#22c55e" : "rgba(255,255,255,0.15)", boxShadow: p.isOnline ? "0 0 5px rgba(34,197,94,0.6)" : "none" }} />
                       </button>
                     );
                   })}
