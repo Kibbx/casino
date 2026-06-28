@@ -94,9 +94,17 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
   return (
     <div
       className={`rounded-2xl overflow-hidden neon-card ${game.neonClass}`}
-      style={{ "--pulse-delay": delay, width: "100%", minWidth: 0, height: "100%", display: "flex", flexDirection: "column", cursor: closed ? "not-allowed" : (handleClick ? "pointer" : "default"), opacity: closed ? 0.5 : 1 } as React.CSSProperties}
+      style={{
+        "--pulse-delay": delay,
+        width: "100%", minWidth: 0, height: "100%",
+        display: "flex", flexDirection: "column",
+        cursor: closed ? "not-allowed" : (handleClick ? "pointer" : "default"),
+        opacity: closed ? 0.55 : 1,
+        filter: closed ? "grayscale(0.55)" : "none",
+        transition: "opacity 0.2s, filter 0.2s",
+      } as React.CSSProperties}
       onClick={handleClick}
-      onMouseEnter={() => setHov(true)}
+      onMouseEnter={() => { if (!closed) setHov(true); }}
       onMouseLeave={() => setHov(false)}
     >
       {/* Artwork header */}
@@ -149,8 +157,35 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             transition: "opacity 0.2s",
           }}
         />
+        {/* Closed dark overlay — dims the image further when a game is unavailable */}
+        {closed && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: "rgba(0,0,0,0.45)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <span
+              style={{
+                fontFamily: "'Orbitron', sans-serif",
+                fontSize: 13,
+                fontWeight: 900,
+                letterSpacing: "0.18em",
+                color: "#ef4444",
+                textShadow: "0 0 12px rgba(239,68,68,0.6)",
+                textTransform: "uppercase",
+              }}
+            >
+              CLOSED
+            </span>
+          </div>
+        )}
         {/* Ghost watermark text — only shown when there is no artwork image */}
-        {!game.image && (
+        {!game.image && !closed && (
           <div
             className="absolute inset-0 flex items-center justify-center select-none"
             style={{
@@ -173,7 +208,9 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             left: "15%",
             right: "15%",
             height: 1,
-            background: `linear-gradient(90deg, transparent, ${game.neonColor}66, transparent)`,
+            background: closed
+              ? "linear-gradient(90deg, transparent, rgba(239,68,68,0.4), transparent)"
+              : `linear-gradient(90deg, transparent, ${game.neonColor}66, transparent)`,
             opacity: hov ? 1 : 0.4,
             transition: "opacity 0.2s",
           }}
@@ -218,7 +255,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
       <div className="px-4 py-3" style={{ background: "#0c0a0a", flex: 1, display: "flex", flexDirection: "column" }}>
         <h3
           className="font-rajdhani font-black text-base uppercase tracking-wider mb-0.5 text-center"
-          style={{ color: "#f0f0f0" }}
+          style={{ color: closed ? "rgba(255,255,255,0.4)" : "#f0f0f0" }}
         >
           {game.name}
         </h3>
@@ -238,17 +275,19 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
         )}
 
         <button
+          disabled={closed}
           className="w-full py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-150"
           style={{
             marginTop: "auto",
-            background: closed ? "rgba(255,255,255,0.04)" : (hov ? game.neonColor : "transparent"),
-            color: closed ? "rgba(255,255,255,0.28)" : (hov ? "#060404" : game.neonColor),
-            border: `1px solid ${closed ? "rgba(255,255,255,0.12)" : game.neonColor + "55"}`,
+            background: closed ? "rgba(239,68,68,0.08)" : (hov ? game.neonColor : "transparent"),
+            color: closed ? "#ef4444" : (hov ? "#060404" : game.neonColor),
+            border: `1px solid ${closed ? "rgba(239,68,68,0.3)" : game.neonColor + "55"}`,
             boxShadow: !closed && hov ? `0 0 16px ${game.neonColor}55` : "none",
             cursor: closed ? "not-allowed" : "pointer",
+            opacity: closed ? 0.7 : 1,
           }}
         >
-          {closed ? "Unavailable" : (game.actionLabel ?? "Play Now")}
+          {closed ? "CLOSED" : (game.actionLabel ?? "Play Now")}
         </button>
       </div>
     </div>

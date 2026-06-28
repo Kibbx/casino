@@ -25,6 +25,22 @@ export interface BJTable {
 
 const IMGS = import.meta.env.BASE_URL;
 
+/* ─── Static CLOSED card shown when BJ is disabled or has no open tables ── */
+const BJ_CLOSED_GAME: CatalogGame = {
+  id: "blackjack",
+  name: "Blackjack",
+  description: "No tables are currently open.",
+  gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)",
+  neonClass: "neon-green",
+  neonColor: "#39ff14",
+  badge: "BLACKJACK",
+  actionLabel: "Join Table",
+  statusLabel: "CLOSED",
+  statusColor: "#ef4444",
+  image: `${IMGS}images/card-blackjack.webp`,
+  disabled: true,
+};
+
 /* ─── Theme config ────────────────────────────────────────────────────── */
 const THEME_CFG = {
   velvet:  { gradient: "linear-gradient(135deg, #0a1f0a 0%, #0d2e0d 60%, #174e17 100%)", neonClass: "neon-green",  neonColor: "#39ff14", label: "Classic" },
@@ -295,7 +311,12 @@ export function TableGamesPage() {
     }
   };
 
-  const openTables = bjTables.filter(t => t.isOpen);
+  const bjMeta     = gamesMeta["blackjack"];
+  // Admin has explicitly disabled blackjack when the setting is "false"
+  const bjAdminOff = !gamesLoading && bjMeta?.status === "closed";
+  const openTables = bjAdminOff ? [] : bjTables.filter(t => t.isOpen);
+  // Show a CLOSED card when: admin disabled, OR tables loaded with none open
+  const showBJClosed = !loading && !error && (bjAdminOff || openTables.length === 0);
 
   return (
     <PageWrapper title="Table Games" breadcrumb="Casino / Table Games" accentColor="#39ff14">
@@ -309,7 +330,7 @@ export function TableGamesPage() {
         />
       )}
 
-      {/* Blackjack loading / error */}
+      {/* Blackjack loading */}
       {loading && (
         <p className="text-sm text-center mb-4" style={{ color: "rgba(255,255,255,0.28)" }}>Loading blackjack tables…</p>
       )}
@@ -318,16 +339,14 @@ export function TableGamesPage() {
       )}
 
       <CardGrid>
-        {/* Dynamic blackjack tables */}
+        {/* Dynamic blackjack tables — only shown when BJ is enabled + open */}
         {openTables.map((table, i) => (
           <BJTableCard key={table.id} table={table} onClick={() => handleBJClick(table)} delay={`${-i}s`} />
         ))}
 
-        {/* Empty state: no open BJ tables */}
-        {!loading && !error && openTables.length === 0 && (
-          <div className="text-sm py-2" style={{ color: "rgba(255,255,255,0.25)" }}>
-            No blackjack tables open right now.
-          </div>
+        {/* CLOSED blackjack card — shown when admin disabled or no open tables */}
+        {showBJClosed && (
+          <CatalogCard game={BJ_CLOSED_GAME} delay="0s" />
         )}
 
         {/* Static games — player counts + bet ranges from live API */}

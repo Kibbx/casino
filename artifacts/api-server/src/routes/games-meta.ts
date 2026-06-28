@@ -32,17 +32,27 @@ router.get("/", async (_req, res) => {
   const rouletteSubs = getRouletteSubscribers().length;
 
   const games: Record<string, GameMeta> = {
+    blackjack: {
+      currentPlayers: count("blackjack"),
+      minBet: int("blackjackMinBet", 100),
+      maxBet: int("blackjackMaxBet", 10000),
+      // Default true — blackjack is enabled unless explicitly set to "false"
+      status: bool("blackjackEnabled", true) ? "open" : "closed",
+      hasPassword: false,
+    },
     roulette: {
       currentPlayers: Math.max(count("roulette"), rouletteSubs),
       minBet: int("rouletteMinBet", 50),
       maxBet: int("rouletteMaxBet", 5000),
-      status: bool("rouletteEnabled", false) ? "live" : "open",
+      // When roulette is disabled it must be "closed", not "open"
+      status: bool("rouletteEnabled", false) ? "live" : "closed",
       hasPassword: !!s["roulettePassword"],
     },
     baccarat: {
       currentPlayers: count("baccarat"),
       minBet: int("baccaratMinBet", 100),
       maxBet: int("baccaratMaxBet", 10000),
+      // No separate baccaratEnabled setting — baccarat is always open
       status: "open",
       hasPassword: !!s["baccaratPassword"],
     },
