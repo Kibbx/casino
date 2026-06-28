@@ -104,23 +104,12 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
           background: game.gradient,
         }}
       >
-        {/* Themed artwork image — zoom is CSS-only (.card-art-img) to avoid
-            React re-render flicker and parent-filter stacking-context conflicts */}
-        {game.image && (
-          <img
-            src={game.image}
-            alt={game.name}
-            className="card-art-img"
-          />
-        )}
-        {/* Gradient colour tint overlay (maintains themed palette over the image) */}
+        {/* Gradient fill */}
         <div
           style={{
             position: "absolute",
             inset: 0,
             background: game.gradient,
-            opacity: game.image ? 0.38 : 1,
-            transition: "opacity 0.2s",
           }}
         />
         {/* Brightness lift on hover */}
