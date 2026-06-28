@@ -1123,6 +1123,35 @@
 @keyframes dl-pulse-left  { 0% { background-position: calc(100% + 100px) center; } 100% { background-position: -100px center; } }
 @keyframes dl-pulse-right { 0% { background-position: -100px center; } 100% { background-position: calc(100% + 100px) center; } }
 
+/* ── Section transition ──────────────────────────────────────────── */
+.section-content {
+  will-change: opacity, transform;
+  min-height: 100%;
+}
+.section-exit {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+  pointer-events: none;
+}
+@keyframes sectionEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.section-enter {
+  animation: sectionEnter 220ms ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-exit {
+    transform: none !important;
+    transition: opacity 160ms ease-out !important;
+  }
+  @keyframes sectionEnter {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .neon-card,

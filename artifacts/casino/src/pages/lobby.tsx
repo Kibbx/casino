@@ -161,8 +161,11 @@ export function Lobby() {
   const { enter, modalNode } = useGameLauncher();
   const isStaff = (playerStaffRoles?.length ?? 0) > 0;
 
-  const [collapsed,   setCollapsed]   = useState(false);
-  const [activeNav,   setActiveNav]   = useState("home");
+  const [collapsed,     setCollapsed]     = useState(false);
+  const [activeNav,     setActiveNav]     = useState("home");
+  const [displayedNav,  setDisplayedNav]  = useState("home");
+  const [sectionPhase,  setSectionPhase]  = useState<"idle"|"exit"|"enter">("idle");
+  const sectionTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const [hoveredNav,  setHoveredNav]  = useState<string | null>(null);
   const [volume,      setVolume]      = useState(75);
   const [muted,       setMuted]       = useState(false);
@@ -203,6 +206,21 @@ export function Lobby() {
   const searchRef = useRef<HTMLDivElement>(null);
   const [playerResults, setPlayerResults] = useState<PlayerSearchResult[]>([]);
   const [viewedPlayerId, setViewedPlayerId] = useState<number | null>(null);
+
+  // ── Section transition state machine ─────────────────────────────────────
+  useEffect(() => {
+    if (activeNav === displayedNav) return;
+    sectionTimers.current.forEach(clearTimeout);
+    setSectionPhase("exit");
+    sectionTimers.current = [
+      setTimeout(() => {
+        setDisplayedNav(activeNav);
+        setSectionPhase("enter");
+      }, 160),
+      setTimeout(() => setSectionPhase("idle"), 400),
+    ];
+    return () => sectionTimers.current.forEach(clearTimeout);
+  }, [activeNav]);
 
   // Debounced player search against the API
   useEffect(() => {
@@ -648,10 +666,11 @@ export function Lobby() {
 
         {/* ── Main ── */}
         <main className="flex-1 overflow-y-auto relative" style={{ background: "#060404", outline: "none" }} tabIndex={-1} onFocus={(e) => e.currentTarget.blur()}>
-          {activeNav === "player-profile" && viewedPlayerId !== null && (
+          <div className={`section-content${sectionPhase === "exit" ? " section-exit" : sectionPhase === "enter" ? " section-enter" : ""}`}>
+          {displayedNav === "player-profile" && viewedPlayerId !== null && (
             <ProfilePage viewedPlayerId={viewedPlayerId} onBack={() => { setActiveNav("home"); setLocation("/lobby"); }} />
           )}
-          {activeNav === "home" && (
+          {displayedNav === "home" && (
             <>
               <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
                 <div className="absolute top-0 left-1/4 w-[600px] h-[300px] rounded-full opacity-[0.03]" style={{ background: "radial-gradient(ellipse, #a855f7 0%, transparent 70%)", filter: "blur(40px)" }} />
@@ -724,29 +743,30 @@ export function Lobby() {
               </div>
             </>
           )}
-          {activeNav === "table-games"   && <TableGamesPage />}
-          {activeNav === "mini-games"    && <MiniGamesPage />}
-          {activeNav === "slots"         && <SlotsPage />}
-          {activeNav === "poker"         && <PokerPage />}
-          {activeNav === "sportsbook"    && <SportsbookPage />}
-          {activeNav === "tournaments"   && <TournamentsPage />}
-          {activeNav === "lottery"       && <LotteryPage />}
-          {activeNav === "bingo"         && <BingoPage />}
-          {activeNav === "rewards"       && <RewardsPage />}
-          {activeNav === "challenges"    && <ChallengesPage />}
-          {activeNav === "leaderboards"  && <LeaderboardsPage />}
-          {activeNav === "marketplace"   && <MarketplacePage />}
-          {activeNav === "profile"       && <ProfilePage />}
-          {activeNav === "staff"         && <StaffPage />}
-          {activeNav === "mkt-home"          && <MktComingSoon title="Home"           />}
-          {activeNav === "mkt-item-listings"  && <MktComingSoon title="Item Listings"  />}
-          {activeNav === "mkt-trades"         && <MktComingSoon title="Trades"         />}
-          {activeNav === "mkt-sales-history"  && <MktComingSoon title="Sales History"  />}
-          {activeNav === "mkt-stall-settings" && <MktComingSoon title="Stall Settings" />}
-          {activeNav === "mkt-trending"       && <MktComingSoon title="Trending"       />}
-          {activeNav === "mkt-shops"          && <MktComingSoon title="Shops"          />}
-          {activeNav === "mkt-inventory"      && <MktComingSoon title="Inventory"      />}
-          {activeNav === "mkt-profile"        && <MktComingSoon title="Profile"        />}
+          {displayedNav === "table-games"   && <TableGamesPage />}
+          {displayedNav === "mini-games"    && <MiniGamesPage />}
+          {displayedNav === "slots"         && <SlotsPage />}
+          {displayedNav === "poker"         && <PokerPage />}
+          {displayedNav === "sportsbook"    && <SportsbookPage />}
+          {displayedNav === "tournaments"   && <TournamentsPage />}
+          {displayedNav === "lottery"       && <LotteryPage />}
+          {displayedNav === "bingo"         && <BingoPage />}
+          {displayedNav === "rewards"       && <RewardsPage />}
+          {displayedNav === "challenges"    && <ChallengesPage />}
+          {displayedNav === "leaderboards"  && <LeaderboardsPage />}
+          {displayedNav === "marketplace"   && <MarketplacePage />}
+          {displayedNav === "profile"       && <ProfilePage />}
+          {displayedNav === "staff"         && <StaffPage />}
+          {displayedNav === "mkt-home"          && <MktComingSoon title="Home"           />}
+          {displayedNav === "mkt-item-listings"  && <MktComingSoon title="Item Listings"  />}
+          {displayedNav === "mkt-trades"         && <MktComingSoon title="Trades"         />}
+          {displayedNav === "mkt-sales-history"  && <MktComingSoon title="Sales History"  />}
+          {displayedNav === "mkt-stall-settings" && <MktComingSoon title="Stall Settings" />}
+          {displayedNav === "mkt-trending"       && <MktComingSoon title="Trending"       />}
+          {displayedNav === "mkt-shops"          && <MktComingSoon title="Shops"          />}
+          {displayedNav === "mkt-inventory"      && <MktComingSoon title="Inventory"      />}
+          {displayedNav === "mkt-profile"        && <MktComingSoon title="Profile"        />}
+          </div>
         </main>
       </div>
 
