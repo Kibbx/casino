@@ -80,6 +80,7 @@ export interface CatalogGame {
   actionLabel?: string;
   statusLabel?: string;
   statusColor?: string;
+  image?: string;
 }
 
 export function CatalogCard({ game, delay = "0s", route, onClick }: { game: CatalogGame; delay?: string; route?: string; onClick?: () => void }) {
@@ -94,43 +95,96 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
-      {/* Gradient image area */}
+      {/* Artwork header */}
       <div
         style={{
-          height: 128,
-          background: game.gradient,
+          height: 140,
           position: "relative",
           overflow: "hidden",
-          transition: "filter 0.2s",
-          filter: hov ? "brightness(1.2)" : "brightness(1)",
+          background: game.gradient,
         }}
       >
+        {/* Themed artwork image */}
+        {game.image && (
+          <img
+            src={game.image}
+            alt={game.name}
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center",
+              transform: hov ? "scale(1.07)" : "scale(1)",
+              transition: "transform 0.4s ease",
+            }}
+          />
+        )}
+        {/* Gradient colour tint overlay (maintains themed palette over the image) */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: game.gradient,
+            opacity: game.image ? 0.38 : 1,
+            transition: "opacity 0.2s",
+          }}
+        />
+        {/* Brightness lift on hover */}
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(255,255,255,0.06)",
+            opacity: hov ? 1 : 0,
+            transition: "opacity 0.2s",
+          }}
+        />
+        {/* Ghost watermark text */}
         <div
           className="absolute inset-0 flex items-center justify-center select-none"
           style={{
             fontFamily: "'Orbitron', sans-serif",
-            fontSize: 52,
+            fontSize: 46,
             fontWeight: 900,
-            color: `${game.neonColor}14`,
+            color: game.image ? `${game.neonColor}1a` : `${game.neonColor}22`,
             letterSpacing: "0.04em",
+            pointerEvents: "none",
           }}
         >
           {game.name.split(" ")[0].toUpperCase()}
         </div>
+        {/* Bottom fade into card body */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-16"
-          style={{ background: "linear-gradient(transparent, rgba(10,8,8,0.9))" }}
+          className="absolute bottom-0 left-0 right-0"
+          style={{ height: 56, background: "linear-gradient(transparent, rgba(10,8,8,0.95))" }}
         />
+        {/* Neon edge glow along bottom */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: "15%",
+            right: "15%",
+            height: 1,
+            background: `linear-gradient(90deg, transparent, ${game.neonColor}66, transparent)`,
+            opacity: hov ? 1 : 0.4,
+            transition: "opacity 0.2s",
+          }}
+        />
+        {/* Badge top-left */}
         <div className="absolute top-2 left-2 flex gap-1.5">
           {game.badge && (
             <span
               className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest"
-              style={{ background: game.badgeColor ?? game.neonColor, color: "#fff" }}
+              style={{ background: game.badgeColor ?? game.neonColor, color: "#fff", boxShadow: `0 0 8px ${game.badgeColor ?? game.neonColor}88` }}
             >
               {game.badge}
             </span>
           )}
         </div>
+        {/* Status pill top-right */}
         {game.statusLabel && (
           <div className="absolute top-2 right-2">
             <span

@@ -73,7 +73,7 @@ export const tableGamesData: GameDef[] = [
     players: "16 playing", betRange: "$1 – $200",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#06b6d4",
     route: "/high-low", tokenId: "highlow",
-    image: `${IMGS}images/mini-games.png`, gameKey: "highlow",
+    image: `${IMGS}images/card-mini-games.png`, gameKey: "highlow",
     displayCategory: "TABLE GAMES",
   },
 ];
@@ -104,7 +104,7 @@ export const miniGamesData: GameDef[] = [
     players: "Multiplayer", betRange: "$1 – $200",
     actionLabel: "Play Now", statusLabel: "LIVE DRAW", statusColor: "#ec4899",
     route: "/keno", tokenId: "keno",
-    image: `${IMGS}images/mini-games.png`,
+    image: `${IMGS}images/card-mini-games.png`,
     displayCategory: "MINI GAMES",
   },
   {
@@ -129,7 +129,7 @@ export const miniGamesData: GameDef[] = [
     players: "Solo", betRange: "$2 – $50",
     actionLabel: "Open Case", statusLabel: "OPEN", statusColor: "#06b6d4",
     route: "/cases",
-    image: `${IMGS}images/mini-games.png`,
+    image: `${IMGS}images/card-cases.webp`,
     displayCategory: "MINI GAMES",
   },
 ];
@@ -192,6 +192,7 @@ export const bingoData: GameDef[] = [
     players: "7 playing", betRange: "$2 – $20 / card",
     actionLabel: "Join Room", statusLabel: "LIVE", statusColor: "#22c55e",
     route: "/bingo", launchKey: "bingo",
+    image: `${IMGS}images/card-bingo.png`,
   },
   {
     id: "75ball",
@@ -202,6 +203,7 @@ export const bingoData: GameDef[] = [
     players: "12 playing", betRange: "$0.50 – $5 / card",
     actionLabel: "Join Room", statusLabel: "LIVE", statusColor: "#22c55e",
     route: "/bingo", launchKey: "bingo",
+    image: `${IMGS}images/card-bingo.png`,
   },
   {
     id: "pattern",
@@ -212,6 +214,7 @@ export const bingoData: GameDef[] = [
     players: "2 waiting", betRange: "$3 – $25 / card",
     actionLabel: "Join Room", statusLabel: "OPEN", statusColor: "#06b6d4",
     route: "/bingo", launchKey: "bingo",
+    image: `${IMGS}images/card-bingo.png`,
   },
 ];
 
