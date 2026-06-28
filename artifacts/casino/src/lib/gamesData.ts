@@ -97,7 +97,7 @@ export const miniGamesData: GameDef[] = [
     description: "Pick your lucky numbers and watch the draw. The more you match, the more you win.",
     gradient: "linear-gradient(135deg, #0d0520 0%, #160930 60%, #1c0d40 100%)",
     neonClass: "neon-pink", neonColor: "#ec4899",
-    actionLabel: "Play Now", statusLabel: "LIVE DRAW", statusColor: "#ec4899",
+    actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#ec4899",
     route: "/keno", tokenId: "keno",
     image: `${IMGS}images/card-keno.png`,
     displayCategory: "MINI GAMES",
