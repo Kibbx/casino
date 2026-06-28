@@ -141,20 +141,22 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             transition: "opacity 0.2s",
           }}
         />
-        {/* Ghost watermark text */}
-        <div
-          className="absolute inset-0 flex items-center justify-center select-none"
-          style={{
-            fontFamily: "'Orbitron', sans-serif",
-            fontSize: 46,
-            fontWeight: 900,
-            color: game.image ? `${game.neonColor}1a` : `${game.neonColor}22`,
-            letterSpacing: "0.04em",
-            pointerEvents: "none",
-          }}
-        >
-          {game.name.split(" ")[0].toUpperCase()}
-        </div>
+        {/* Ghost watermark text — only shown when there is no artwork image */}
+        {!game.image && (
+          <div
+            className="absolute inset-0 flex items-center justify-center select-none"
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: 46,
+              fontWeight: 900,
+              color: `${game.neonColor}22`,
+              letterSpacing: "0.04em",
+              pointerEvents: "none",
+            }}
+          >
+            {game.name.split(" ")[0].toUpperCase()}
+          </div>
+        )}
         {/* Bottom fade into card body */}
         <div
           className="absolute bottom-0 left-0 right-0"
