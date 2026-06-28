@@ -121,7 +121,7 @@ export const miniGamesData: GameDef[] = [
     route: "/mob-tower",
     image: `${IMGS}images/card-mob-tower.png`, gameKey: "mobtower",
     displayCategory: "MINI GAMES",
-    bgGlowAnim: true, bgTitle: "MOB TOWER", bgTheme: "mob-tower",
+    bgGlowAnim: true, bgTheme: "mob-tower",
   },
   {
     id: "case-opening",
@@ -134,7 +134,7 @@ export const miniGamesData: GameDef[] = [
     route: "/cases",
     image: `${IMGS}images/card-cases.webp`,
     displayCategory: "MINI GAMES",
-    bgGlowAnim: true, bgTitle: "CASES", bgTheme: "cases",
+    bgGlowAnim: true, bgTheme: "cases",
   },
 ];
 

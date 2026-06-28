@@ -66,58 +66,36 @@ export function PageWrapper({
 }
 
 /* ── Mini Games themed backgrounds ────────────────────────────── */
-const MINI_PARTICLES: Record<string, Array<{ x: string; y: string; s: number; d: string; dur: string }>> = {
-  mines: [
-    { x: "15%", y: "62%", s: 3, d: "0s",   dur: "6s"   },
-    { x: "35%", y: "78%", s: 2, d: "1.5s", dur: "8s"   },
-    { x: "58%", y: "52%", s: 4, d: "0.8s", dur: "7s"   },
-    { x: "76%", y: "70%", s: 2, d: "2s",   dur: "9s"   },
-    { x: "88%", y: "84%", s: 3, d: "0.4s", dur: "5.5s" },
-    { x: "45%", y: "90%", s: 2, d: "3s",   dur: "7s"   },
-  ],
-  keno: [
-    { x: "10%", y: "65%", s: 3, d: "0s",   dur: "7s"   },
-    { x: "28%", y: "74%", s: 2, d: "1s",   dur: "9s"   },
-    { x: "52%", y: "80%", s: 4, d: "2s",   dur: "6s"   },
-    { x: "70%", y: "60%", s: 2, d: "0.5s", dur: "8s"   },
-    { x: "90%", y: "70%", s: 3, d: "1.5s", dur: "7s"   },
-    { x: "40%", y: "88%", s: 2, d: "3.5s", dur: "8.5s" },
-  ],
-  "mob-tower": [
-    { x: "20%", y: "88%", s: 3, d: "0s",   dur: "7s"   },
-    { x: "42%", y: "92%", s: 2, d: "1.2s", dur: "9s"   },
-    { x: "60%", y: "84%", s: 3, d: "0.7s", dur: "6s"   },
-    { x: "78%", y: "90%", s: 2, d: "2.5s", dur: "8s"   },
-    { x: "92%", y: "93%", s: 4, d: "0.3s", dur: "10s"  },
-    { x: "12%", y: "95%", s: 2, d: "4s",   dur: "7.5s" },
-  ],
-  cases: [
-    { x: "12%", y: "62%", s: 3, d: "0.5s", dur: "8s"   },
-    { x: "30%", y: "74%", s: 2, d: "0s",   dur: "7s"   },
-    { x: "55%", y: "80%", s: 4, d: "1.8s", dur: "6s"   },
-    { x: "72%", y: "65%", s: 2, d: "1s",   dur: "9s"   },
-    { x: "85%", y: "78%", s: 3, d: "0.3s", dur: "7s"   },
-    { x: "48%", y: "90%", s: 2, d: "2.8s", dur: "8.5s" },
-  ],
+/* Fixed breathing glow dots per theme — no movement, opacity only */
+const MINI_GLOW_DOTS: Record<string, Array<{ x: string; y: string; s: number; d: string; dur: string }>> = {
+  mines:       [{ x:"30%",y:"36%",s:3,d:"0s",  dur:"6s"  },{x:"71%",y:"37%",s:2,d:"2.5s",dur:"7.5s"},{x:"91%",y:"70%",s:4,d:"4.5s",dur:"8s"}],
+  keno:        [{ x:"20%",y:"39%",s:4,d:"1s",  dur:"7s"  },{x:"86%",y:"59%",s:4,d:"0s",  dur:"8.5s"}],
+  "mob-tower": [{ x:"13%",y:"6%", s:2,d:"0s",  dur:"6s"  },{x:"87%",y:"5%", s:2,d:"3.5s",dur:"7s"}],
+  cases:       [{ x:"23%",y:"42%",s:2,d:"0.5s",dur:"7s"  },{x:"76%",y:"44%",s:2,d:"2s",  dur:"8s"  },{x:"50%",y:"18%",s:3,d:"4s",dur:"6.5s"}],
 };
 
 function MinesSvg({ c }: { c: string }) {
   return (
     <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <polygon points="150,20 175,55 150,90 125,55"    stroke={c} strokeWidth="1.5" fill={`${c}08`}/>
-      <polygon points="30,30 42,50 30,70 18,50"         stroke={c} strokeWidth="1"   fill={`${c}08`}/>
-      <polygon points="20,120 35,80 50,120"             stroke={c} strokeWidth="1"   fill={`${c}05`}/>
-      <polygon points="185,15 200,30 195,50 178,40"     stroke={c} strokeWidth="1"   fill={`${c}08`}/>
-      <polygon points="195,118 210,95 220,124"          stroke={c} strokeWidth="0.8" fill={`${c}05`}/>
-      <polygon points="85,25 96,45 74,45"               stroke={c} strokeWidth="0.8" fill={`${c}06`}/>
-      <circle cx="70"  cy="40"  r="4" fill={c} opacity="0.38"/>
-      <circle cx="178" cy="100" r="6" fill={c} opacity="0.22"/>
-      <circle cx="112" cy="118" r="3" fill={c} opacity="0.28"/>
-      <circle cx="40"  cy="108" r="2" fill={c} opacity="0.2"/>
-      <circle cx="140" cy="30"  r="2" fill={c} opacity="0.3"/>
-      <line x1="10"  y1="95" x2="60"  y2="95" stroke={c} strokeWidth="0.5" opacity="0.4"/>
-      <line x1="160" y1="110" x2="215" y2="110" stroke={c} strokeWidth="0.5" opacity="0.3"/>
-      <line x1="0"   y1="60" x2="25"  y2="35"  stroke={c} strokeWidth="0.5" opacity="0.25"/>
+      <g stroke={c} strokeWidth="0.4" opacity="0.38">
+        <line x1="55"  y1="0"  x2="55"  y2="140"/>
+        <line x1="110" y1="0"  x2="110" y2="140"/>
+        <line x1="165" y1="0"  x2="165" y2="140"/>
+        <line x1="0"   y1="46" x2="220" y2="46"/>
+        <line x1="0"   y1="92" x2="220" y2="92"/>
+      </g>
+      <polygon points="155,18 180,52 155,86 130,52" stroke={c} strokeWidth="1.2" fill="none" opacity="0.72"/>
+      <polygon points="24,28 38,48 24,68 10,48"     stroke={c} strokeWidth="0.9" fill="none" opacity="0.58"/>
+      <polygon points="200,98 212,116 200,134 188,116" stroke={c} strokeWidth="0.8" fill="none" opacity="0.52"/>
+      <g stroke={c} strokeWidth="0.9" opacity="0.7">
+        <line x1="66" y1="46" x2="66" y2="54"/>
+        <line x1="62" y1="50" x2="70" y2="50"/>
+      </g>
+      <circle cx="66" cy="50" r="1.5" fill={c} opacity="0.55"/>
+      <g stroke={c} strokeWidth="0.8" opacity="0.58">
+        <line x1="188" y1="27" x2="188" y2="33"/>
+        <line x1="185" y1="30" x2="191" y2="30"/>
+      </g>
     </svg>
   );
 }
@@ -125,18 +103,16 @@ function MinesSvg({ c }: { c: string }) {
 function KenoSvg({ c }: { c: string }) {
   return (
     <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <circle cx="40"  cy="50"  r="22" stroke={c}       strokeWidth="1.5" fill={`${c}08`}/>
-      <circle cx="120" cy="30"  r="18" stroke={c}       strokeWidth="1"   fill={`${c}08`}/>
-      <circle cx="190" cy="80"  r="25" stroke={c}       strokeWidth="1.5" fill={`${c}06`}/>
-      <circle cx="85"  cy="110" r="15" stroke="#9333ea" strokeWidth="1"   fill="#9333ea08"/>
-      <circle cx="180" cy="25"  r="12" stroke="#9333ea" strokeWidth="0.8" fill="none" opacity="0.5"/>
-      <circle cx="155" cy="118" r="10" stroke={c}       strokeWidth="0.8" fill="none" opacity="0.4"/>
-      <text x="27"  y="55"  fontSize="13" fill={c}       opacity="0.5"  fontFamily="monospace" fontWeight="bold">07</text>
-      <text x="112" y="35"  fontSize="11" fill={c}       opacity="0.45" fontFamily="monospace" fontWeight="bold">23</text>
-      <text x="178" y="85"  fontSize="15" fill={c}       opacity="0.45" fontFamily="monospace" fontWeight="bold">41</text>
-      <text x="79"  y="115" fontSize="10" fill="#9333ea" opacity="0.45" fontFamily="monospace" fontWeight="bold">15</text>
-      <line x1="0"   y1="70"  x2="220" y2="70"  stroke={c}       strokeWidth="0.3" opacity="0.2"/>
-      <line x1="110" y1="0"   x2="110" y2="140" stroke="#9333ea" strokeWidth="0.3" opacity="0.15"/>
+      <circle cx="44"  cy="54"  r="27" stroke={c}       strokeWidth="1.1" fill="none" opacity="0.72"/>
+      <circle cx="118" cy="32"  r="21" stroke={c}       strokeWidth="0.9" fill="none" opacity="0.62"/>
+      <circle cx="188" cy="82"  r="28" stroke={c}       strokeWidth="1.1" fill="none" opacity="0.56"/>
+      <circle cx="82"  cy="114" r="17" stroke="#9333ea" strokeWidth="0.9" fill="none" opacity="0.55"/>
+      <circle cx="188" cy="82"  r="38" stroke={c}       strokeWidth="0.4" fill="none" opacity="0.28"/>
+      <circle cx="188" cy="82"  r="48" stroke={c}       strokeWidth="0.3" fill="none" opacity="0.16"/>
+      <text x="34"  y="59"  fontSize="12" fill={c}       opacity="0.55" fontFamily="monospace" fontWeight="bold">07</text>
+      <text x="109" y="37"  fontSize="10" fill={c}       opacity="0.5"  fontFamily="monospace" fontWeight="bold">23</text>
+      <text x="177" y="87"  fontSize="13" fill={c}       opacity="0.48" fontFamily="monospace" fontWeight="bold">41</text>
+      <text x="75"  y="119" fontSize="9"  fill="#9333ea" opacity="0.48" fontFamily="monospace" fontWeight="bold">15</text>
     </svg>
   );
 }
@@ -144,18 +120,17 @@ function KenoSvg({ c }: { c: string }) {
 function MobTowerSvg({ c }: { c: string }) {
   return (
     <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <rect x="90" y="10" width="40"  height="8" rx="1" fill={c} opacity="0.3"/>
-      <rect x="80" y="25" width="60"  height="8" rx="1" fill={c} opacity="0.25"/>
-      <rect x="70" y="40" width="80"  height="8" rx="1" fill={c} opacity="0.2"/>
-      <rect x="60" y="55" width="100" height="8" rx="1" fill={c} opacity="0.15"/>
-      <rect x="50" y="70" width="120" height="8" rx="1" fill={c} opacity="0.1"/>
-      <rect x="30"  y="0"  width="2"   height="140" fill={c} opacity="0.14"/>
-      <rect x="185" y="0"  width="2"   height="140" fill={c} opacity="0.11"/>
-      <rect x="108" y="85" width="1.5" height="55"  fill={c} opacity="0.22"/>
-      <rect x="68"  y="115" width="1" height="25"   fill={c} opacity="0.15"/>
-      <rect x="148" y="110" width="1" height="30"   fill={c} opacity="0.15"/>
-      <rect x="0"   y="90" width="22" height="50"   fill={c} opacity="0.07"/>
-      <rect x="196" y="80" width="24" height="60"   fill={c} opacity="0.07"/>
+      <rect x="95" y="14" width="30"  height="6" rx="1" fill={c} opacity="0.55"/>
+      <rect x="88" y="26" width="44"  height="6" rx="1" fill={c} opacity="0.46"/>
+      <rect x="81" y="38" width="58"  height="6" rx="1" fill={c} opacity="0.38"/>
+      <rect x="74" y="50" width="72"  height="6" rx="1" fill={c} opacity="0.3"/>
+      <rect x="67" y="62" width="86"  height="6" rx="1" fill={c} opacity="0.22"/>
+      <rect x="60" y="74" width="100" height="6" rx="1" fill={c} opacity="0.15"/>
+      <rect x="28"  y="0"  width="1.5" height="140" fill={c} opacity="0.22"/>
+      <rect x="190" y="0"  width="1.5" height="140" fill={c} opacity="0.18"/>
+      <rect x="109" y="83" width="1"   height="57"  fill={c} opacity="0.32"/>
+      <rect x="0"   y="100" width="20" height="40"  fill={c} opacity="0.09"/>
+      <rect x="196" y="92"  width="24" height="48"  fill={c} opacity="0.09"/>
     </svg>
   );
 }
@@ -163,26 +138,26 @@ function MobTowerSvg({ c }: { c: string }) {
 function CasesSvg({ c }: { c: string }) {
   return (
     <svg viewBox="0 0 220 140" fill="none" style={{ width: "100%", height: "100%" }}>
-      <rect x="20"  y="30" width="50" height="50" rx="2" stroke={c}       strokeWidth="1.2" fill={`${c}06`}/>
-      <line x1="20" y1="55"  x2="70"  y2="55"  stroke={c} strokeWidth="0.5" opacity="0.4"/>
-      <line x1="45" y1="30"  x2="45"  y2="80"  stroke={c} strokeWidth="0.5" opacity="0.4"/>
-      <rect x="152" y="58" width="55" height="55" rx="2" stroke={c}       strokeWidth="1"   fill={`${c}05`}/>
-      <line x1="152" y1="85"  x2="207" y2="85"  stroke={c} strokeWidth="0.5" opacity="0.35"/>
-      <line x1="179" y1="58"  x2="179" y2="113" stroke={c} strokeWidth="0.5" opacity="0.35"/>
-      <rect x="95"  y="18" width="36" height="36" stroke="#0891b2" strokeWidth="1"   fill="none" opacity="0.55"/>
-      <rect x="105" y="28" width="36" height="36" stroke={c}       strokeWidth="0.8" fill="none" opacity="0.45"/>
-      <line x1="95"  y1="18" x2="105" y2="28" stroke={c} strokeWidth="0.6" opacity="0.45"/>
-      <line x1="131" y1="18" x2="141" y2="28" stroke={c} strokeWidth="0.6" opacity="0.45"/>
-      <line x1="95"  y1="54" x2="105" y2="64" stroke={c} strokeWidth="0.6" opacity="0.45"/>
-      <line x1="131" y1="54" x2="141" y2="64" stroke={c} strokeWidth="0.6" opacity="0.45"/>
-      <line x1="5"   y1="0"  x2="55"  y2="140" stroke={c}       strokeWidth="0.9" opacity="0.13"/>
-      <line x1="175" y1="0"  x2="225" y2="140" stroke="#0891b2" strokeWidth="0.9" opacity="0.1"/>
+      <rect x="18"  y="28" width="54" height="54" rx="2" stroke={c}       strokeWidth="1.1" fill="none" opacity="0.68"/>
+      <line x1="18" y1="55"  x2="72"  y2="55"  stroke={c} strokeWidth="0.6" opacity="0.52"/>
+      <line x1="45" y1="28"  x2="45"  y2="82"  stroke={c} strokeWidth="0.6" opacity="0.52"/>
+      <rect x="150" y="56" width="58" height="58" rx="2" stroke={c}       strokeWidth="1"   fill="none" opacity="0.58"/>
+      <line x1="150" y1="85"  x2="208" y2="85"  stroke={c} strokeWidth="0.5" opacity="0.44"/>
+      <line x1="179" y1="56"  x2="179" y2="114" stroke={c} strokeWidth="0.5" opacity="0.44"/>
+      <rect x="92"  y="16" width="38" height="38" stroke="#0891b2" strokeWidth="1"   fill="none" opacity="0.62"/>
+      <rect x="102" y="26" width="38" height="38" stroke={c}       strokeWidth="0.8" fill="none" opacity="0.5"/>
+      <line x1="92"  y1="16" x2="102" y2="26" stroke={c} strokeWidth="0.6" opacity="0.5"/>
+      <line x1="130" y1="16" x2="140" y2="26" stroke={c} strokeWidth="0.6" opacity="0.5"/>
+      <line x1="92"  y1="54" x2="102" y2="64" stroke={c} strokeWidth="0.6" opacity="0.5"/>
+      <line x1="130" y1="54" x2="140" y2="64" stroke={c} strokeWidth="0.6" opacity="0.5"/>
+      <line x1="0"   y1="0"  x2="38"  y2="140" stroke={c}       strokeWidth="0.8" opacity="0.16"/>
+      <line x1="178" y1="0"  x2="220" y2="95"  stroke="#0891b2" strokeWidth="0.8" opacity="0.13"/>
     </svg>
   );
 }
 
 function MiniGameBg({ theme, color }: { theme: string; color: string }) {
-  const particles = MINI_PARTICLES[theme] ?? [];
+  const dots = MINI_GLOW_DOTS[theme] ?? [];
   const ill =
     theme === "mines"     ? <MinesSvg c={color} />     :
     theme === "keno"      ? <KenoSvg c={color} />      :
@@ -190,32 +165,33 @@ function MiniGameBg({ theme, color }: { theme: string; color: string }) {
     theme === "cases"     ? <CasesSvg c={color} />     : null;
   return (
     <>
-      {/* Themed SVG illustration: blurred into soft glowing shapes */}
+      {/* Themed SVG: slight blur softens edges, breathing animation varies opacity */}
       {ill && (
-        <div style={{ position: "absolute", inset: 0, opacity: 0.12, filter: "blur(9px)", pointerEvents: "none" }}>
+        <div className="mini-bg-illus" style={{ position: "absolute", inset: 0, filter: "blur(4px)", pointerEvents: "none" }}>
           {ill}
         </div>
       )}
-      {/* Radial depth glow */}
+      {/* Radial depth glow from center */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
-        background: `radial-gradient(ellipse 80% 60% at 50% 38%, ${color}1c 0%, transparent 70%)`,
+        background: `radial-gradient(ellipse 75% 55% at 50% 40%, ${color}18 0%, transparent 70%)`,
       }} />
-      {/* Subtle grid noise */}
+      {/* Very subtle grid texture */}
       <div style={{
         position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: `linear-gradient(${color}09 1px, transparent 1px), linear-gradient(90deg, ${color}09 1px, transparent 1px)`,
-        backgroundSize: "8px 8px",
+        backgroundImage: `linear-gradient(${color}07 1px, transparent 1px), linear-gradient(90deg, ${color}07 1px, transparent 1px)`,
+        backgroundSize: "10px 10px",
       }} />
-      {/* Drifting particles */}
-      {particles.map((p, i) => (
-        <div key={i} className="mini-particle" style={{
+      {/* Fixed-position glow dots — opacity breathing only, no movement */}
+      {dots.map((p, i) => (
+        <div key={i} className="mini-glow-dot" style={{
           left: p.x, top: p.y, width: p.s, height: p.s,
           background: color, animationDelay: p.d, animationDuration: p.dur,
+          boxShadow: `0 0 ${p.s * 3}px ${color}`,
         }} />
       ))}
-      {/* Top-edge shine sweep */}
-      <div className="mini-border-shine" style={{ "--shine-c": color } as React.CSSProperties} />
+      {/* Hover shimmer — appears only on card hover */}
+      <div className="mini-hover-shimmer" />
     </>
   );
 }
