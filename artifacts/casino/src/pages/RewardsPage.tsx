@@ -19,7 +19,7 @@ const AVAILABLE_REWARDS = [
 
 interface Toast { msg: string; ok: boolean; key: number }
 
-export function RewardsPage() {
+export function RewardsPage({ rpBalance = 0 }: { rpBalance?: number }) {
   const { playerId, sessionToken } = useStore();
   const { chips: liveChips } = usePlayerSocket(playerId ?? null, sessionToken);
 
@@ -91,7 +91,7 @@ export function RewardsPage() {
           <div className="ml-auto text-right">
             <p className="text-[10px] uppercase tracking-widest mb-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>Reward Points</p>
             <p className="text-2xl font-black tabular-nums" style={{ color: "#f5c518", fontFamily: "'Orbitron', sans-serif" }}>
-              {state.points.toLocaleString()}
+              {rpBalance.toLocaleString()}
             </p>
           </div>
           <div className="text-right">

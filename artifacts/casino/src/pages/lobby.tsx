@@ -767,7 +767,7 @@ export function Lobby() {
           {displayedNav === "tournaments"   && <TournamentsPage />}
           {displayedNav === "lottery"       && <LotteryPage />}
           {displayedNav === "bingo"         && <BingoPage />}
-          {displayedNav === "rewards"       && <RewardsPage />}
+          {displayedNav === "rewards"       && <RewardsPage rpBalance={rpBalance} />}
           {displayedNav === "challenges"    && <ChallengesPage />}
           {displayedNav === "leaderboards"  && <LeaderboardsPage />}
           {displayedNav === "marketplace"   && <MarketplacePage />}
