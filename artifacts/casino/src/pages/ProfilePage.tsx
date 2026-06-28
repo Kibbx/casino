@@ -273,9 +273,22 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
     fetch(`${BASE}/api/players/${viewedPlayerId}/public-profile`, {
       headers: { Authorization: `Bearer ${sessionToken}` },
     })
-      .then(r => (r.ok ? r.json() : null))
+      .then(async r => {
+        if (r.ok) return r.json();
+        // Surface the actual server error so production failures are diagnosable
+        let errMsg = `HTTP ${r.status}`;
+        try {
+          const body = await r.json();
+          if (body?.error) errMsg = `${r.status}: ${body.error}`;
+        } catch { /* non-JSON body */ }
+        console.warn(`[public-profile] fetch failed for playerId=${viewedPlayerId} — ${errMsg}`);
+        return null;
+      })
       .then(data => { setPubData(data); setPubLoading(false); })
-      .catch(() => { setPubLoading(false); });
+      .catch(err => {
+        console.warn(`[public-profile] network error for playerId=${viewedPlayerId}:`, err);
+        setPubLoading(false);
+      });
   }, [viewedPlayerId, isViewing, sessionToken]);
 
   async function handleClaimRakeback() {

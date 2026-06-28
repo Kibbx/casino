@@ -353,9 +353,16 @@ router.get("/search", requirePlayer, async (req, res) => {
 
 // Public player profile — any authenticated player can view
 router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
+  const rawId = req.params.playerId;
+  const requesterId = (req as any).authenticatedPlayerId as number | undefined;
+  console.log(`[public-profile] hit — rawId=${rawId} requesterId=${requesterId ?? "banker"}`);
+
   try {
-    const id = parseInt(req.params.playerId as string);
-    if (isNaN(id)) return res.status(400).json({ error: "Invalid player ID" });
+    const id = parseInt(rawId as string);
+    if (isNaN(id)) {
+      console.log(`[public-profile] bad id — rawId="${rawId}" is NaN`);
+      return res.status(400).json({ error: "Invalid player ID" });
+    }
 
     const [player] = await db
       .select({
@@ -374,7 +381,12 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
       .from(playersTable)
       .where(eq(playersTable.id, id));
 
-    if (!player || player.isBot) return res.status(404).json({ error: "Player not found" });
+    if (!player || player.isBot) {
+      console.log(`[public-profile] not found — id=${id} found=${!!player} isBot=${player?.isBot ?? false}`);
+      return res.status(404).json({ error: "Player not found" });
+    }
+
+    console.log(`[public-profile] found player id=${id} username="${player.username}"`);
 
     // Challenge stats — gracefully degrade if the table hasn't been migrated yet
     let totalChallengesCompleted = 0;
@@ -392,10 +404,28 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
 
     // Transaction-derived stats — uses the shared computeTxStats helper so
     // values are identical to what the leaderboard endpoint returns.
-    const allTxs = await db
-      .select({ type: transactionsTable.type, amount: transactionsTable.amount, description: transactionsTable.description })
-      .from(transactionsTable)
-      .where(eq(transactionsTable.playerId, id));
+    // Wrapped in its own try-catch: if the production schema is missing a column
+    // (e.g. description), stats degrade to zero rather than returning a 500.
+    let allTxs: TxRow[] = [];
+    try {
+      allTxs = await db
+        .select({ type: transactionsTable.type, amount: transactionsTable.amount, description: transactionsTable.description })
+        .from(transactionsTable)
+        .where(eq(transactionsTable.playerId, id));
+    } catch (txErr: any) {
+      console.error(`[public-profile] transactions query failed for id=${id}:`, txErr?.message ?? txErr);
+      // Fall back to type+amount only — no description-based filtering (poker detection degraded)
+      try {
+        const rows = await db
+          .select({ type: transactionsTable.type, amount: transactionsTable.amount })
+          .from(transactionsTable)
+          .where(eq(transactionsTable.playerId, id));
+        allTxs = rows.map(r => ({ ...r, description: null }));
+      } catch {
+        // Transactions table inaccessible — stats stay at zero
+      }
+    }
+
     const handsPlayedNum = Number(player.handsPlayed ?? 0);
     const txStats = computeTxStats(allTxs, handsPlayedNum);
     const statWagered      = txStats.wagered;
@@ -410,6 +440,7 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
     const activePlayers = getActivePlayers();
     const activeMap = new Map(activePlayers.map(a => [a.playerId, a.game]));
 
+    console.log(`[public-profile] returning ok for id=${id}`);
     return res.json({
       id: player.id,
       username: player.username ?? "Unknown Player",
@@ -437,7 +468,7 @@ router.get("/:playerId/public-profile", requirePlayer, async (req, res) => {
       activityBreakdown,
     });
   } catch (e: any) {
-    console.error("[public-profile] error:", e?.message ?? e);
+    console.error(`[public-profile] unhandled error for rawId=${rawId}:`, e?.message ?? e);
     return res.status(500).json({ error: "Failed to load profile" });
   }
 });

@@ -1,0 +1,75 @@
+Improve the layout and spacing of the Leaderboards page.
+
+Current issue:
+The leaderboard UI feels cramped. Elements are packed too closely together, making the page look compressed instead of premium. The design should match the spacious, high-end casino aesthetic used throughout the rest of the site.
+
+Do not redesign the page—keep the existing style and components. Focus on improving spacing, sizing, and visual hierarchy.
+
+### Header
+
+* Increase the space between the page title and the leaderboard container.
+* Give the glowing divider lines more breathing room.
+* Add more top and bottom margin around the header.
+
+### Current Rank Card
+
+* Increase the height of the "Your current rank" banner.
+* Add more horizontal and vertical padding.
+* Center the content vertically.
+* Increase spacing between the medal icon, rank text, and "Jump to My Page" button.
+* Make the button slightly larger.
+
+### Leaderboard Table
+
+* Increase row height to around 60–70px.
+* Increase left and right padding in every column.
+* Add more space between:
+
+  * Rank
+  * Avatar
+  * Username
+  * Games
+  * Win %
+  * Biggest Win
+  * Trend
+* Vertically center everything.
+* Increase font size slightly for player names and statistics.
+* Give the table header more padding and height.
+* Add a little more spacing between the table header and the first player row.
+
+### Player Row
+
+* Increase avatar size slightly.
+* Add more space between avatar and username.
+* Make the highlighted "YOU" row feel less compressed.
+* Increase the padding around the highlighted background.
+
+### Pagination
+
+* Move pagination farther away from the table.
+* Add 30–40px of vertical spacing above it.
+* Make the page buttons slightly larger.
+* Add more spacing between page buttons.
+* Give the pagination container more height.
+
+### Overall Layout
+
+* Increase the width of the leaderboard container if there is unused screen space.
+* Add more padding inside the main content container.
+* Increase spacing between every major section.
+* Keep all content perfectly aligned.
+* Ensure nothing touches the edges of its containers.
+
+### Responsive
+
+* Keep the improved spacing on desktop.
+* Scale spacing appropriately on tablets.
+* Collapse gracefully on mobile without elements becoming cramped.
+
+### Important
+
+* Do **not** change the color scheme.
+* Do **not** redesign the UI.
+* Do **not** remove any existing functionality.
+* Reuse the existing components and CSS where possible.
+* Focus on making the interface feel polished, premium, and spacious, similar to modern casino platforms like Stake or Roobet.
