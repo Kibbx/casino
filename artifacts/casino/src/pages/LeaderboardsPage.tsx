@@ -13,6 +13,7 @@ type ApiEntry = {
   games: number;
   wins: number;
   winRate: number;
+  netProfit: number;
   biggestWin: number;
   chips: number;
   avatarUrl: string | null;
@@ -36,6 +37,16 @@ function fmtBiggestWin(n: number): string {
   if (n >= 1_000_000) return "$" + (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 1_000)     return "$" + (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
   return "$" + n.toLocaleString();
+}
+
+function fmtNetProfit(n: number): string {
+  const abs = Math.abs(n);
+  let formatted: string;
+  if (abs >= 1_000_000_000) formatted = (abs / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B";
+  else if (abs >= 1_000_000) formatted = (abs / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  else if (abs >= 1_000)     formatted = (abs / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  else                        formatted = abs.toLocaleString();
+  return (n >= 0 ? "+" : "-") + "$" + formatted;
 }
 
 function fmtGames(n: number): string {
@@ -239,11 +250,11 @@ export function LeaderboardsPage() {
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load"); setLoading(false); });
   }, [sessionToken]);
 
-  /* sorted + ranked + trend — biggestWin DESC → wins DESC → games DESC */
+  /* sorted + ranked + trend — netProfit DESC → biggestWin DESC → games DESC */
   const ranked = useMemo((): RankedEntry[] => {
     const copy = [...data].sort((a, b) =>
+      b.netProfit !== a.netProfit   ? b.netProfit - a.netProfit :
       b.biggestWin !== a.biggestWin ? b.biggestWin - a.biggestWin :
-      b.wins !== a.wins             ? b.wins - a.wins :
                                       b.games - a.games
     );
     const snapshot = loadSnapshot();
@@ -361,7 +372,7 @@ export function LeaderboardsPage() {
           <span>Rank</span>
           <span style={{ paddingLeft: 4 }}>Player</span>
           <span>Games</span>
-          <span>Win %</span>
+          <span>Net Profit</span>
           <span style={{ textAlign: "right" }}>Biggest Win</span>
           <span style={{ textAlign: "center" }}>Trend</span>
         </div>
@@ -417,10 +428,7 @@ export function LeaderboardsPage() {
                 const profitColor = "#22c55e";
                 const profitGlow  = "rgba(34,197,94,0.3)";
 
-                let winRateColor = "rgba(255,255,255,0.5)";
-                if (entry.winRate >= 65)      winRateColor = "#22c55e";
-                else if (entry.winRate >= 50) winRateColor = "rgba(255,255,255,0.75)";
-                else if (entry.winRate > 0)   winRateColor = "#f97316";
+                const netProfitColor = entry.netProfit >= 0 ? "#22c55e" : "#ef4444";
 
                 return (
                   <div
@@ -502,12 +510,12 @@ export function LeaderboardsPage() {
                       {fmtGames(entry.games)}
                     </span>
 
-                    {/* Win % */}
+                    {/* Net Profit */}
                     <span style={{
                       fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums",
-                      color: entry.games > 0 ? winRateColor : "rgba(255,255,255,0.2)",
+                      color: entry.games > 0 ? netProfitColor : "rgba(255,255,255,0.2)",
                     }}>
-                      {entry.games > 0 ? entry.winRate + "%" : "—"}
+                      {entry.games > 0 ? fmtNetProfit(entry.netProfit) : "—"}
                     </span>
 
                     {/* Biggest Win */}

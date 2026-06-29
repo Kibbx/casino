@@ -1,0 +1,129 @@
+Redesign the Leaderboard statistics by replacing the current data columns only. Do **not** change the layout, sizing, spacing, styling, or overall UI.
+
+### Goal
+
+The current **Win %** column is misleading because casino games naturally have many losing bets, making even successful players appear to perform poorly.
+
+Instead, make the leaderboard showcase more exciting and meaningful player achievements.
+
+## New leaderboard columns
+
+Keep the current layout exactly the same, but replace the columns with:
+
+| Rank | Player | Games | Net Profit | Biggest Win | Trend |
+
+Replace:
+
+* **Win %** ➜ **Net Profit**
+
+Keep:
+
+* Rank
+* Player
+* Games
+* Biggest Win
+* Trend
+
+## Net Profit
+
+Net Profit should represent:
+
+**Total Winnings - Total Wagers**
+
+or
+
+Use the existing backend profit statistic if one already exists.
+
+Display examples:
+
+* +$8.2M
+* +$425K
+* -$78K
+
+Requirements:
+
+* Positive values should be green.
+* Negative values should be red.
+* Format numbers consistently (K, M, B).
+* Reuse existing currency/chip formatting helpers.
+
+## Biggest Win
+
+Continue using the player's largest single win.
+
+Examples:
+
+* $250K
+* $1.4M
+* $14.8M
+
+Do not change how Biggest Win is calculated unless the current logic is incorrect.
+
+## Trend
+
+Keep the existing trend indicator exactly as it works today.
+
+Do not change:
+
+* trend calculations
+* ranking calculations
+* pagination
+* sorting (unless it is currently based on Win %)
+
+## Sorting
+
+If the leaderboard currently sorts by Win %, change it to:
+
+1. Net Profit (descending)
+
+If Net Profit ties:
+
+2. Biggest Win
+
+If still tied:
+
+3. Games Played
+
+## Backend
+
+Reuse existing player statistics whenever possible.
+
+Look for existing fields such as:
+
+* totalWon
+* totalWagered
+* netProfit
+* totalProfit
+* winnings
+* losses
+* lifetimeProfit
+
+Do not create duplicate statistics if the backend already stores them.
+
+## Frontend
+
+Only change:
+
+* Column title
+* Displayed value
+* Value formatting
+
+Do **not** modify:
+
+* Card size
+* Row height
+* Fonts
+* Padding
+* Margins
+* Colors (other than green/red for profit)
+* Header layout
+* Responsive sizing
+* Overall page design
+
+## Expected result
+
+The leaderboard should now display:
+
+| Rank | Player | Games | Net Profit | Biggest Win | Trend |
+
+This gives players a much more meaningful and competitive leaderboard while preserving the exact same UI layout and styling.

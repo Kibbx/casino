@@ -573,10 +573,25 @@ router.get("/leaderboard", async (req, res) => {
         FROM transactions t
         WHERE t.player_id = p.id
           AND t.type IN ('win','tournament_win','fortuna-win','rome-slots-win','western-slots-win')
-      ), 0) AS biggest_win
+      ), 0) AS biggest_win,
+      COALESCE((
+        SELECT SUM(CASE
+          WHEN t.type IN ('win','tournament_win','fortuna-win','rome-slots-win','western-slots-win','rakeback')
+            THEN t.amount
+          WHEN t.type IN ('loss','fortuna-bet','fortuna-bonus-buy','rome-slots-bet','western-slots-bet','highlow_bet','baccarat','sport_bet')
+            THEN -t.amount
+          ELSE 0
+        END)
+        FROM transactions t
+        WHERE t.player_id = p.id
+          AND t.type IN (
+            'win','tournament_win','fortuna-win','rome-slots-win','western-slots-win','rakeback',
+            'loss','fortuna-bet','fortuna-bonus-buy','rome-slots-bet','western-slots-bet','highlow_bet','baccarat','sport_bet'
+          )
+      ), 0) AS net_profit
     FROM players p
     WHERE p.is_bot = false
-    ORDER BY biggest_win DESC, p.wins DESC, p.hands_played DESC
+    ORDER BY net_profit DESC, biggest_win DESC, p.hands_played DESC
   `);
 
   const result = ((rows as any).rows as any[]).map(p => {
@@ -590,6 +605,7 @@ router.get("/leaderboard", async (req, res) => {
       games,
       wins,
       winRate,
+      netProfit:  Number(p.net_profit ?? 0),
       biggestWin: Number(p.biggest_win ?? 0),
       chips:      Number(p.chips),
       avatarUrl:  p.avatar_url ? String(p.avatar_url) : null,
