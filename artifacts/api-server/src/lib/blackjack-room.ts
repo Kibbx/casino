@@ -229,6 +229,44 @@ export class BlackjackRoom {
     seat.activeHand = "main";
   }
 
+  /** All cards currently dealt to players or the dealer — used for duplicate checking. */
+  private allDealtCards(): Card[] {
+    const cards: Card[] = [];
+    for (const seat of this.seats) {
+      cards.push(...seat.cards);
+      if (seat.splitCards) cards.push(...seat.splitCards);
+    }
+    cards.push(...this.dealerCards);
+    return cards;
+  }
+
+  /**
+   * Server-side duplicate guard.
+   * Logs an error (and the full dealt-card list) if any rank+suit pair appears more
+   * times than the configured number of decks. Never throws — a log entry is enough
+   * to surface the problem without crashing an active hand.
+   */
+  private assertNoDuplicates() {
+    const numDecks = this.roundRules.numDecks;
+    const counts = new Map<string, number>();
+    let violated = false;
+    for (const card of this.allDealtCards()) {
+      const key = `${card.rank}${card.suit}`;
+      const n = (counts.get(key) ?? 0) + 1;
+      counts.set(key, n);
+      if (n > numDecks) {
+        console.error(
+          `[BJ T${this.tableId}] ⚠ DUPLICATE CARD: ${key} appeared ${n}× ` +
+          `(limit=${numDecks} with ${numDecks}-deck shoe)`
+        );
+        violated = true;
+      }
+    }
+    if (violated) {
+      console.error(`[BJ T${this.tableId}] Dealt cards at violation:`, this.allDealtCards().map(c => `${c.rank}${c.suit}`).join(" "));
+    }
+  }
+
   // ── Private: phase lifecycle ────────────────────────────────────────────────
 
   private startBetting() {
@@ -280,13 +318,20 @@ export class BlackjackRoom {
 
     this.setPhase("DEALING", DEALING_MS);
 
-    if (this.deck.length < this.numSeats * 4 + 4) this.deck = createDeck(this.roundRules.numDecks);
+    // Ensure the shoe has enough cards before touching it.
+    // This is the ONLY pre-deal reshuffle point — once cards are in play we never
+    // rebuild the shoe until the next hand starts.
+    const cardsNeeded = bettors.length * 4 + 4; // worst-case with splits
+    if (this.deck.length < cardsNeeded) this.deck = createDeck(this.roundRules.numDecks);
 
     for (const seat of bettors) {
       seat.cards = [this.deck.pop()!, this.deck.pop()!];
       seat.status = isBlackjack(seat.cards) ? "blackjack" : "active";
     }
     this.dealerCards = [this.deck.pop()!, { ...this.deck.pop()!, hidden: true }];
+
+    // Server-side sanity check: log any impossible duplicates at the moment of deal.
+    this.assertNoDuplicates();
 
     this.broadcastState();
     this.phaseTimer = setTimeout(() => this.startPlayerTurns(), DEALING_MS);
@@ -367,8 +412,10 @@ export class BlackjackRoom {
       this.phaseTimer = setTimeout(() => this.resolveRound(), DEALER_STAND_MS);
       return;
     }
-    // Draw one fair card off the top of the shoe
-    if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
+    // Draw one fair card off the shared shoe.
+    // Never reshuffle here — the shoe is only replenished between hands (startBetting)
+    // or before a hand begins (startDealing). Reshuffling mid-hand would reintroduce
+    // cards already dealt and is the primary cause of duplicate card bugs.
     this.dealerCards.push(drawCard(this.deck));
     this.broadcastState();
     // Schedule next card
@@ -699,7 +746,6 @@ export class BlackjackRoom {
     try {
 
     if (action === "hit") {
-      if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
       const newCard = drawCard(this.deck);
 
       if (seat.activeHand === "split") {
@@ -742,7 +788,6 @@ export class BlackjackRoom {
     }
 
     if (action === "double") {
-      if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
       const activeCards = seat.activeHand === "split" ? seat.splitCards! : seat.cards;
       if (activeCards.length !== 2) return { error: "Can only double on first two cards" };
       if (!isDoubleAllowed(activeCards, this.roundRules.canDouble)) return { error: "Doubling is not permitted under the current table rules" };
@@ -784,7 +829,6 @@ export class BlackjackRoom {
     }
 
     if (action === "split") {
-      if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
       if (seat.cards.length !== 2) return { error: "Can only split first two cards" };
       if (seat.cards[0].rank !== seat.cards[1].rank) return { error: "Cards must be a matching pair to split" };
       if (seat.splitCards) return { error: "Already split" };

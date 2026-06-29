@@ -1,0 +1,59 @@
+Blackjack is still dealing duplicate exact cards within the same hand. The card/deck logic is still broken and needs a deeper fix.
+
+Current issue:
+Players are still seeing the same exact card appear again in a hand. Same rank + same suit should not repeat in a single-deck shoe, and should not repeat more times than the configured number of decks in a multi-deck shoe.
+
+### Required fix
+
+Audit and replace the Blackjack dealing logic so every card comes from a finite shoe.
+
+Rules:
+
+* Build a real shoe array before dealing.
+* Each card must include:
+
+  * rank
+  * suit
+  * value
+  * deckIndex or unique card instance ID
+* Shuffle the shoe once.
+* Deal cards by popping/removing from the shoe.
+* Never generate cards independently with `Math.random()` per draw.
+* Never clone/reuse the same card object.
+* Persist the shoe/game state between actions: deal, hit, stand, dealer draw.
+* Do not recreate or reshuffle the shoe during the same hand.
+
+### Critical checks
+
+Find and remove any logic that:
+
+* Calls `drawCard()` by randomly choosing rank/suit without removing it.
+* Rebuilds the deck on every API request.
+* Reinitializes the shoe after player hit or dealer draw.
+* Stores only card rank/value but not suit/deck instance.
+* Uses frontend-generated cards.
+* Lets frontend and backend both deal cards.
+* Duplicates card objects by reference.
+
+### Validation
+
+Add a server-side duplicate-card guard:
+
+* For every active hand, count dealt cards by `rank + suit`.
+* If a card appears more than `numberOfDecks`, throw/log an error.
+* Block impossible duplicate deals before saving the hand.
+
+### Tests
+
+Add tests for:
+
+* A single hand cannot contain duplicate exact cards when using 1 deck.
+* A 6-deck shoe cannot contain the same exact rank+suit more than 6 times.
+* Dealing the entire shoe produces exactly `52 * numberOfDecks` cards.
+* No card is dealt after being removed from the shoe.
+* Hitting and dealer drawing continue from the same persisted shoe.
+* Refreshing/reloading the page does not reset the shoe.
+
+### Expected result
+
+Blackjack must deal from one persistent finite shuffled shoe per table/round and cannot produce impossible duplicate exact cards in the same hand.
