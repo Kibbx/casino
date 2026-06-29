@@ -197,17 +197,29 @@ function PhaseTimer({ phaseEndsAt }: { phaseEndsAt: number | null }) {
 // ── Circular countdown — centered on felt during BETTING phase ────────────────
 
 function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null }) {
+  // Integer seconds for the display text — 250 ms poll (existing hook)
   const secs = useCountdown(phaseEndsAt);
 
-  // Track the initial seconds for this phase to use as the ring's denominator.
-  // Refs so we never cause re-renders; reset whenever phaseEndsAt changes.
-  const maxRef     = useRef<number>(30);
-  const prevEndRef = useRef<number | null>(null);
-  if (prevEndRef.current !== phaseEndsAt) {
-    prevEndRef.current = phaseEndsAt;
-    maxRef.current     = secs ?? 30;
-  }
-  if (secs !== null && secs > maxRef.current) maxRef.current = secs;
+  // Continuous 0→1 fraction for the ring — driven by requestAnimationFrame (60 fps)
+  const [fraction, setFraction] = useState<number>(1);
+  const rafRef     = useRef<number>(0);
+  const totalMsRef = useRef<number>(1);
+
+  useEffect(() => {
+    cancelAnimationFrame(rafRef.current);
+    if (!phaseEndsAt) { setFraction(1); return; }
+    // Capture total duration the moment this phase's end-time is known
+    totalMsRef.current = Math.max(1, phaseEndsAt - Date.now());
+
+    const tick = () => {
+      const rem = phaseEndsAt - Date.now();
+      if (rem <= 0) { setFraction(0); return; }
+      setFraction(rem / totalMsRef.current);
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [phaseEndsAt]);
 
   if (secs === null) return null;
 
@@ -216,7 +228,7 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
   const C      = 2 * Math.PI * R;
   const cx     = SIZE / 2;
   const cy     = SIZE / 2;
-  const frac   = maxRef.current > 0 ? Math.max(0, Math.min(1, secs / maxRef.current)) : 0;
+  const frac   = Math.max(0, Math.min(1, fraction));
   const offset = C * (1 - frac);   // 0 = full ring, C = empty
   const urgent = secs <= 5;
   const color  = urgent ? "#f87171" : "#4ade80";
@@ -245,7 +257,8 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         stroke="rgba(255,255,255,0.08)"
         strokeWidth={7}
       />
-      {/* progress arc — origin at 12 o'clock, drains clockwise */}
+      {/* progress arc — origin at 12 o'clock, drains clockwise; no CSS transition
+          because RAF already provides per-frame updates */}
       <circle cx={cx} cy={cy} r={R}
         fill="none"
         stroke={color}
@@ -254,7 +267,7 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         strokeDasharray={`${C} ${C}`}
         strokeDashoffset={offset}
         transform={`rotate(-90 ${cx} ${cy})`}
-        style={{ transition: "stroke-dashoffset 0.22s linear, stroke 0.3s ease" }}
+        style={{ transition: "stroke 0.3s ease" }}
       />
       {/* seconds number */}
       <text
@@ -1109,7 +1122,6 @@ export default function BlackjackPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: PHASE_COLOR[phase], display: "inline-block" }} />
             <span style={{ fontSize: "clamp(8px, 0.9vw, 11px)", color: PHASE_COLOR[phase], fontWeight: 700, textTransform: "uppercase", letterSpacing: 2 }}>{PHASE_LABELS[phase]}</span>
-            <PhaseTimer phaseEndsAt={table?.phaseEndsAt ?? null} />
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -1160,7 +1172,7 @@ export default function BlackjackPage() {
             transition={{ type: "spring", stiffness: 360, damping: 28 }}
             style={{
               position: "absolute",
-              top: "38%",
+              top: "50%",
               left: "50%",
               transform: "translate(-50%, -50%)",
               zIndex: 15,

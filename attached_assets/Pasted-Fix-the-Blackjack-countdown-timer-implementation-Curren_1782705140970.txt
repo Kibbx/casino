@@ -1,0 +1,63 @@
+Fix the Blackjack countdown timer implementation.
+
+Current issues:
+
+1. The old countdown text still appears at the top next to “PLACE YOUR BETS”.
+2. The circular timer is not centered in the actual screen/table area.
+3. The circular progress bar animation is choppy and needs to be smooth.
+
+### Required fixes
+
+#### Remove old top timer
+
+* Remove the small top countdown text like `6s`, `3s`, etc.
+* Keep the phase label `PLACE YOUR BETS`.
+* Do not show duplicate timers.
+* The circular timer should be the only visible countdown.
+
+#### Center the circular timer
+
+* Position the circular timer in the true center of the Blackjack play area.
+* It should be horizontally centered in the viewport/table container.
+* It should be vertically centered between the dealer/cards area and the player betting controls, not awkwardly high or low.
+* Make sure it stays centered on different screen sizes.
+* Avoid positioning relative to a card container or betting controls if that causes offset.
+
+Recommended approach:
+
+* Put the timer inside the main Blackjack table container.
+* Use absolute positioning:
+
+  * `left: 50%`
+  * `top: 50%`
+  * `transform: translate(-50%, -50%)`
+* Ensure the parent table container has `position: relative`.
+* If the bottom chip controls visually shift the center, use a CSS variable or class like `top: 47%`, but make it visually centered.
+
+#### Smooth progress ring
+
+* Make the progress ring animate smoothly clockwise.
+* Do not update the ring only once per second.
+* Use CSS transition, SVG stroke animation, or requestAnimationFrame.
+* The number inside can update every second, but the ring itself should move continuously.
+* Use the full countdown duration to calculate progress percentage.
+* Avoid jumpy interval-only progress.
+
+Suggested SVG approach:
+
+* Use an SVG circle.
+* Use `stroke-dasharray` and `stroke-dashoffset`.
+* Animate `stroke-dashoffset` linearly over the full countdown duration.
+* Reset cleanly when a new countdown starts.
+
+### Behavior
+
+* Reuse the existing real countdown state from the game.
+* Do not create a separate fake timer.
+* Do not change backend game timing.
+* Show the circular timer only during betting/countdown phases.
+* Hide it when the hand starts or when no countdown is active.
+
+### Expected result
+
+The top timer is gone, the circular countdown is centered on the Blackjack table, and the progress ring moves smoothly clockwise instead of jumping once per second.
