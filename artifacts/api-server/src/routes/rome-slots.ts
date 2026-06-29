@@ -162,7 +162,7 @@ export function countScatters(grid: Grid): number {
 // ── POST /rome-slots/spin ─────────────────────────────────────────────────────
 router.post("/spin", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
-  const slotsEnabled = (await getSetting("slotsEnabled", "false")) === "true";
+  const slotsEnabled = (await getSetting("slotsEnabled", "true")) === "true";
   if (!slotsEnabled) {
     console.log(`[rome-slots] /spin blocked — slotsEnabled=false (player=${playerId})`);
     return res.status(403).json({ error: "Slots are currently closed" });
@@ -239,7 +239,7 @@ router.post("/spin", requirePlayer, async (req, res) => {
 // ── POST /rome-slots/free-spin ────────────────────────────────────────────────
 router.post("/free-spin", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
-  const slotsEnabled = (await getSetting("slotsEnabled", "false")) === "true";
+  const slotsEnabled = (await getSetting("slotsEnabled", "true")) === "true";
   if (!slotsEnabled) {
     console.log(`[rome-slots] /free-spin blocked — slotsEnabled=false (player=${playerId})`);
     return res.status(403).json({ error: "Slots are currently closed" });

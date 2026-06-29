@@ -236,7 +236,7 @@ const GAME_KEY = "western-slots";
 // ── POST /western-slots/spin ──────────────────────────────────────────────────
 router.post("/spin", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
-  const slotsEnabled = (await getSetting("slotsEnabled", "false")) === "true";
+  const slotsEnabled = (await getSetting("slotsEnabled", "true")) === "true";
   if (!slotsEnabled) {
     console.log(`[western-slots] /spin blocked — slotsEnabled=false (player=${playerId})`);
     return res.status(403).json({ error: "Slots are currently closed" });
@@ -299,7 +299,7 @@ router.post("/spin", requirePlayer, async (req, res) => {
 // ── POST /western-slots/free-spin ─────────────────────────────────────────────
 router.post("/free-spin", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
-  const slotsEnabled = (await getSetting("slotsEnabled", "false")) === "true";
+  const slotsEnabled = (await getSetting("slotsEnabled", "true")) === "true";
   if (!slotsEnabled) {
     console.log(`[western-slots] /free-spin blocked — slotsEnabled=false (player=${playerId})`);
     return res.status(403).json({ error: "Slots are currently closed" });
