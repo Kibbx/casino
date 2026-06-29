@@ -1,0 +1,55 @@
+Fix the live server static asset handling for the casino app.
+
+Problem:
+On the live deployment, game images are broken. In Chrome DevTools Network, the image requests such as BKG.webp, Gladius.webp, ButtonSpin.webp, etc. return HTTP 200 but their response Type / Content-Type is text/html instead of image/webp. This means the server is returning the React/Vite index.html fallback for image URLs instead of serving the actual image files.
+
+Expected:
+Image URLs like:
+/casino/images/Gladius.webp
+/casino/images/BKG.webp
+/casino/images/ButtonSpin.webp
+
+must return the actual WebP files with Content-Type: image/webp, not index.html.
+
+Please inspect the server entrypoint and build/deploy config.
+
+Fix requirements:
+1. The live server should serve static files from:
+   artifacts/casino/dist/public
+
+2. Static file middleware must run before any catch-all SPA fallback route.
+
+3. The catch-all fallback should only serve index.html for frontend routes, not for existing asset requests.
+
+4. Make sure the build process copies assets from:
+   artifacts/casino/public
+   into:
+   artifacts/casino/dist/public
+
+5. After the fix, verify these commands return image/webp, not text/html:
+   curl -I <live-url>/casino/images/Gladius.webp
+   curl -I <live-url>/casino/images/BKG.webp
+   curl -I <live-url>/casino/images/ButtonSpin.webp
+
+6. Also verify the files exist in the built output:
+   find artifacts/casino/dist/public -name "Gladius.webp"
+   find artifacts/casino/dist/public -name "BKG.webp"
+   find artifacts/casino/dist/public -name "ButtonSpin.webp"
+
+Likely Express fix:
+If the server uses Express, ensure something like this exists before the catch-all route:
+
+   const publicPath = path.resolve(process.cwd(), "artifacts/casino/dist/public");
+   app.use(express.static(publicPath));
+
+   app.get("*", (req, res) => {
+     res.sendFile(path.join(publicPath, "index.html"));
+   });
+
+If the server runs from inside artifacts/casino, use:
+
+   const publicPath = path.resolve(process.cwd(), "dist/public");
+
+Do not serve image URLs through the SPA fallback. If a .webp/.png/.jpg/.svg asset is missing, it should return 404, not index.html.
+
+Please implement the fix and explain what file(s) you changed.

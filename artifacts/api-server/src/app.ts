@@ -54,6 +54,10 @@ if (process.env.NODE_ENV === "production") {
   const casinoDist = path.resolve(process.cwd(), "artifacts/casino/dist/public");
   const indexFile = path.join(casinoDist, "index.html");
 
+  // Static asset extensions — if a request matches one of these and isn't found
+  // by the static middleware, it must return 404 (never index.html).
+  const ASSET_EXT = /\.(webp|png|jpg|jpeg|gif|svg|ico|mp3|mp4|wav|ogg|woff2?|ttf|eot|pdf|txt|xml|map)$/i;
+
   // index.html — never cache so deploys are immediately visible
   app.use((req, res, next) => {
     if (req.path === "/" || req.path === "/index.html") {
@@ -65,14 +69,24 @@ if (process.env.NODE_ENV === "production") {
     next();
   });
 
-  // Vite-hashed bundles (assets/ dir) — safe to cache long-term, they change filename on every build
+  // Vite-hashed bundles — long cache, they change filename on every build
   app.use("/assets", express.static(path.join(casinoDist, "assets"), { maxAge: "7d", immutable: true }));
 
-  // Public files with fixed names (images/, fonts, etc.) — short cache so replacements are seen quickly
-  app.use(express.static(casinoDist, { maxAge: "5m", immutable: false }));
+  // Static files served at root path  (builds with BASE_PATH=/)
+  app.use(express.static(casinoDist, { maxAge: "5m" }));
 
-  // SPA fallback — also no-cache
-  app.use((_req, res) => {
+  // Also serve at /casino prefix in case the build used BASE_PATH=/casino/
+  // This ensures image requests like /casino/rome-slots/screen/BKG.webp resolve
+  // to dist/public/rome-slots/screen/BKG.webp instead of hitting the SPA fallback.
+  app.use("/casino", express.static(casinoDist, { maxAge: "5m" }));
+
+  // SPA fallback — serves index.html ONLY for non-asset paths.
+  // Asset extensions (images, fonts, media) that reach here are genuinely missing:
+  // return 404 so the browser shows a broken-image icon, not a silent 200/text:html.
+  app.use((req, res) => {
+    if (ASSET_EXT.test(req.path)) {
+      return res.status(404).send("Not found");
+    }
     res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
