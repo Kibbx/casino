@@ -11600,10 +11600,10 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
   }
 
   // ── Create Game state ──────────────────────────────────────────────────
-  const SPORT_LIST = ["NFL","NBA","MLB","NHL","UFC","Soccer","Boxing","Tennis","Golf","College Football","College Basketball"] as const;
+  const SPORT_LIST = ["NFL","NBA","MLB","NHL","UFC","Soccer","Boxing","College Football","College Basketball"] as const;
   const SPORT_DEFAULT_LEAGUE: Record<string, string> = {
     NFL:"NFL", NBA:"NBA", MLB:"MLB", NHL:"NHL", UFC:"UFC",
-    Soccer:"MLS", Boxing:"Boxing", Tennis:"ATP US Open", Golf:"PGA",
+    Soccer:"MLS", Boxing:"Boxing",
     "College Football":"NCAAF", "College Basketball":"NCAAB",
   };
 
@@ -11758,7 +11758,7 @@ function SportBetsTab({ isOwner = false }: { isOwner?: boolean }) {
                     <label style={{ fontSize: "9px", color: "#64748b", fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", display: "block", marginBottom: "4px" }}>Sport Category</label>
                     <select value={createSport} onChange={e => { setCreateSport(e.target.value); setCreateLeague(""); }}
                       style={{ width: "100%", background: "rgba(0,0,0,0.5)", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "8px", padding: "9px 12px", fontSize: "13px", color: "#e2e8f0", outline: "none", cursor: "pointer" }}>
-                      {["NFL","NBA","MLB","NHL","UFC","Soccer","Boxing","Tennis","Golf","College Football","College Basketball"].map(s => (
+                      {["NFL","NBA","MLB","NHL","UFC","Soccer","Boxing","College Football","College Basketball"].map(s => (
                         <option key={s} value={s} style={{ background: "#1e293b" }}>{s}</option>
                       ))}
                     </select>
