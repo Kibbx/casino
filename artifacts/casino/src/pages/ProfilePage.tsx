@@ -214,7 +214,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
       const res = await fetch(`${BASE}/api/cases/my-inventory/${id}/request`, {
         method: "POST", headers: { Authorization: `Bearer ${sessionToken}` },
       });
-      const body = await res.json().catch(() => ({}));
+      let body: Record<string, unknown> = {};
+      try { body = await res.json(); } catch { /* non-JSON body */ }
       if (res.ok) { setItemMsg({ id, text: "Requested! Staff will deliver it in-game.", ok: true }); loadInventory(); }
       else setItemMsg({ id, text: (body as any).error ?? "Request failed", ok: false });
     } catch { setItemMsg({ id, text: "Request failed", ok: false }); }
@@ -226,7 +227,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
       const res = await fetch(`${BASE}/api/cases/my-inventory/${id}/sell`, {
         method: "POST", headers: { Authorization: `Bearer ${sessionToken}` },
       });
-      const body = await res.json().catch(() => ({}));
+      let body: Record<string, unknown> = {};
+      try { body = await res.json(); } catch { /* non-JSON body */ }
       if (res.ok) { setItemMsg({ id, text: `Sold for +${((body as any).chipsAwarded ?? 0).toLocaleString()} chips!`, ok: true }); loadInventory(); }
       else setItemMsg({ id, text: (body as any).error ?? "Sell failed", ok: false });
     } catch { setItemMsg({ id, text: "Sell failed", ok: false }); }
@@ -238,7 +240,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
       const res = await fetch(`${BASE}/api/cases/my-inventory/${id}/trash`, {
         method: "POST", headers: { Authorization: `Bearer ${sessionToken}` },
       });
-      const body = await res.json().catch(() => ({}));
+      let body: Record<string, unknown> = {};
+      try { body = await res.json(); } catch { /* non-JSON body */ }
       if (!res.ok) setItemMsg({ id, text: (body as any).error ?? "Failed", ok: false });
       else loadInventory();
     } catch { setItemMsg({ id, text: "Failed", ok: false }); }
@@ -299,7 +302,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
       });
-      const body = await res.json().catch(() => ({}));
+      let body: Record<string, unknown> = {};
+      try { body = await res.json(); } catch { /* non-JSON body */ }
       if (!res.ok) throw new Error((body as any).error ?? "Claim failed");
       setRbClaimMsg({ ok: true, text: `+${fmt(body.claimed ?? 0)} chips claimed!` });
       const rbRes = await fetch(`${BASE}/api/rakeback/status`, {
@@ -343,7 +347,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
         body: JSON.stringify({ currentPin: curPin, newPin }),
       });
-      const body = await res.json().catch(() => ({}));
+      let body: Record<string, unknown> = {};
+      try { body = await res.json(); } catch { /* non-JSON body */ }
       if (!res.ok) throw new Error((body as any).error ?? "Failed to change PIN");
       setPinMsg({ ok: true, text: "PIN changed successfully." });
       setCurPin(""); setNewPin(""); setConfirmPin("");
