@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import { KeyRound } from "lucide-react";
 import { getAccessToken, setAccessToken } from "./gamePasswordGuard";
-import { Button, Input } from "../components/ui-elements";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const IMGS = import.meta.env.BASE_URL;
@@ -52,14 +51,26 @@ export const GAMES: Record<string, GameDef> = {
   lottery:    { label: "Lottery",       cat: "EVENTS",      img: "",                                          route: "/lottery",        key: "lottery",     apiPath: "lottery",   neon: "neon-green",  direct: true },
 };
 
+const NEON_HEX: Record<string, string> = {
+  "neon-green":  "#39ff14",
+  "neon-red":    "#ef4444",
+  "neon-teal":   "#06b6d4",
+  "neon-pink":   "#ec4899",
+  "neon-blue":   "#3b82f6",
+  "neon-yellow": "#fbbf24",
+  "neon-orange": "#f97316",
+  "neon-purple": "#a855f7",
+};
+
 function GamePasswordModal({
-  apiPath, storageKey, label, onSuccess, onCancel,
+  apiPath, storageKey, label, neonColor, onSuccess, onCancel,
 }: {
-  apiPath: string; storageKey: string; label: string; onSuccess: () => void; onCancel: () => void;
+  apiPath: string; storageKey: string; label: string; neonColor: string; onSuccess: () => void; onCancel: () => void;
 }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [focused, setFocused] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,31 +97,138 @@ function GamePasswordModal({
     }
   }
 
+  const canSubmit = !loading && !!password.trim();
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 px-4">
-      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-            <KeyRound className="w-5 h-5 text-primary" />
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)" }}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: 14 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
+        style={{
+          width: "100%",
+          maxWidth: 360,
+          background: "linear-gradient(160deg, #09090f 0%, #0d0b14 100%)",
+          border: `1px solid ${neonColor}40`,
+          boxShadow: `0 0 0 1px ${neonColor}0d, 0 0 48px ${neonColor}18, 0 28px 72px rgba(0,0,0,0.7)`,
+          borderRadius: 20,
+          padding: "28px 28px 24px",
+        }}
+      >
+        {/* Icon + title */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 24 }}>
+          <div
+            style={{
+              width: 50, height: 50, borderRadius: 13,
+              background: `${neonColor}14`,
+              border: `1px solid ${neonColor}33`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 14,
+              boxShadow: `0 0 20px ${neonColor}20`,
+            }}
+          >
+            <KeyRound size={22} style={{ color: neonColor }} />
           </div>
-          <div>
-            <h2 className="font-display font-bold text-foreground">Room Password</h2>
-            <p className="text-xs text-muted-foreground">{label} requires a code</p>
-          </div>
+          <h2
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: 13,
+              fontWeight: 900,
+              letterSpacing: "0.16em",
+              color: "#f0f0f0",
+              textTransform: "uppercase",
+              marginBottom: 7,
+            }}
+          >
+            Room Password
+          </h2>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 500 }}>
+            <span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{label}</span> requires a password to enter
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <Input
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input
             type="password"
             value={password}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            onChange={e => { setPassword(e.target.value); setError(""); }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
             placeholder="Enter room password"
             autoFocus
             autoComplete="off"
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,0.04)",
+              border: `1px solid ${error ? "#ef4444" : focused ? `${neonColor}66` : `${neonColor}2a`}`,
+              borderRadius: 10,
+              padding: "12px 14px",
+              fontSize: 14,
+              color: "#f0f0f0",
+              outline: "none",
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              boxShadow: error ? "0 0 0 1px rgba(239,68,68,0.12)" : focused ? `0 0 0 1px ${neonColor}18` : "none",
+              transition: "border-color 0.15s, box-shadow 0.15s",
+            }}
           />
-          {error && <p className="text-destructive text-sm">{error}</p>}
-          <div className="flex gap-2">
-            <Button type="submit" isLoading={loading} className="flex-1">Enter Room</Button>
-            <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+          <div style={{ minHeight: 16 }}>
+            {error && (
+              <p style={{ fontSize: 11, color: "#f87171", fontFamily: "'Rajdhani', sans-serif", fontWeight: 600, letterSpacing: "0.03em" }}>
+                ✕ {error}
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{
+                flex: "0 0 auto",
+                padding: "11px 18px",
+                borderRadius: 10,
+                fontSize: 10,
+                fontWeight: 900,
+                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.09)",
+                color: "rgba(255,255,255,0.4)",
+                cursor: "pointer",
+                transition: "color 0.15s, border-color 0.15s",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!canSubmit}
+              style={{
+                flex: 1,
+                padding: "11px 0",
+                borderRadius: 10,
+                fontSize: 10,
+                fontWeight: 900,
+                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                background: canSubmit ? `${neonColor}1a` : `${neonColor}09`,
+                border: `1px solid ${canSubmit ? `${neonColor}55` : `${neonColor}20`}`,
+                color: canSubmit ? neonColor : `${neonColor}44`,
+                cursor: canSubmit ? "pointer" : "not-allowed",
+                boxShadow: canSubmit ? `0 0 18px ${neonColor}22` : "none",
+                transition: "all 0.15s",
+              }}
+            >
+              {loading ? "Checking…" : "Enter Room"}
+            </button>
           </div>
         </form>
       </motion.div>
@@ -129,7 +247,7 @@ function GamePasswordModal({
  */
 export function useGameLauncher() {
   const [, setLocation] = useLocation();
-  const [modal, setModal] = useState<{ apiPath: string; storageKey: string; label: string; onSuccess: () => void } | null>(null);
+  const [modal, setModal] = useState<{ apiPath: string; storageKey: string; label: string; neonColor: string; onSuccess: () => void } | null>(null);
 
   function gate(game: GameDef, hasPassword: boolean) {
     console.log(`[launcher] gate game=${game.key} hasPassword=${hasPassword}`);
@@ -146,6 +264,7 @@ export function useGameLauncher() {
       apiPath: game.apiPath,
       storageKey: game.key,
       label: game.label,
+      neonColor: NEON_HEX[game.neon] ?? "#a855f7",
       onSuccess: () => { setLocation(game.route); setModal(null); },
     });
   }
@@ -179,6 +298,7 @@ export function useGameLauncher() {
       apiPath={modal.apiPath}
       storageKey={modal.storageKey}
       label={modal.label}
+      neonColor={modal.neonColor}
       onSuccess={modal.onSuccess}
       onCancel={() => setModal(null)}
     />

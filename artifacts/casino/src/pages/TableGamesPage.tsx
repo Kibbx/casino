@@ -213,51 +213,138 @@ export function BJPasswordModal({ table, onClose, onSuccess }: {
     }
   };
 
+  const [focused, setFocused] = useState(false);
+  const neon = "#fbbf24";
+  const canSubmit = !loading && !!pw.trim();
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: "rgba(0,0,0,0.78)" }}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: "rgba(0,0,0,0.88)", backdropFilter: "blur(6px)" }}
       onClick={onClose}
     >
       <div
-        className="rounded-2xl p-6 w-80"
-        style={{ background: "#0e0e18", border: "1px solid rgba(251,191,36,0.3)", boxShadow: "0 0 40px rgba(251,191,36,0.08)" }}
+        style={{
+          width: "100%",
+          maxWidth: 360,
+          background: "linear-gradient(160deg, #09090f 0%, #0d0b14 100%)",
+          border: `1px solid ${neon}40`,
+          boxShadow: `0 0 0 1px ${neon}0d, 0 0 48px ${neon}18, 0 28px 72px rgba(0,0,0,0.7)`,
+          borderRadius: 20,
+          padding: "28px 28px 24px",
+        }}
         onClick={e => e.stopPropagation()}
       >
-        <div className="flex items-center gap-2 mb-4">
-          <Lock size={16} style={{ color: "#fbbf24" }} />
-          <h3 className="font-black text-base uppercase tracking-wider" style={{ color: "#fbbf24" }}>Private Table</h3>
+        {/* Icon + title */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", marginBottom: 24 }}>
+          <div
+            style={{
+              width: 50, height: 50, borderRadius: 13,
+              background: `${neon}14`,
+              border: `1px solid ${neon}33`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              marginBottom: 14,
+              boxShadow: `0 0 20px ${neon}20`,
+            }}
+          >
+            <Lock size={22} style={{ color: neon }} />
+          </div>
+          <h2
+            style={{
+              fontFamily: "'Orbitron', sans-serif",
+              fontSize: 13,
+              fontWeight: 900,
+              letterSpacing: "0.16em",
+              color: "#f0f0f0",
+              textTransform: "uppercase",
+              marginBottom: 7,
+            }}
+          >
+            Room Password
+          </h2>
+          <p style={{ fontSize: 12, color: "rgba(255,255,255,0.42)", fontFamily: "'Rajdhani', sans-serif", fontWeight: 500 }}>
+            <span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 700 }}>{table.name}</span> requires a password to enter
+          </p>
         </div>
-        <p className="text-sm mb-4" style={{ color: "rgba(255,255,255,0.5)" }}>
-          Enter the password to join <span className="font-bold text-white">{table.name}</span>.
-        </p>
-        <input
-          type="password"
-          value={pw}
-          onChange={e => { setPw(e.target.value); setErr(null); }}
-          onKeyDown={e => e.key === "Enter" && submit()}
-          placeholder="Table password…"
-          autoFocus
-          className="w-full rounded-lg px-3 py-2 text-sm mb-3 outline-none"
-          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", color: "#fff" }}
-        />
-        {err && <p className="text-xs mb-3" style={{ color: "#f87171" }}>{err}</p>}
-        <div className="flex gap-2">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 rounded-lg text-xs font-bold uppercase"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={submit}
-            disabled={loading || !pw.trim()}
-            className="flex-1 py-2 rounded-lg text-xs font-black uppercase transition-opacity"
-            style={{ background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.4)", color: "#fbbf24", cursor: loading || !pw.trim() ? "not-allowed" : "pointer", opacity: loading || !pw.trim() ? 0.5 : 1 }}
-          >
-            {loading ? "Checking…" : "Join"}
-          </button>
+
+        {/* Input */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <input
+            type="password"
+            value={pw}
+            onChange={e => { setPw(e.target.value); setErr(null); }}
+            onKeyDown={e => e.key === "Enter" && submit()}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder="Enter room password"
+            autoFocus
+            style={{
+              width: "100%",
+              background: "rgba(255,255,255,0.04)",
+              border: `1px solid ${err ? "#ef4444" : focused ? `${neon}66` : `${neon}2a`}`,
+              borderRadius: 10,
+              padding: "12px 14px",
+              fontSize: 14,
+              color: "#f0f0f0",
+              outline: "none",
+              fontFamily: "'Rajdhani', sans-serif",
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              boxShadow: err ? "0 0 0 1px rgba(239,68,68,0.12)" : focused ? `0 0 0 1px ${neon}18` : "none",
+              transition: "border-color 0.15s, box-shadow 0.15s",
+            }}
+          />
+          <div style={{ minHeight: 16 }}>
+            {err && (
+              <p style={{ fontSize: 11, color: "#f87171", fontFamily: "'Rajdhani', sans-serif", fontWeight: 600, letterSpacing: "0.03em" }}>
+                ✕ {err}
+              </p>
+            )}
+          </div>
+
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={onClose}
+              style={{
+                flex: "0 0 auto",
+                padding: "11px 18px",
+                borderRadius: 10,
+                fontSize: 10,
+                fontWeight: 900,
+                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                background: "rgba(255,255,255,0.04)",
+                border: "1px solid rgba(255,255,255,0.09)",
+                color: "rgba(255,255,255,0.4)",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={submit}
+              disabled={!canSubmit}
+              style={{
+                flex: 1,
+                padding: "11px 0",
+                borderRadius: 10,
+                fontSize: 10,
+                fontWeight: 900,
+                fontFamily: "'Orbitron', sans-serif",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                background: canSubmit ? `${neon}1a` : `${neon}09`,
+                border: `1px solid ${canSubmit ? `${neon}55` : `${neon}20`}`,
+                color: canSubmit ? neon : `${neon}44`,
+                cursor: canSubmit ? "pointer" : "not-allowed",
+                boxShadow: canSubmit ? `0 0 18px ${neon}22` : "none",
+                transition: "all 0.15s",
+              }}
+            >
+              {loading ? "Checking…" : "Enter Room"}
+            </button>
+          </div>
         </div>
       </div>
     </div>
