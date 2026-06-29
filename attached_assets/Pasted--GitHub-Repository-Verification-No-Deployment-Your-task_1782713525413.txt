@@ -1,0 +1,107 @@
+# GitHub Repository Verification (No Deployment)
+
+Your task is **ONLY** to verify the Git repository and prepare it for a safe push to GitHub.
+
+## Important Constraints
+
+* **DO NOT deploy anything.**
+* **DO NOT run the application.**
+* **DO NOT modify production or server configuration.**
+* **DO NOT connect to or deploy to any VPS, cloud server, or hosting provider.**
+* **GitHub is the final destination. We will deploy manually from GitHub later.**
+
+## Verification Checklist
+
+1. Verify this is a valid Git repository.
+2. Check the current branch.
+3. Run `git status` and explain exactly what is staged, unstaged, and untracked.
+4. Compare the working tree with the latest commit.
+5. Verify the GitHub remote(s):
+
+   * `git remote -v`
+   * Confirm the repository URL is correct.
+6. Review all changed files and determine:
+
+   * Are any important project files missing?
+   * Are there files that should NOT be committed?
+   * Are there generated files, caches, logs, secrets, or temporary files that should be ignored?
+7. Review `.gitignore` and recommend any missing entries.
+8. Verify that all source code required to build the project is included.
+9. Verify configuration files required for deployment are present (but do not expose secrets).
+10. Check for accidentally committed secrets:
+
+    * API keys
+    * passwords
+    * tokens
+    * private certificates
+    * `.env` files (unless intentionally tracked)
+
+## Required Output
+
+Provide:
+
+### Repository Summary
+
+* Current branch
+* Current commit hash
+* GitHub remote
+* Repository status
+
+### Files Ready to Commit
+
+List every file that should be committed.
+
+### Files That Should NOT Be Committed
+
+List any files that should remain ignored, with reasons.
+
+### Missing or Suspicious Files
+
+Identify anything that appears missing or inconsistent.
+
+### Final Recommendation
+
+State one of:
+
+* ✅ Safe to commit and push
+* ⚠ Needs review before committing
+* ❌ Do not push
+
+## If Everything Looks Good
+
+Provide the **exact Git commands only** (do not execute them):
+
+```bash
+git add ...
+git status
+git commit -m "your commit message"
+git push origin <branch-name>
+```
+
+Use the actual branch name.
+
+## If Problems Are Found
+
+Do **NOT** make changes automatically.
+
+Instead:
+
+1. Explain each issue.
+2. Explain why it matters.
+3. Recommend the exact Git commands needed to fix it.
+4. Wait for approval before suggesting any destructive operations.
+
+## Do Not Perform These Actions
+
+* No deployment
+* No server access
+* No SSH
+* No Docker deployment
+* No package publishing
+* No database migrations
+* No force push
+* No history rewriting
+* No branch deletion
+* No automatic commits
+
+Your job is strictly to perform a Git repository audit and prepare a safe GitHub push. Nothing more.
