@@ -230,13 +230,14 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
   const C      = 2 * Math.PI * R;
   const cx     = SIZE / 2;     // 60
   const cy     = SIZE / 2;     // 60
+  // frac: 1 at phase start → 0 at phase end
+  // offset: 0 = full ring visible, C = ring completely empty (drained)
   const frac   = Math.max(0, Math.min(1, fraction));
-  const offset = C * (1 - frac);   // 0 = full ring, C = empty ring
+  const offset = C * (1 - frac);
 
-  const urgent = secs <= 5;
-  const ringColor  = urgent ? "#f87171" : "#4ade80";
-  const glowStrong = urgent ? "rgba(248,113,113,0.7)"  : "rgba(74,222,128,0.65)";
-  const glowSoft   = urgent ? "rgba(248,113,113,0.25)" : "rgba(74,222,128,0.25)";
+  const urgent    = secs <= 5;
+  const ringColor = urgent ? "#f87171" : "#22c55e";
+  const glowColor = urgent ? "rgba(248,113,113,0.45)" : "rgba(34,197,94,0.40)";
 
   return (
     <svg
@@ -245,39 +246,25 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         display: "block",
         width:  "clamp(80px, 8vw, 120px)",
         height: "clamp(80px, 8vw, 120px)",
-        filter: [
-          `drop-shadow(0 0 20px ${glowStrong})`,
-          `drop-shadow(0 0 8px  ${glowSoft})`,
-        ].join(" "),
+        filter: `drop-shadow(0 0 12px ${glowColor})`,
         transition: "filter 0.35s ease",
         overflow: "visible",
       }}
     >
-      <defs>
-        {/* Radial glass gradient for the dark centre */}
-        <radialGradient id="bj-timer-glass" cx="42%" cy="32%" r="65%">
-          <stop offset="0%"   stopColor="rgba(255,255,255,0.10)" />
-          <stop offset="100%" stopColor="rgba(0,0,0,0.72)" />
-        </radialGradient>
-      </defs>
-
-      {/* Outer dark disc — fills the whole ring area + margin */}
-      <circle cx={cx} cy={cy} r={R + STROKE / 2 + 3}
-        fill="url(#bj-timer-glass)"
-        stroke="rgba(255,255,255,0.06)"
-        strokeWidth={1}
+      {/* Flat dark centre disc — no gradient bloom */}
+      <circle cx={cx} cy={cy} r={R + STROKE / 2 + 2}
+        fill="rgba(0,0,0,0.82)"
+        stroke="none"
       />
 
-      {/* Dim track ring (unlit portion) */}
+      {/* Unlit track — very dim so drained segments are clearly dark */}
       <circle cx={cx} cy={cy} r={R}
         fill="none"
-        stroke="rgba(255,255,255,0.12)"
+        stroke="rgba(255,255,255,0.07)"
         strokeWidth={STROKE}
-        strokeLinecap="round"
       />
 
-      {/* Active progress arc — 12 o'clock origin, drains clockwise.
-          No CSS transition on dashoffset — RAF updates every frame. */}
+      {/* Active arc — drains clockwise from 12 o'clock; RAF drives offset each frame */}
       <circle cx={cx} cy={cy} r={R}
         fill="none"
         stroke={ringColor}
@@ -286,10 +273,10 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         strokeDasharray={`${C} ${C}`}
         strokeDashoffset={offset}
         transform={`rotate(-90 ${cx} ${cy})`}
-        style={{ transition: "stroke 0.35s ease" }}
+        style={{ transition: "stroke 0.3s ease" }}
       />
 
-      {/* Countdown number — perfectly centred, always white for legibility */}
+      {/* Countdown number — always white, perfectly centred */}
       <text
         x={cx}
         y={cy}
