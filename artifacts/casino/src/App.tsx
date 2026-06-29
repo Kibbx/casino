@@ -153,6 +153,14 @@ function Router() {
 
 function App() {
   useVersionCheck();
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const t = e.target as HTMLElement;
+      if (t?.tagName === "IMG") (t as HTMLImageElement).style.visibility = "hidden";
+    };
+    document.addEventListener("error", handler, true);
+    return () => document.removeEventListener("error", handler, true);
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <WsProvider>
