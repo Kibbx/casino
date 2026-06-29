@@ -283,19 +283,6 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
       >
         {secs}
       </text>
-      {/* unit label */}
-      <text
-        x={cx} y={cy + 18}
-        textAnchor="middle"
-        dominantBaseline="auto"
-        fill={urgent ? "rgba(248,113,113,0.6)" : "rgba(74,222,128,0.5)"}
-        fontSize={10}
-        fontWeight={700}
-        fontFamily="inherit"
-        style={{ transition: "fill 0.3s ease", userSelect: "none", letterSpacing: 2 } as React.CSSProperties}
-      >
-        SEC
-      </text>
     </svg>
   );
 }
