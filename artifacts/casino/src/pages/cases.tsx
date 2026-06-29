@@ -4,6 +4,7 @@ import { useStore } from "../store";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { ChevronLeft, Package, Lock, Zap, Coins } from "lucide-react";
 import { fireChallengeEvent } from "../lib/challengeEventService";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 function Chip({ size = 13 }: { size?: number }) {
   return <Coins size={size} style={{ display: "inline", verticalAlign: "middle", color: "#fbbf24", flexShrink: 0 }} />;
@@ -426,6 +427,7 @@ function ResultModal({ result, onClose }: { result: any; onClose: () => void }) 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function CasesPage() {
+  useGameClosedRedirect("cases", "/minigames");
   const [, setLocation] = useLocation();
   const { sessionToken, playerId } = useStore();
   const { data: playerData, refetch: refetchPlayer } = useGetPlayer(playerId!, { query: { enabled: !!playerId } });

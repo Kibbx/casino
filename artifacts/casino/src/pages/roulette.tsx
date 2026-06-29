@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Trash2, Users, Clock } from "lucide-react";
 import { playSound } from "../lib/sounds";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -667,6 +668,7 @@ function PhaseBar({ phase, secondsLeft, playerCount }: { phase: Phase; secondsLe
 // ── Main Roulette Page ─────────────────────────────────────────────────────────
 
 export default function Roulette() {
+  useGameClosedRedirect("roulette", "/tablegames");
   const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
   const [, setLocation] = useLocation();
   const { playerId, sessionToken } = useStore();

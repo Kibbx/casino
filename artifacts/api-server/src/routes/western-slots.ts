@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, playersTable, transactionsTable } from "@workspace/db";
+import { db, playersTable, transactionsTable, settingsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { requirePlayer } from "../middleware/auth.js";
 import { broadcastPlayerBalance } from "../lib/table-ws.js";
@@ -8,6 +8,11 @@ import { isPlayerGameBanned } from "./security.js";
 import { trackRakebackBet, trackRakebackWin } from "../lib/rakeback.js";
 
 const router = Router();
+
+async function getSetting(key: string, fallback: string): Promise<string> {
+  const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
+  return rows[0]?.value ?? fallback;
+}
 
 const BET_MIN = 20;
 
@@ -231,6 +236,11 @@ const GAME_KEY = "western-slots";
 // ── POST /western-slots/spin ──────────────────────────────────────────────────
 router.post("/spin", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
+  const slotsEnabled = (await getSetting("slotsEnabled", "false")) === "true";
+  if (!slotsEnabled) {
+    console.log(`[western-slots] /spin blocked — slotsEnabled=false (player=${playerId})`);
+    return res.status(403).json({ error: "Slots are currently closed" });
+  }
   const totalBet = parseInt(req.body.bet);
 
   if (!totalBet || totalBet < BET_MIN || isNaN(totalBet)) {
@@ -289,6 +299,11 @@ router.post("/spin", requirePlayer, async (req, res) => {
 // ── POST /western-slots/free-spin ─────────────────────────────────────────────
 router.post("/free-spin", requirePlayer, async (req, res) => {
   const playerId = (req as any).authenticatedPlayerId as number;
+  const slotsEnabled = (await getSetting("slotsEnabled", "false")) === "true";
+  if (!slotsEnabled) {
+    console.log(`[western-slots] /free-spin blocked — slotsEnabled=false (player=${playerId})`);
+    return res.status(403).json({ error: "Slots are currently closed" });
+  }
 
   const rows = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
   const player = rows[0];

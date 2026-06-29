@@ -11,6 +11,7 @@ import { awardXP } from "../lib/rewardsState";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
 import { PlayingCardImg, MiniPlayingCard } from "../components/PlayingCardImg";
 import { fireChallengeEvent } from "../lib/challengeEventService";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -478,6 +479,7 @@ function Seat({ seat, isLocal, isCurrentTurn, phase, onSit, onLeave }: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BlackjackPage() {
+  useGameClosedRedirect("blackjack", "/tablegames");
   const [, setLocation] = useLocation();
   const { playerId, sessionToken } = useStore();
   usePageTracker("blackjack", sessionToken);

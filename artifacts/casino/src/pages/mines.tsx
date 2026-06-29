@@ -11,6 +11,7 @@ import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
 import { awardXP } from "../lib/rewardsState";
 import { playSound } from "../lib/sounds";
 import { fireChallengeEvent } from "../lib/challengeEventService";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const IMGS = import.meta.env.BASE_URL;
@@ -156,6 +157,7 @@ function Tile({ state, clickable, revealing, onClick }: {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Mines() {
+  useGameClosedRedirect("mines", "/minigames");
   const [, setLocation] = useLocation();
   const { playerId, sessionToken } = useStore();
   usePageTracker("mines", sessionToken);

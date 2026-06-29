@@ -9,6 +9,7 @@ import { motion } from "framer-motion";
 import { ChevronLeft, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
 import { PlayingCardImg } from "../components/PlayingCardImg";
 import { playSound } from "../lib/sounds";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -78,6 +79,7 @@ const BET_PRESETS = [100, 500, 1000, 5000, 10000, 25000];
 
 // ── Main page ───────────────────────────────────────────────────────────────
 export default function HighLow() {
+  useGameClosedRedirect("highlow", "/tablegames");
   const [, setLocation] = useLocation();
   const { playerId, sessionToken } = useStore();
   usePageTracker("high-low", sessionToken);

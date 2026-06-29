@@ -6,6 +6,7 @@ import { awardXP } from "../lib/rewardsState";
 import { soundSafe, soundBust, soundCashout, setMasterVolume, preloadSounds } from "../sounds";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const FLOORS = 8;
@@ -22,6 +23,7 @@ interface FloorResult {
 }
 
 export default function MobTower() {
+  useGameClosedRedirect("mob-tower", "/minigames");
   const [, setLocation] = useLocation();
   const { playerId, sessionToken } = useStore();
   const { data: currentPlayer } = useGetPlayer(playerId!, { query: { enabled: !!playerId } });

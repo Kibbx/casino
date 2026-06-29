@@ -7,6 +7,7 @@ import { awardXP } from "../lib/rewardsState";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
 import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 const WS   = import.meta.env.BASE_URL + "western-slots/";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -378,6 +379,7 @@ function Panel({img,x,y,w,h,label,value}:{
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function WesternSlots() {
+  useGameClosedRedirect("deadwood-dollars", "/slots");
   const [,navigate] = useLocation();
   const {sessionToken, playerId} = useStore();
   usePageTracker("western-slots");

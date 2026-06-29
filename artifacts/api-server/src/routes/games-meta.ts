@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { db, settingsTable } from "@workspace/db";
+import { db, settingsTable, baccaratTablesTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { getActivePlayers } from "../lib/player-activity.js";
 import { getRouletteSubscribers } from "../lib/roulette-room.js";
 
@@ -14,7 +15,11 @@ export interface GameMeta {
 }
 
 router.get("/", async (_req, res) => {
-  const rows = await db.select().from(settingsTable);
+  const [rows, openBacTables] = await Promise.all([
+    db.select().from(settingsTable),
+    db.select({ id: baccaratTablesTable.id }).from(baccaratTablesTable)
+      .where(eq(baccaratTablesTable.isOpen, true)).limit(1),
+  ]);
   const s: Record<string, string> = {};
   for (const r of rows) s[r.key] = r.value;
 
@@ -52,8 +57,8 @@ router.get("/", async (_req, res) => {
       currentPlayers: count("baccarat"),
       minBet: int("baccaratMinBet", 100),
       maxBet: int("baccaratMaxBet", 10000),
-      // No separate baccaratEnabled setting — baccarat is always open
-      status: "open",
+      // Derived from table isOpen flag — toggled via admin panel per-table toggle
+      status: openBacTables.length > 0 ? "open" : "closed",
       hasPassword: !!s["baccaratPassword"],
     },
     highlow: {

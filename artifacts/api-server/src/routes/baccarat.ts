@@ -288,6 +288,10 @@ router.post("/play-single", requirePlayer, async (req, res) => {
 
   const tables = await db.select().from(baccaratTablesTable).where(eq(baccaratTablesTable.isOpen, true)).limit(1);
   const tbl = tables[0];
+  if (!tbl) {
+    console.log(`[baccarat] /play-single blocked — no open tables (player=${playerId})`);
+    return res.status(403).json({ error: "Baccarat is currently closed" });
+  }
   const minBet = tbl?.minBet ?? 100;
   const maxBet = tbl?.maxBet ?? 100000;
   const bankerComm = tbl?.bankerCommission ?? 5;

@@ -6,6 +6,7 @@ import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCcw } from "lucide-react";
 import { PlayingCardImg } from "../components/PlayingCardImg";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 // ── Audio (Web Audio API, zero external files) ────────────────────────────────
 
@@ -232,6 +233,7 @@ function BetZone({ side, label, odds, myBet, selected, isWinner, isLoser, disabl
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function BaccaratPage() {
+  useGameClosedRedirect("baccarat", "/tablegames");
   const { playerId, sessionToken, currentPlayer } = useStore();
   const [, setLocation] = useLocation();
   const { chips: liveChips } = usePlayerSocket(playerId ?? null, sessionToken, () => setLocation("/login"));

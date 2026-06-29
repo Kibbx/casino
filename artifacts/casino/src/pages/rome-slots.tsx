@@ -19,6 +19,7 @@ import {
   getRomeSfxVolume,
   getRomeSfxMuted,
 } from "./rome-sounds";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLOTS_MAINTENANCE = false;
@@ -156,6 +157,7 @@ function PanelDisplay({ img, w, h, x, y, label, value, highlight }: {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 export default function RomeSlots() {
+  useGameClosedRedirect("fortuna", "/slots");
   const [, navigate] = useLocation();
   const { playerId, sessionToken } = useStore();
   usePageTracker("rome-slots");

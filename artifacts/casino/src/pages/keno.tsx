@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { playSound } from "../lib/sounds";
 import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
+import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 function playBtnClick() {
   try { const a = new Audio(buttonClickUrl); a.play().catch(() => {}); } catch {}
@@ -120,6 +121,7 @@ function KenoTile({
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function Keno() {
+  useGameClosedRedirect("keno", "/minigames");
   const [, setLocation] = useLocation();
   const { playerId, sessionToken } = useStore();
   usePasswordGuard("keno");
