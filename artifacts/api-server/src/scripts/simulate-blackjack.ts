@@ -1,67 +1,67 @@
 /**
  * Dev-only Blackjack RTP simulation.
  *
- * Plays a large number of hands using textbook basic strategy against the fair
- * engine and reports win/loss/push/blackjack rates, RTP, and house edge. This is
- * how we verify the rule set yields the expected ~99.5% RTP WITHOUT any per-hand
- * rigging — the only levers are in BLACKJACK_RULES.
+ * Plays rounds using textbook basic strategy against the fair engine and reports
+ * win/loss/push/blackjack rates, RTP, and house edge for each configured mode.
+ * This verifies that each named rule set yields the expected long-run RTP WITHOUT
+ * any per-hand rigging — the only levers are in RULE_SETS.
  *
- * Run:  pnpm --filter @workspace/api-server simulate:blackjack [hands]
+ * Usage:
+ *   pnpm --filter @workspace/api-server simulate:blackjack              # all modes, 100k rounds each
+ *   pnpm --filter @workspace/api-server simulate:blackjack 50000        # all modes, 50k rounds each
+ *   pnpm --filter @workspace/api-server simulate:blackjack 100000 hot   # one mode only
  *
- * This script is never imported by the server and never auto-runs in production;
- * it only executes when invoked directly from the command line.
+ * This script is never imported by the server and never auto-runs in production.
  */
 import {
-  BLACKJACK_RULES,
-  createDeck,
-  drawCard,
-  needsReshuffle,
-  cardValue,
-  handValue,
-  isSoftHand,
-  isBlackjack,
-  dealerPlay,
-  type Card,
+  RULE_SETS, getRulesForMode, createDeck, drawCard, needsReshuffle,
+  cardValue, handValue, isSoftHand, isBlackjack, dealerPlay,
+  type BlackjackRules, type Card,
 } from "../lib/blackjack-engine.ts";
 
 type Move = "H" | "S" | "D" | "P";
 
-const upValue = (card: Card): number => cardValue(card.rank); // ace = 11
+const upValue = (card: Card): number => cardValue(card.rank);
 
 const isPair = (cards: Card[]): boolean =>
   cards.length === 2 && cardValue(cards[0].rank) === cardValue(cards[1].rank);
 
+function canDoubleCards(cards: Card[], rules: BlackjackRules): boolean {
+  if (cards.length !== 2) return false;
+  if (rules.canDouble === "none") return false;
+  if (rules.canDouble === "any") return true;
+  const total = handValue(cards);
+  return total >= 9 && total <= 11;
+}
+
 /**
- * Textbook basic strategy for a 4–8 deck shoe, dealer stands on soft 17, double
- * allowed on any two cards, double-after-split allowed. Returns the ideal move;
- * callers downgrade D→H when doubling is not permitted.
+ * Textbook basic strategy (adapted per rule set double/split constraints).
+ * Returns the ideal move; callers downgrade D→H when doubling is not permitted.
  */
 function basicStrategy(cards: Card[], dealerUp: Card, canDouble: boolean, canSplit: boolean): Move {
-  const d = upValue(dealerUp); // 2..11 (11 = ace)
+  const d = upValue(dealerUp);
   const total = handValue(cards);
 
-  // Pairs
   if (canSplit && isPair(cards)) {
     const pv = cardValue(cards[0].rank);
-    if (pv === 11) return "P"; // A,A
-    if (pv === 10) return "S"; // 10,10 never split
-    if (pv === 9) return d === 7 || d === 10 || d === 11 ? "S" : "P"; // 9,9
-    if (pv === 8) return "P"; // 8,8
+    if (pv === 11) return "P";
+    if (pv === 10) return "S";
+    if (pv === 9) return d === 7 || d === 10 || d === 11 ? "S" : "P";
+    if (pv === 8) return "P";
     if (pv === 7) return d <= 7 ? "P" : "H";
     if (pv === 6) return d <= 6 ? "P" : "H";
-    if (pv === 5) return d <= 9 ? (canDouble ? "D" : "H") : "H"; // treat as hard 10
+    if (pv === 5) return d <= 9 && canDouble ? "D" : "H";
     if (pv === 4) return d === 5 || d === 6 ? "P" : "H";
     if (pv === 3 || pv === 2) return d <= 7 ? "P" : "H";
   }
 
-  // Soft totals (an ace counted as 11)
   if (isSoftHand(cards)) {
-    if (total >= 20) return "S"; // soft 20/21
-    if (total === 19) return "S"; // A,8
+    if (total >= 20) return "S";
+    if (total === 19) return "S";
     if (total === 18) {
       if (d >= 3 && d <= 6 && canDouble) return "D";
       if (d === 2 || d === 7 || d === 8) return "S";
-      return "H"; // 9,10,A
+      return "H";
     }
     if (total === 17) return d >= 3 && d <= 6 && canDouble ? "D" : "H";
     if (total === 16 || total === 15) return d >= 4 && d <= 6 && canDouble ? "D" : "H";
@@ -69,166 +69,169 @@ function basicStrategy(cards: Card[], dealerUp: Card, canDouble: boolean, canSpl
     return "H";
   }
 
-  // Hard totals
   if (total >= 17) return "S";
   if (total >= 13 && total <= 16) return d <= 6 ? "S" : "H";
   if (total === 12) return d >= 4 && d <= 6 ? "S" : "H";
   if (total === 11) return canDouble ? "D" : "H";
   if (total === 10) return d <= 9 && canDouble ? "D" : "H";
   if (total === 9) return d >= 3 && d <= 6 && canDouble ? "D" : "H";
-  return "H"; // 8 or less
+  return "H";
 }
 
 type FinalHand = { cards: Card[]; bet: number };
 
 /**
  * Play out one player position (recursively for splits). Returns every resulting
- * hand with the wager committed to it (doubles carry 2x). Aces split take one
- * card each and stop. Re-splitting is allowed up to a small cap.
+ * hand with the wager committed to it. Respects the mode's double/split rules.
  */
-function playPlayer(cards: Card[], dealerUp: Card, deck: Card[], bet: number, splitsLeft: number): FinalHand[] {
-  const move = basicStrategy(cards, dealerUp, cards.length === 2, isPair(cards) && splitsLeft > 0);
+function playPlayer(
+  cards: Card[], dealerUp: Card, deck: Card[], bet: number,
+  splitsLeft: number, rules: BlackjackRules,
+): FinalHand[] {
+  const canDbl = canDoubleCards(cards, rules);
+  const canSpl = rules.canSplit && isPair(cards) && splitsLeft > 0;
+  const move = basicStrategy(cards, dealerUp, canDbl, canSpl);
 
   if (move === "P") {
     const isAces = cards[0].rank === "A";
     const h1: Card[] = [cards[0], drawCard(deck)];
     const h2: Card[] = [cards[1], drawCard(deck)];
-    if (isAces) {
-      // Split aces: exactly one card each, no further play.
-      return [{ cards: h1, bet }, { cards: h2, bet }];
-    }
+    if (isAces) return [{ cards: h1, bet }, { cards: h2, bet }];
     return [
-      ...playPlayer(h1, dealerUp, deck, bet, splitsLeft - 1),
-      ...playPlayer(h2, dealerUp, deck, bet, splitsLeft - 1),
+      ...playPlayer(h1, dealerUp, deck, bet, splitsLeft - 1, rules),
+      ...playPlayer(h2, dealerUp, deck, bet, splitsLeft - 1, rules),
     ];
   }
 
   if (move === "D" && cards.length === 2) {
-    const doubled = [...cards, drawCard(deck)];
-    return [{ cards: doubled, bet: bet * 2 }];
+    return [{ cards: [...cards, drawCard(deck)], bet: bet * 2 }];
   }
 
-  // Hit/stand loop (D downgrades to H when we can no longer double).
   const hand = [...cards];
   while (true) {
     const m = basicStrategy(hand, dealerUp, false, false);
     if (m === "H" || m === "D") {
       hand.push(drawCard(deck));
       if (handValue(hand) > 21) break;
-    } else {
-      break;
-    }
+    } else break;
   }
   return [{ cards: hand, bet }];
 }
 
-function main() {
-  const rounds = Math.max(1, parseInt(process.argv[2] ?? "100000", 10) || 100000);
-  const baseBet = 100;
+interface SimResult {
+  rounds: number; handsResolved: number; splitRounds: number; doubles: number;
+  wins: number; losses: number; pushes: number; blackjacks: number;
+  totalWagered: number; totalReturned: number; elapsed: number;
+}
 
-  let deck: Card[] = createDeck();
-
-  let totalWagered = 0;
-  let totalReturned = 0;
-  let handsResolved = 0;
-  let wins = 0;
-  let losses = 0;
-  let pushes = 0;
-  let blackjacks = 0;
-  let doubles = 0;
-  let splitRounds = 0;
-
+function runMode(rules: BlackjackRules, rounds: number, baseBet: number): SimResult {
+  let deck: Card[] = createDeck(rules.numDecks);
+  let totalWagered = 0, totalReturned = 0, handsResolved = 0;
+  let wins = 0, losses = 0, pushes = 0, blackjacks = 0, doubles = 0, splitRounds = 0;
   const t0 = Date.now();
 
   for (let round = 0; round < rounds; round++) {
-    if (needsReshuffle(deck)) deck = createDeck();
+    if (needsReshuffle(deck, rules)) deck = createDeck(rules.numDecks);
 
-    // Initial deal (player two, dealer two with a hole card).
     const player: Card[] = [drawCard(deck), drawCard(deck)];
     const dealer: Card[] = [drawCard(deck), { ...drawCard(deck), hidden: true }];
     const dealerUp = dealer[0];
-
     const playerBJ = isBlackjack(player);
     const dealerBJ = isBlackjack(dealer);
 
-    // Naturals settle immediately, before any drawing.
     if (playerBJ || dealerBJ) {
       totalWagered += baseBet;
       handsResolved++;
-      if (playerBJ && dealerBJ) {
-        totalReturned += baseBet; // push
-        pushes++;
-      } else if (playerBJ) {
-        totalReturned += baseBet + Math.floor(baseBet * BLACKJACK_RULES.blackjackPayout); // 3:2
-        wins++;
-        blackjacks++;
-      } else {
-        losses++; // dealer natural, nothing returned
-      }
+      if (playerBJ && dealerBJ) { totalReturned += baseBet; pushes++; }
+      else if (playerBJ) {
+        totalReturned += baseBet + Math.floor(baseBet * rules.blackjackPayout);
+        wins++; blackjacks++;
+      } else { losses++; }
       continue;
     }
 
-    // Player plays out (with splits/doubles), then the dealer plays once.
-    const finalHands = playPlayer(player, dealerUp, deck, baseBet, 3);
+    const finalHands = playPlayer(player, dealerUp, deck, baseBet, 3, rules);
     if (finalHands.length > 1) splitRounds++;
     for (const h of finalHands) if (h.bet > baseBet) doubles++;
 
-    const { dealerCards } = dealerPlay(dealer, deck);
+    const { dealerCards } = dealerPlay(dealer, deck, rules);
     const dv = handValue(dealerCards);
 
     for (const hand of finalHands) {
       const pv = handValue(hand.cards);
       totalWagered += hand.bet;
       handsResolved++;
-      if (pv > 21) {
-        losses++; // player bust
-      } else if (dv > 21 || pv > dv) {
-        totalReturned += hand.bet * 2; // win 1:1 (post-split 21 is NOT a 3:2 blackjack)
-        wins++;
-      } else if (pv < dv) {
-        losses++;
-      } else {
-        totalReturned += hand.bet; // push
-        pushes++;
-      }
+      if (pv > 21) { losses++; }
+      else if (dv > 21 || pv > dv) { totalReturned += hand.bet * 2; wins++; }
+      else if (pv < dv) { losses++; }
+      else { totalReturned += hand.bet; pushes++; }
     }
   }
 
-  const ms = Date.now() - t0;
-  const rtp = (totalReturned / totalWagered) * 100;
-  const houseEdge = 100 - rtp;
-  const pct = (n: number) => ((n / handsResolved) * 100).toFixed(2) + "%";
+  return {
+    rounds, handsResolved, splitRounds, doubles, wins, losses, pushes, blackjacks,
+    totalWagered, totalReturned, elapsed: Date.now() - t0,
+  };
+}
+
+function printResult(modeName: string, rules: BlackjackRules, r: SimResult) {
+  const rtp = (r.totalReturned / r.totalWagered) * 100;
+  const edge = 100 - rtp;
+  const pct = (n: number) => ((n / r.handsResolved) * 100).toFixed(2) + "%";
+  const dblLabel = rules.canDouble === "any" ? "any 2 cards" : rules.canDouble === "9-11" ? "totals 9-11" : "none";
+  console.log("──────────────────────────────────────────────────────────");
+  console.log(`  Mode: ${modeName.toUpperCase().padEnd(10)}  RTP ${rtp.toFixed(3)}%   House edge ${edge.toFixed(3)}%`);
+  console.log(`  Rules : ${rules.numDecks}dk · ${rules.dealerHitsSoft17 ? "H17" : "S17"} · BJ pays ${rules.blackjackPayout === 1.5 ? "3:2" : "6:5"} · double ${dblLabel} · split ${rules.canSplit ? "yes" : "no"}`);
+  console.log(`  Rounds ${r.rounds.toLocaleString()} | Hands ${r.handsResolved.toLocaleString()} | ${r.elapsed.toLocaleString()} ms`);
+  console.log(`  Wins ${pct(r.wins)} | Losses ${pct(r.losses)} | Pushes ${pct(r.pushes)} | BJ ${pct(r.blackjacks)}`);
+}
+
+function main() {
+  const args = process.argv.slice(2);
+  const rounds = Math.max(1, parseInt(args[0] ?? "100000", 10) || 100000);
+  const baseBet = 100;
+  const modeArg = args[1];
+
+  const allModes = ["glacier", "frozen", "cold", "cool", "standard", "warm", "hot"] as const;
+  const modesToRun: string[] = modeArg ? [modeArg] : [...allModes];
 
   console.log("");
   console.log("══════════════════════════════════════════════════════════");
-  console.log("  Blackjack fair-engine simulation (basic strategy)");
-  console.log("══════════════════════════════════════════════════════════");
-  console.log(`  Rules            : ${BLACKJACK_RULES.numDecks} decks, ` +
-    `${BLACKJACK_RULES.dealerHitsSoft17 ? "H17" : "S17"}, ` +
-    `BJ pays ${BLACKJACK_RULES.blackjackPayout}:1, reshuffle < ${BLACKJACK_RULES.reshuffleAt}`);
-  console.log(`  Rounds dealt     : ${rounds.toLocaleString()}`);
-  console.log(`  Hands resolved   : ${handsResolved.toLocaleString()} (incl. splits)`);
-  console.log(`  Split rounds     : ${splitRounds.toLocaleString()}`);
-  console.log(`  Double hands     : ${doubles.toLocaleString()}`);
-  console.log("  ─────────────────────────────────────────────────────");
-  console.log(`  Wins             : ${wins.toLocaleString()} (${pct(wins)})`);
-  console.log(`  Losses           : ${losses.toLocaleString()} (${pct(losses)})`);
-  console.log(`  Pushes           : ${pushes.toLocaleString()} (${pct(pushes)})`);
-  console.log(`  Blackjacks       : ${blackjacks.toLocaleString()} (${pct(blackjacks)})`);
-  console.log("  ─────────────────────────────────────────────────────");
-  console.log(`  Total wagered    : ${totalWagered.toLocaleString()}`);
-  console.log(`  Total returned   : ${totalReturned.toLocaleString()}`);
-  console.log(`  RTP              : ${rtp.toFixed(3)}%`);
-  console.log(`  House edge       : ${houseEdge.toFixed(3)}%`);
-  console.log(`  Elapsed          : ${ms.toLocaleString()} ms`);
+  console.log("  Blackjack multi-mode RTP simulation (basic strategy)");
+  console.log(`  ${rounds.toLocaleString()} rounds per mode · ${modesToRun.length} mode(s)`);
   console.log("══════════════════════════════════════════════════════════");
   console.log("");
 
-  if (rtp < 97 || rtp > 101) {
-    console.error(`⚠️  RTP ${rtp.toFixed(3)}% is outside the expected fair band (~98–100%).`);
-    process.exit(1);
+  const summary: { mode: string; rtp: number }[] = [];
+  let anyFailed = false;
+
+  for (const modeName of modesToRun) {
+    const rules = getRulesForMode(modeName);
+    const result = runMode(rules, rounds, baseBet);
+    const rtp = (result.totalReturned / result.totalWagered) * 100;
+    printResult(modeName, rules, result);
+    summary.push({ mode: modeName, rtp });
+    if (rtp < 93 || rtp > 101) {
+      console.error(`  ⚠️  RTP ${rtp.toFixed(3)}% is outside the expected fair band (93–101%).`);
+      anyFailed = true;
+    } else {
+      console.log(`  ✅ Fair`);
+    }
+    console.log("");
   }
-  console.log("✅ RTP is within the expected fair band for basic strategy.");
+
+  if (modesToRun.length > 1) {
+    console.log("══════════════════════════════════════════════════════════");
+    console.log("  SUMMARY — RTP by admin-configured mode");
+    console.log("══════════════════════════════════════════════════════════");
+    for (const { mode, rtp } of summary) {
+      const bar = "█".repeat(Math.round((rtp - 90) / 2));
+      console.log(`  ${mode.padEnd(10)} ${rtp.toFixed(2).padStart(6)}%  ${bar}`);
+    }
+    console.log("");
+  }
+
+  if (anyFailed) process.exit(1);
 }
 
 main();

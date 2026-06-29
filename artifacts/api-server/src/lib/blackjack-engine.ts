@@ -6,35 +6,96 @@ const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
 
 /**
- * Blackjack rule configuration — the ONLY levers that affect house edge / RTP.
- *
- * The shoe is ALWAYS dealt fairly: every card dealt is the next card off a
- * cryptographically shuffled multi-deck shoe. There is no per-hand rigging, no
- * peeking ahead in the shoe, and no result manipulation. To change the long-run
- * RTP, adjust these rules — nothing else.
- *
- * Current rule set:
- *   - 6-deck shoe, reshuffled when it runs low
- *   - Dealer STANDS on all 17, including soft 17 ("S17") — player-favorable
- *   - Blackjack pays 3:2 (1.5x)
- *   - Player may double on any first two cards; double after split allowed
- *   - Split once on a matching rank pair
- *   - No surrender; dealer checks the hole card for blackjack
- *
- * Expected long-run RTP under optimal (basic-strategy) play with this rule set
- * is ~99.5% (house edge ~0.5%). Run `pnpm --filter @workspace/api-server simulate:blackjack`
- * to measure it empirically.
+ * Which totals the player may double down on.
+ *   "any"  — any first-two-card total (most player-favorable)
+ *   "9-11" — only hard totals 9, 10, or 11
+ *   "none" — doubling is not permitted
  */
-export const BLACKJACK_RULES = {
-  /** Number of 52-card decks in the shoe. */
-  numDecks: 6,
+export type DoubleRule = "any" | "9-11" | "none";
+
+/**
+ * All knobs that legitimately affect long-run RTP.
+ *
+ * The shoe is ALWAYS dealt fairly — every card is the next card off a
+ * cryptographically shuffled multi-deck shoe. There is no per-hand rigging,
+ * no peeking ahead in the shoe, and no result manipulation. To change the
+ * long-run RTP, adjust these rule parameters — nothing else.
+ *
+ * Expected RTPs under optimal (basic-strategy) play:
+ *   hot      (S17, 3:2, double any, split)        ≈ 99.4%
+ *   warm     (H17, 3:2, double any, split)        ≈ 99.2%
+ *   standard (H17, 6:5, double any, split)        ≈ 97.8%
+ *   cool     (H17, 6:5, double 9-11, split)       ≈ 97.5%
+ *   cold     (H17, 6:5, double 9-11, no split)    ≈ 97.0%
+ *   frozen   (H17, 6:5, no double, no split)      ≈ 95.7%
+ *   glacier  (H17, 6:5, no double, no split, 8dk) ≈ 95.5%
+ */
+export interface BlackjackRules {
+  /** Number of 52-card decks in the shoe (more decks → slightly lower player RTP). */
+  numDecks: number;
   /** true = dealer hits soft 17 (H17); false = dealer stands on all 17 (S17). */
-  dealerHitsSoft17: false,
-  /** Blackjack payout multiplier on the bet (1.5 = 3:2, 1.2 = 6:5). */
-  blackjackPayout: 1.5,
-  /** Build a fresh shoe once the live shoe drops below this many cards. */
-  reshuffleAt: 52,
-} as const;
+  dealerHitsSoft17: boolean;
+  /** Blackjack payout multiplier on the bet: 1.5 = 3:2 (player-favorable), 1.2 = 6:5. */
+  blackjackPayout: number;
+  /** Rebuild the shoe once it falls below this many cards. */
+  reshuffleAt: number;
+  /** Which totals the player is allowed to double down on. */
+  canDouble: DoubleRule;
+  /** Whether the player may split a matching-rank pair. */
+  canSplit: boolean;
+}
+
+/** All named rule presets, keyed by the backend oddsMode string. */
+export const RULE_SETS: Record<string, BlackjackRules> = {
+  /** Best rules for the player: S17, BJ pays 3:2, double anything, split. */
+  hot: {
+    numDecks: 6, dealerHitsSoft17: false, blackjackPayout: 1.5,
+    reshuffleAt: 52, canDouble: "any", canSplit: true,
+  },
+  /** H17, BJ pays 3:2, double anything, split. */
+  warm: {
+    numDecks: 6, dealerHitsSoft17: true, blackjackPayout: 1.5,
+    reshuffleAt: 52, canDouble: "any", canSplit: true,
+  },
+  /** H17, BJ pays 6:5, double anything, split. */
+  standard: {
+    numDecks: 6, dealerHitsSoft17: true, blackjackPayout: 1.2,
+    reshuffleAt: 52, canDouble: "any", canSplit: true,
+  },
+  /** H17, BJ pays 6:5, double on 9-11 only, split. */
+  cool: {
+    numDecks: 6, dealerHitsSoft17: true, blackjackPayout: 1.2,
+    reshuffleAt: 52, canDouble: "9-11", canSplit: true,
+  },
+  /** H17, BJ pays 6:5, double on 9-11 only, no split. */
+  cold: {
+    numDecks: 6, dealerHitsSoft17: true, blackjackPayout: 1.2,
+    reshuffleAt: 52, canDouble: "9-11", canSplit: false,
+  },
+  /** H17, BJ pays 6:5, no double, no split. */
+  frozen: {
+    numDecks: 6, dealerHitsSoft17: true, blackjackPayout: 1.2,
+    reshuffleAt: 52, canDouble: "none", canSplit: false,
+  },
+  /** H17, BJ pays 6:5, no double, no split, 8-deck shoe. */
+  glacier: {
+    numDecks: 8, dealerHitsSoft17: true, blackjackPayout: 1.2,
+    reshuffleAt: 52, canDouble: "none", canSplit: false,
+  },
+};
+
+/** Look up the rule set for a given backend oddsMode string. Defaults to "standard". */
+export function getRulesForMode(mode: string): BlackjackRules {
+  return RULE_SETS[mode] ?? RULE_SETS.standard;
+}
+
+/**
+ * Backward-compatible constant — the "hot" rule set (highest player RTP).
+ * Used as the default for all functions that accept an optional rules parameter.
+ */
+export const BLACKJACK_RULES: BlackjackRules = RULE_SETS.hot;
+
+// ── Card / shoe ────────────────────────────────────────────────────────────
 
 export function createDeck(numDecks = BLACKJACK_RULES.numDecks): Card[] {
   const deck: Card[] = [];
@@ -69,18 +130,20 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 /** True when the shoe should be replaced with a fresh, freshly-shuffled one. */
-export function needsReshuffle(deck: Card[]): boolean {
-  return deck.length < BLACKJACK_RULES.reshuffleAt;
+export function needsReshuffle(deck: Card[], rules: BlackjackRules = BLACKJACK_RULES): boolean {
+  return deck.length < rules.reshuffleAt;
 }
 
 /**
  * Draw the next card off the top of the shoe. This is the ONLY way cards leave
- * the shoe during play — it is a plain, unbiased pop with no look-ahead.
+ * the shoe during play — a plain, unbiased pop with no look-ahead.
  */
 export function drawCard(deck: Card[]): Card {
   if (deck.length === 0) throw new Error("drawCard: shoe is empty");
   return deck.pop()!;
 }
+
+// ── Hand evaluation ────────────────────────────────────────────────────────
 
 export function cardValue(rank: Rank): number {
   if (["J", "Q", "K"].includes(rank)) return 10;
@@ -119,7 +182,6 @@ export function isSoftHand(cards: Card[]): boolean {
     total -= 10;
     aces--;
   }
-  // Any ace left after reduction is still being counted as 11 → soft.
   return aces > 0;
 }
 
@@ -131,15 +193,31 @@ export function isBlackjack(cards: Card[]): boolean {
   return cards.length === 2 && handValue(cards) === 21;
 }
 
+// ── Rule enforcement helpers ───────────────────────────────────────────────
+
+/**
+ * Returns true if the player may double down on these first-two cards
+ * under the given rules. Called by the room before accepting a double action.
+ */
+export function isDoubleAllowed(cards: Card[], rule: DoubleRule): boolean {
+  if (rule === "any") return true;
+  if (rule === "none") return false;
+  const total = handValue(cards);
+  if (rule === "9-11") return total >= 9 && total <= 11;
+  return false;
+}
+
+// ── Dealer logic ───────────────────────────────────────────────────────────
+
 /**
  * Whether the dealer must take another card, per the configured soft-17 rule.
- * Dealer always hits below 17. On exactly 17 the dealer hits only when the hand
- * is soft AND the house rule says hit soft 17.
+ * Dealer always hits below 17. On exactly 17 the dealer hits only when the
+ * hand is soft AND the rule set says hit soft 17 (H17).
  */
-export function shouldDealerHit(cards: Card[]): boolean {
+export function shouldDealerHit(cards: Card[], rules: BlackjackRules = BLACKJACK_RULES): boolean {
   const v = handValue(cards);
   if (v < 17) return true;
-  if (v === 17 && BLACKJACK_RULES.dealerHitsSoft17 && isSoftHand(cards)) return true;
+  if (v === 17 && rules.dealerHitsSoft17 && isSoftHand(cards)) return true;
   return false;
 }
 
@@ -154,14 +232,16 @@ export function dealInitialHand(deck: Card[]): { playerCards: Card[]; dealerCard
  * Play out the dealer's hand to completion using fair draws and the configured
  * soft-17 rule. Reveals the hole card first.
  */
-export function dealerPlay(dealerCards: Card[], deck: Card[]): { dealerCards: Card[]; remainingDeck: Card[] } {
+export function dealerPlay(dealerCards: Card[], deck: Card[], rules: BlackjackRules = BLACKJACK_RULES): { dealerCards: Card[]; remainingDeck: Card[] } {
   const remaining = [...deck];
   const cards = dealerCards.map((c) => ({ ...c, hidden: false }));
-  while (shouldDealerHit(cards)) {
+  while (shouldDealerHit(cards, rules)) {
     cards.push({ ...drawCard(remaining), hidden: false });
   }
   return { dealerCards: cards, remainingDeck: remaining };
 }
+
+// ── Winner / payout ────────────────────────────────────────────────────────
 
 export type GameStatus = "active" | "player_bust" | "player_blackjack" | "dealer_bust" | "player_win" | "dealer_win" | "push";
 
@@ -172,12 +252,8 @@ export function determineWinner(playerCards: Card[], dealerCards: Card[]): GameS
   const playerBJ = isBlackjack(playerCards);
   const dealerBJ = isBlackjack(dealerCards);
 
-  // Both blackjack → push (neither gets the BJ bonus)
   if (playerBJ && dealerBJ) return "push";
-  // Player blackjack, dealer does not → player wins with bonus
   if (playerBJ) return "player_blackjack";
-  // Dealer blackjack, player does not have blackjack → dealer wins
-  // Exception: player 21 (non-BJ) vs dealer BJ → push (both scored 21)
   if (dealerBJ && pv < 21) return "dealer_win";
 
   if (pv > 21) return "player_bust";
@@ -189,14 +265,14 @@ export function determineWinner(playerCards: Card[], dealerCards: Card[]): GameS
 
 /**
  * Total chips returned to the player for a resolved hand (original bet + winnings).
- *   - player_blackjack → bet + 3:2 (or whatever BLACKJACK_RULES.blackjackPayout is)
- *   - player_win / dealer_bust → bet + 1:1
+ *   - player_blackjack → bet + (bet × rules.blackjackPayout), e.g. 3:2 or 6:5
+ *   - player_win / dealer_bust → bet × 2 (1:1)
  *   - push → bet refunded
  *   - loss / bust → 0 (the already-deducted bet is kept by the house)
  */
-export function calculatePayout(bet: number, status: GameStatus): number {
+export function calculatePayout(bet: number, status: GameStatus, rules: BlackjackRules = BLACKJACK_RULES): number {
   switch (status) {
-    case "player_blackjack": return bet + Math.floor(bet * BLACKJACK_RULES.blackjackPayout);
+    case "player_blackjack": return bet + Math.floor(bet * rules.blackjackPayout);
     case "player_win":
     case "dealer_bust": return bet * 2;
     case "push": return bet;

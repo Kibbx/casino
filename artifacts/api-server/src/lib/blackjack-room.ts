@@ -7,13 +7,14 @@
  */
 
 import { WebSocket } from "ws";
-import { db, playersTable, transactionsTable, blackjackTablesTable, blackjackHandsTable } from "@workspace/db";
+import { db, playersTable, transactionsTable, blackjackTablesTable, blackjackHandsTable, settingsTable } from "@workspace/db";
 import { eq, and, gte, sql } from "drizzle-orm";
 import { recordPlayerActivity } from "./player-activity.js";
 import {
   createDeck, handValue, isBust, isBlackjack,
   determineWinner, calculatePayout, drawCard, needsReshuffle, shouldDealerHit,
-  type Card,
+  getRulesForMode, isDoubleAllowed, BLACKJACK_RULES,
+  type BlackjackRules, type Card,
 } from "./blackjack-engine.js";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -119,6 +120,8 @@ export class BlackjackRoom {
   private subs: Set<BJSub> = new Set();
   /** Players with a DB-backed action currently in flight — prevents double-fire on slow connections */
   private actingPlayers: Set<number> = new Set();
+  /** Rule set active for the current round, set from the DB configuration at the start of each deal. */
+  private roundRules: BlackjackRules = BLACKJACK_RULES;
 
   constructor(cfg: BJTableConfig) {
     this.tableId = cfg.id;
@@ -266,9 +269,18 @@ export class BlackjackRoom {
     const bettors = this.seats.filter(s => s.bet > 0 && s.playerId !== null);
     if (bettors.length === 0) { this.startBetting(); return; }
 
+    // Read the current RTP configuration and select the matching rule preset.
+    // This is the ONLY point where the admin slider affects gameplay — it picks
+    // a named rule set that changes legitimate game parameters (S17/H17, BJ payout
+    // ratio, double/split availability) for this round. No card outcomes are
+    // manipulated at any other point in the game.
+    const [modeSetting] = await db.select().from(settingsTable).where(eq(settingsTable.key, "blackjackOddsMode"));
+    this.roundRules = getRulesForMode(modeSetting?.value ?? "standard");
+    console.log(`[BJ T${this.tableId}] round rules: mode=${modeSetting?.value ?? "standard"} H17=${this.roundRules.dealerHitsSoft17} BJ=${this.roundRules.blackjackPayout} double=${this.roundRules.canDouble} split=${this.roundRules.canSplit}`);
+
     this.setPhase("DEALING", DEALING_MS);
 
-    if (this.deck.length < this.numSeats * 4 + 4) this.deck = createDeck(NUM_DECKS);
+    if (this.deck.length < this.numSeats * 4 + 4) this.deck = createDeck(this.roundRules.numDecks);
 
     for (const seat of bettors) {
       seat.cards = [this.deck.pop()!, this.deck.pop()!];
@@ -350,13 +362,13 @@ export class BlackjackRoom {
 
   private dealerDrawStep() {
     this.clearTimers();
-    if (!shouldDealerHit(this.dealerCards)) {
-      // Dealer stands (per the soft-17 rule) — pause so players can read the hand, then resolve
+    if (!shouldDealerHit(this.dealerCards, this.roundRules)) {
+      // Dealer stands per the S17/H17 rule active for this round
       this.phaseTimer = setTimeout(() => this.resolveRound(), DEALER_STAND_MS);
       return;
     }
     // Draw one fair card off the top of the shoe
-    if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
+    if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
     this.dealerCards.push(drawCard(this.deck));
     this.broadcastState();
     // Schedule next card
@@ -383,7 +395,7 @@ export class BlackjackRoom {
 
       // Outcomes are always honest — bias was applied during card dealing, not here
       const mainResult = determineWinner(seat.cards, this.dealerCards);
-      const mainFinal = calculatePayout(seat.bet, mainResult);
+      const mainFinal = calculatePayout(seat.bet, mainResult, this.roundRules);
       seat.result = mainResult;
       seat.payout = mainFinal;
 
@@ -392,7 +404,7 @@ export class BlackjackRoom {
       if (seat.splitCards && seat.splitBet > 0) {
         const splitResultRaw = determineWinner(seat.splitCards, this.dealerCards);
         const splitResult = splitResultRaw === "player_blackjack" ? "player_win" : splitResultRaw;
-        const splitFinal = calculatePayout(seat.splitBet, splitResult);
+        const splitFinal = calculatePayout(seat.splitBet, splitResult, this.roundRules);
         seat.splitResult = splitResult;
         seat.splitPayout = splitFinal;
         totalPayout += splitFinal;
@@ -687,7 +699,7 @@ export class BlackjackRoom {
     try {
 
     if (action === "hit") {
-      if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
+      if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
       const newCard = drawCard(this.deck);
 
       if (seat.activeHand === "split") {
@@ -730,9 +742,10 @@ export class BlackjackRoom {
     }
 
     if (action === "double") {
-      if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
+      if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
       const activeCards = seat.activeHand === "split" ? seat.splitCards! : seat.cards;
       if (activeCards.length !== 2) return { error: "Can only double on first two cards" };
+      if (!isDoubleAllowed(activeCards, this.roundRules.canDouble)) return { error: "Doubling is not permitted under the current table rules" };
       const betAmt = seat.activeHand === "split" ? seat.splitBet : seat.bet;
 
       const debited = await db.update(playersTable)
@@ -771,10 +784,11 @@ export class BlackjackRoom {
     }
 
     if (action === "split") {
-      if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
+      if (needsReshuffle(this.deck, this.roundRules)) this.deck = createDeck(this.roundRules.numDecks);
       if (seat.cards.length !== 2) return { error: "Can only split first two cards" };
       if (seat.cards[0].rank !== seat.cards[1].rank) return { error: "Cards must be a matching pair to split" };
       if (seat.splitCards) return { error: "Already split" };
+      if (!this.roundRules.canSplit) return { error: "Splitting is not permitted under the current table rules" };
 
       const debited = await db.update(playersTable)
         .set({ chips: sql`${playersTable.chips} - ${seat.bet}` })

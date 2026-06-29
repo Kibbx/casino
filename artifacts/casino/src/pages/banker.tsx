@@ -13468,14 +13468,14 @@ function OwnerDashboardTab() {
   // Smooth linear interpolation for RTP display — no zone-boundary jumps
   type LerpGame = "blackjack" | "roulette" | "baccarat";
   const LERP_ANCHORS: { pct: number; blackjack: number; roulette: number; baccarat: number }[] = [
-    { pct:   0, blackjack: 77,   roulette: 80,   baccarat: 86   },
-    { pct:  14, blackjack: 80,   roulette: 83,   baccarat: 90   },
-    { pct:  28, blackjack: 87,   roulette: 87,   baccarat: 93   },
-    { pct:  42, blackjack: 94,   roulette: 90,   baccarat: 95.5 },
-    { pct:  56, blackjack: 95.8, roulette: 92.4, baccarat: 97   },
-    { pct:  71, blackjack: 97.5, roulette: 94.7, baccarat: 98.5 },
-    { pct:  85, blackjack: 98.5, roulette: 95.5, baccarat: 99.5 },
-    { pct: 100, blackjack: 99.5, roulette: 96.3, baccarat: 100.5},
+    { pct:   0, blackjack: 95.5, roulette: 80,   baccarat: 86   },
+    { pct:  14, blackjack: 95.7, roulette: 83,   baccarat: 90   },
+    { pct:  28, blackjack: 96.0, roulette: 87,   baccarat: 93   },
+    { pct:  42, blackjack: 97.5, roulette: 90,   baccarat: 95.5 },
+    { pct:  56, blackjack: 97.8, roulette: 92.4, baccarat: 97   },
+    { pct:  71, blackjack: 99.0, roulette: 94.7, baccarat: 98.5 },
+    { pct:  85, blackjack: 99.2, roulette: 95.5, baccarat: 99.5 },
+    { pct: 100, blackjack: 99.4, roulette: 96.3, baccarat: 100.5},
   ];
   function lerpRTP(pct: number, game: LerpGame): number {
     const pts = LERP_ANCHORS;
@@ -13600,9 +13600,7 @@ function OwnerDashboardTab() {
     {
       label: "Blackjack", emoji: "🃏",
       pct: bjTemp, set: setBjTemp,
-      rtp: 99.5, game: "blackjack",
-      locked: true,
-      lockNote: "Rule-locked — fair shuffled shoe (6 decks, dealer stands on soft 17, blackjack pays 3:2). RTP ~99.5% under basic strategy, set by rules only.",
+      rtp: lerpRTP(bjTemp, "blackjack"), game: "blackjack",
     },
     {
       label: "Roulette", emoji: "🎡",
