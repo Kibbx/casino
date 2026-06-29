@@ -1018,8 +1018,22 @@
   flex: 1; background: transparent; border: none; outline: none;
   color: rgba(255,255,255,0.9); font-size: 13px; font-family: inherit; padding: 0;
   line-height: 1;
+  -webkit-appearance: none; appearance: none;
 }
 .header-search input::placeholder { color: rgba(255, 255, 255, 0.35); }
+
+/* Kill browser autofill gray/yellow rectangle — CEF + Chrome paint an opaque
+   background over any transparent value; box-shadow inset is the only reliable override. */
+.header-search input:-webkit-autofill,
+.header-search input:-webkit-autofill:hover,
+.header-search input:-webkit-autofill:focus,
+.header-search input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #060404 inset !important;
+  box-shadow:         0 0 0 1000px #060404 inset !important;
+  -webkit-text-fill-color: rgba(255, 255, 255, 0.9) !important;
+  caret-color: rgba(255, 255, 255, 0.9);
+  transition: background-color 86400s ease 0s;
+}
 
 /* ── Nav icon button ─────────────────────────────────────────────── */
 .nav-icon-btn {

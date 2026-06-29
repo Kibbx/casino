@@ -452,6 +452,10 @@ export function Lobby() {
             <Search size={15} style={{ color: "#a855f7", flexShrink: 0 }} />
             <input
               type="text"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck={false}
               placeholder={appMode === "casino" ? "Search players by name or ID..." : "Search listings, sellers, categories..."}
               value={searchQuery}
               onChange={e => { setSearchQuery(e.target.value); setSearchOpen(true); }}
