@@ -617,8 +617,8 @@ export default function TournamentRome({ tournamentId, tournamentName, initialCh
           }
           const PP = RS + "popups/";
           const cfgs: Record<string, { img: string; glow: string; amtColor: string; textTop: string }> = {
-            huge: { img: PP+"PopUp_HugeWin.webp", glow: "#f59e0b", amtColor: "#fde68a", textTop: "62%" },
-            mega: { img: PP+"PopUp_MegaWin.webp", glow: "#fcd34d", amtColor: "#fef3c7", textTop: "62%" },
+            huge: { img: PP+"HugeWinPanel.webp", glow: "#f59e0b", amtColor: "#fde68a", textTop: "62%" },
+            mega: { img: PP+"MegaWinPanel.webp", glow: "#fcd34d", amtColor: "#fef3c7", textTop: "62%" },
           };
           const cfg = cfgs[winPopup] ?? cfgs.huge;
           return (

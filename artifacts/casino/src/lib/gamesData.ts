@@ -240,7 +240,7 @@ export const GAME_DISPLAY: Record<string, { name: string; category: string; imag
   baccarat:      { name: "Baccarat",         category: "TABLE GAMES",  image: `${IMGS}images/card-baccarat.webp`,        gameKey: "baccarat"   },
   poker:         { name: "Poker",            category: "TABLE GAMES",  image: `${IMGS}images/card-poker.webp`,           gameKey: "poker"      },
   slots:         { name: "Slots",            category: "SLOTS",        image: `${IMGS}images/card-slots.webp`,           gameKey: "slots"      },
-  rome_slots:    { name: "Rome Slots",       category: "SLOTS",        image: `${IMGS}images/card-rome-slots.webp`,      gameKey: "slots"      },
+  rome_slots:    { name: "Rome Slots",       category: "SLOTS",        image: `${IMGS}images/card-fortuna.webp`,         gameKey: "slots"      },
   western_slots: { name: "Big House Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, gameKey: "slots"      },
   mines:         { name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           gameKey: "mines"      },
   mob_tower:     { name: "Mob Tower",        category: "MINI GAMES",   image: `${IMGS}images/card-mob-tower.webp`,        gameKey: "mobtower"   },
