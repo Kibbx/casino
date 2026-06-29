@@ -44,7 +44,7 @@ interface Settings {
 }
 interface LotteryTicket {
   id: number; draw_id: number; status: string; ticket_cost: number;
-  purchased_at: string; result_tier: string | null; numbers: string;
+  purchased_at: string; result_tier: string | null; numbers: string | number[] | null | undefined;
 }
 
 /* ── Left card: Weekly Mega Draw ─────────────────────────────── */
@@ -163,9 +163,16 @@ function WeeklyMegaDraw({
   );
 }
 
+function safeParseNums(raw: string | number[] | null | undefined): number[] {
+  if (raw == null) return [];
+  if (Array.isArray(raw)) return raw as number[];
+  try { return JSON.parse(raw as string) as number[]; } catch { return []; }
+}
+
 /* ── Right card: Your Tickets ─────────────────────────────────── */
 function NumbersPopup({ ticket, onClose }: { ticket: LotteryTicket; onClose: () => void }) {
-  const nums: number[] = (() => { try { return JSON.parse(ticket.numbers || "[]"); } catch { return []; } })();
+  const nums: number[] = safeParseNums(ticket.numbers);
+  console.log(`[lottery] NumbersPopup ticketId=${ticket.id} raw=${JSON.stringify(ticket.numbers)} parsed=${JSON.stringify(nums)}`);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -871,8 +878,11 @@ export function LotteryPage() {
     try {
       const r = await apiFetch("/lottery/my-tickets");
       const d = await r.json();
+      console.log(`[lottery] loadTickets response count=${Array.isArray(d) ? d.length : "N/A"} data=${JSON.stringify(Array.isArray(d) ? d.map((t: any) => ({ id: t.id, numbers: t.numbers, status: t.status })) : d)}`);
       if (Array.isArray(d)) setTickets(d);
-    } catch {}
+    } catch (e) {
+      console.error("[lottery] loadTickets error:", e);
+    }
     finally { setTicketsLoading(false); }
   }
 
@@ -895,9 +905,12 @@ export function LotteryPage() {
     if (!settings || buying) return;
     setBuying(true);
     setBuyMsg(null);
+    const payload = { quantity: 1, numbers };
+    console.log(`[lottery] handleBuy payload=${JSON.stringify(payload)}`);
     try {
-      const r = await apiFetch("/lottery/buy", { method: "POST", body: JSON.stringify({ quantity: 1, numbers }) });
+      const r = await apiFetch("/lottery/buy", { method: "POST", body: JSON.stringify(payload) });
       const d = await r.json();
+      console.log(`[lottery] handleBuy response status=${r.status} body=${JSON.stringify(d)}`);
       if (!r.ok) {
         setBuyMsg({ text: d.error || "Purchase failed", ok: false });
       } else {
@@ -906,7 +919,8 @@ export function LotteryPage() {
         await Promise.all([pollDraw(), loadTickets()]);
         setTimeout(() => setBuyMsg(null), 4000);
       }
-    } catch {
+    } catch (e) {
+      console.error("[lottery] handleBuy network error:", e);
       setBuyMsg({ text: "Network error — try again", ok: false });
     } finally {
       setBuying(false);

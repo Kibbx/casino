@@ -315,7 +315,9 @@ router.get("/my-tickets", requirePlayer, async (req, res) => {
   const rows = await db.execute(sql`
     SELECT * FROM lottery_tickets WHERE draw_id=${draw.id} AND player_id=${playerId} ORDER BY id ASC
   `);
-  return res.json(rows.rows);
+  const tickets = rows.rows as any[];
+  console.log(`[lottery/my-tickets] playerId=${playerId} drawId=${draw.id} count=${tickets.length} numbersSnapshot=${JSON.stringify(tickets.map(t => ({ id: t.id, numbers: t.numbers, status: t.status })))}`);
+  return res.json(tickets);
 });
 
 // ─── POST /lottery/buy — purchase tickets ────────────────────────────────────
@@ -356,21 +358,43 @@ router.post("/buy", requirePlayer, async (req, res) => {
   // Validate numbers if provided (single-ticket purchase with chosen numbers)
   let ticketNumbers = '[]';
   let ticketStatus = 'draft';
-  if (qty === 1 && Array.isArray(numbers) && numbers.length === settings.numbersPerTicket) {
-    const allInRange = numbers.every((n: unknown) => Number.isInteger(n) && (n as number) >= settings.numberMin && (n as number) <= settings.numberMax);
-    const allUniq = new Set(numbers).size === numbers.length;
-    if (allInRange && allUniq) {
+  console.log(`[lottery/buy] playerId=${playerId} qty=${qty} numbers=${JSON.stringify(numbers)} numbersPerTicket=${settings.numbersPerTicket} min=${settings.numberMin} max=${settings.numberMax}`);
+  if (Array.isArray(numbers) && numbers.length > 0) {
+    if (qty !== 1) {
+      console.log(`[lottery/buy] numbers provided but qty=${qty} > 1 — ignoring numbers`);
+    } else if (numbers.length !== settings.numbersPerTicket) {
+      const msg = `numbers.length=${numbers.length} !== numbersPerTicket=${settings.numbersPerTicket}`;
+      console.log(`[lottery/buy] validation FAIL — ${msg}`);
+      return res.status(400).json({ error: `Please select exactly ${settings.numbersPerTicket} numbers (got ${numbers.length})` });
+    } else {
+      const allInRange = numbers.every((n: unknown) => Number.isInteger(n) && (n as number) >= settings.numberMin && (n as number) <= settings.numberMax);
+      const allUniq = new Set(numbers).size === numbers.length;
+      if (!allInRange) {
+        const msg = `numbers out of range [${settings.numberMin}–${settings.numberMax}]`;
+        console.log(`[lottery/buy] validation FAIL — ${msg}`);
+        return res.status(400).json({ error: `All numbers must be between ${settings.numberMin} and ${settings.numberMax}` });
+      }
+      if (!allUniq) {
+        console.log(`[lottery/buy] validation FAIL — duplicate numbers`);
+        return res.status(400).json({ error: "Duplicate numbers are not allowed" });
+      }
       ticketNumbers = JSON.stringify(numbers);
       ticketStatus = 'submitted';
+      console.log(`[lottery/buy] validation OK — ticketNumbers=${ticketNumbers} status=${ticketStatus}`);
     }
   }
 
   // Create tickets
+  const createdIds: number[] = [];
   for (let i = 0; i < qty; i++) {
-    await db.execute(sql`
+    const inserted = await db.execute(sql`
       INSERT INTO lottery_tickets (draw_id, player_id, player_username, numbers, status, ticket_cost, purchased_at)
       VALUES (${draw.id}, ${playerId}, ${player.username}, ${ticketNumbers}, ${ticketStatus}, ${settings.ticketCost}, NOW())
+      RETURNING id
     `);
+    const newId = (inserted.rows as any[])[0]?.id;
+    createdIds.push(newId);
+    console.log(`[lottery/buy] created ticket id=${newId} numbers=${ticketNumbers} status=${ticketStatus}`);
   }
 
   // Update draw pools

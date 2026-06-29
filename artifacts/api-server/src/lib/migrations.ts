@@ -1386,6 +1386,30 @@ export async function runMigrations(): Promise<void> {
       sql: `ALTER TABLE lottery_settings ADD COLUMN IF NOT EXISTS consolation_rollover BIGINT NOT NULL DEFAULT 0`,
     },
     {
+      name: "lottery_tickets.numbers column",
+      sql: `ALTER TABLE lottery_tickets ADD COLUMN IF NOT EXISTS numbers TEXT NOT NULL DEFAULT '[]'`,
+    },
+    {
+      name: "lottery_tickets.status column",
+      sql: `ALTER TABLE lottery_tickets ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'draft'`,
+    },
+    {
+      name: "lottery_tickets.submitted_at column",
+      sql: `ALTER TABLE lottery_tickets ADD COLUMN IF NOT EXISTS submitted_at TIMESTAMP`,
+    },
+    {
+      name: "lottery_tickets.matched_count column",
+      sql: `ALTER TABLE lottery_tickets ADD COLUMN IF NOT EXISTS matched_count INTEGER`,
+    },
+    {
+      name: "lottery_tickets.result_tier column",
+      sql: `ALTER TABLE lottery_tickets ADD COLUMN IF NOT EXISTS result_tier TEXT`,
+    },
+    {
+      name: "lottery_tickets.payout_amount column",
+      sql: `ALTER TABLE lottery_tickets ADD COLUMN IF NOT EXISTS payout_amount BIGINT NOT NULL DEFAULT 0`,
+    },
+    {
       name: "players.exclude_from_login_logs column",
       sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS exclude_from_login_logs BOOLEAN NOT NULL DEFAULT false`,
     },
