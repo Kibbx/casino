@@ -122,24 +122,24 @@ const navGroups: NavGroup[] = [
 
 /* ─── Live Activity — server game string → display/nav config ─── */
 const ACTIVITY_MAP: Record<string, { cfgKey: string; name: string; route: string; launchKey?: string; tokenId?: string }> = {
-  "blackjack":    { cfgKey: "blackjack", name: "Blackjack",       route: "/blackjack",    launchKey: "blackjack" },
-  "roulette":     { cfgKey: "roulette",  name: "Roulette",        route: "/roulette",     launchKey: "roulette"  },
-  "baccarat":     { cfgKey: "baccarat",  name: "Baccarat",        route: "/baccarat",     launchKey: "baccarat"  },
-  "poker":        { cfgKey: "poker",     name: "Poker",           route: "/poker-tables", launchKey: "poker"     },
-  "poker-lobby":  { cfgKey: "poker",     name: "Poker",           route: "/poker-tables", launchKey: "poker"     },
-  "high-low":     { cfgKey: "highlow",   name: "High Low",        route: "/high-low",     launchKey: "highlow"   },
-  "highlow":      { cfgKey: "highlow",   name: "High Low",        route: "/high-low",     launchKey: "highlow"   },
-  "slots":        { cfgKey: "slots",     name: "Slots",           route: "/slots",        tokenId: "slots"       },
-  "fortuna":      { cfgKey: "slots",     name: "Fortuna",         route: "/rome-slots",   tokenId: "slots"       },
-  "rome-slots":   { cfgKey: "slots",     name: "Fortuna",         route: "/rome-slots",   tokenId: "slots"       },
-  "western-slots":{ cfgKey: "slots",     name: "Deadwood Dollars",route: "/western-slots",tokenId: "slots"       },
-  "mines":        { cfgKey: "mines",     name: "Mines",           route: "/mines",        launchKey: "mines"     },
-  "mob-tower":    { cfgKey: "mob_tower", name: "Mob Tower",       route: "/mob-tower",    launchKey: "mobtower"  },
-  "horse-racing": { cfgKey: "horse",     name: "Horse Racing",    route: "/horse-racing", launchKey: "horse"     },
-  "bingo":        { cfgKey: "bingo",     name: "Bingo",           route: "/bingo",        launchKey: "bingo"     },
-  "lottery":      { cfgKey: "lottery",   name: "Lottery",         route: "/lottery",      launchKey: "lottery"   },
-  "cases":        { cfgKey: "slots",     name: "Case Opening",    route: "/cases"                                },
-  "keno":         { cfgKey: "slots",     name: "Keno",            route: "/keno",         tokenId: "keno"        },
+  "blackjack":    { cfgKey: "blackjack", name: "Blackjack",       route: "/blackjack",    launchKey: "blackjack"        },
+  "roulette":     { cfgKey: "roulette",  name: "Roulette",        route: "/roulette",     launchKey: "roulette"         },
+  "baccarat":     { cfgKey: "baccarat",  name: "Baccarat",        route: "/baccarat",     launchKey: "baccarat"         },
+  "poker":        { cfgKey: "poker",     name: "Poker",           route: "/poker-tables", launchKey: "poker"            },
+  "poker-lobby":  { cfgKey: "poker",     name: "Poker",           route: "/poker-tables", launchKey: "poker"            },
+  "high-low":     { cfgKey: "highlow",   name: "High Low",        route: "/high-low",     launchKey: "highlow"          },
+  "highlow":      { cfgKey: "highlow",   name: "High Low",        route: "/high-low",     launchKey: "highlow"          },
+  "slots":        { cfgKey: "slots",     name: "Slots",           route: "/slots",        launchKey: "slots"            },
+  "fortuna":      { cfgKey: "slots",     name: "Fortuna",         route: "/rome-slots",   launchKey: "fortuna"          },
+  "rome-slots":   { cfgKey: "slots",     name: "Fortuna",         route: "/rome-slots",   launchKey: "fortuna"          },
+  "western-slots":{ cfgKey: "slots",     name: "Deadwood Dollars",route: "/western-slots",launchKey: "deadwood-dollars" },
+  "mines":        { cfgKey: "mines",     name: "Mines",           route: "/mines",        launchKey: "mines"            },
+  "mob-tower":    { cfgKey: "mob_tower", name: "Mob Tower",       route: "/mob-tower",    launchKey: "mobtower"         },
+  "horse-racing": { cfgKey: "horse",     name: "Horse Racing",    route: "/horse-racing", launchKey: "horse"            },
+  "bingo":        { cfgKey: "bingo",     name: "Bingo",           route: "/bingo",        launchKey: "bingo"            },
+  "lottery":      { cfgKey: "lottery",   name: "Lottery",         route: "/lottery",      launchKey: "lottery"          },
+  "cases":        { cfgKey: "slots",     name: "Case Opening",    route: "/cases",        launchKey: "cases"            },
+  "keno":         { cfgKey: "slots",     name: "Keno",            route: "/keno",         launchKey: "keno"             },
 };
 
 /* ─── Section header ──────────────────────────────────────────── */
@@ -704,22 +704,32 @@ export function Lobby() {
                         const metaKey = entry.id.startsWith("bj-table-") ? "blackjack" : entry.id;
                         const live = gamesMeta[metaKey];
                         const isClosed = live?.status === "closed";
+                        const isLocked = !isClosed && (live?.hasPassword ?? false);
                         const game = live
                           ? {
                               ...entry.game,
                               players: isClosed ? "0 playing" : `${live.currentPlayers} playing`,
                               betRange: formatBetRange(live.minBet, live.maxBet),
                               disabled: isClosed,
+                              hasPassword: isLocked,
                               statusLabel: isClosed ? "CLOSED" : entry.game.statusLabel,
                               statusColor: isClosed ? "#ef4444" : entry.game.statusColor,
                             }
                           : { ...entry.game, players: undefined, betRange: undefined };
                         return <CatalogCard key={entry.id} game={game} onClick={() => {
+                          // BJ table entries navigate directly — per-table password handled by the BJ page
                           if (entry.launchData?.tableId !== undefined) {
                             setAccessToken("blackjack", "open");
                             sessionStorage.setItem("bab_bj_autojoin", JSON.stringify({ tableId: entry.launchData.tableId, password: entry.launchData.password ?? null }));
                             setLocation("/blackjack");
+                            return;
+                          }
+                          // All other games: resolve via GAMES registry so password gate is enforced
+                          const gameDef = GAMES[entry.id] ?? GAMES[entry.tokenId ?? ""];
+                          if (gameDef) {
+                            enter(gameDef, live?.hasPassword ?? false);
                           } else {
+                            // Legacy/unknown entry — direct fallback
                             if (entry.tokenId) setAccessToken(entry.tokenId, "open");
                             setLocation(entry.route);
                           }
@@ -737,9 +747,11 @@ export function Lobby() {
                   {liveActivity.length > 0 ? (
                     <CardGrid>
                       {liveActivity.map(({ username, game }) => {
-                        const m        = ACTIVITY_MAP[game]!;
-                        const cfg      = GAME_CFG[m.cfgKey] ?? GAME_CFG.blackjack;
-                        const isClosed = gamesMeta[game]?.status === "closed";
+                        const m          = ACTIVITY_MAP[game]!;
+                        const cfg        = GAME_CFG[m.cfgKey] ?? GAME_CFG.blackjack;
+                        const liveMeta   = gamesMeta[game];
+                        const isClosed   = liveMeta?.status === "closed";
+                        const isLocked   = !isClosed && (liveMeta?.hasPassword ?? false);
                         const g: CatalogGame = {
                           id:          `live-${username}-${game}`,
                           name:        m.name,
@@ -751,17 +763,19 @@ export function Lobby() {
                           statusLabel: isClosed ? "CLOSED" : "ACTIVE",
                           statusColor: isClosed ? "#ef4444" : "#22c55e",
                           disabled:    isClosed,
+                          hasPassword: isLocked,
                         };
                         return (
                           <CatalogCard
                             key={g.id}
                             game={g}
                             onClick={() => {
+                              // All activity games now have a launchKey — always route through
+                              // the gated launcher so password check is enforced
                               if (m.launchKey) {
                                 const def = GAMES[m.launchKey];
-                                if (def) { enter(def); return; }
+                                if (def) { enter(def, liveMeta?.hasPassword ?? false); return; }
                               }
-                              if (m.tokenId) setAccessToken(m.tokenId, "open");
                               setLocation(m.route);
                             }}
                           />
