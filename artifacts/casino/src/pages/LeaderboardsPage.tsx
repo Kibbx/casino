@@ -84,9 +84,9 @@ function TrendBadge({ delta }: { delta: number | null }) {
 }
 
 function RankCell({ rank }: { rank: number }) {
-  if (rank === 1) return <span style={{ fontSize: 26, lineHeight: 1, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }}>🥇</span>;
-  if (rank === 2) return <span style={{ fontSize: 26, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(192,192,192,0.4))" }}>🥈</span>;
-  if (rank === 3) return <span style={{ fontSize: 26, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(205,127,50,0.4))" }}>🥉</span>;
+  if (rank === 1) return <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }}>🥇</span>;
+  if (rank === 2) return <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(192,192,192,0.4))" }}>🥈</span>;
+  if (rank === 3) return <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(205,127,50,0.4))" }}>🥉</span>;
   return (
     <span style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.3)", fontVariantNumeric: "tabular-nums" }}>
       #{rank}
@@ -118,8 +118,8 @@ function LeaderboardPagination({
 
   const btnBase: React.CSSProperties = {
     display: "inline-flex", alignItems: "center", justifyContent: "center",
-    height: 40, minWidth: 40, padding: "0 16px", borderRadius: 10,
-    fontSize: 13, fontWeight: 800, letterSpacing: "0.04em",
+    height: 34, minWidth: 34, padding: "0 12px", borderRadius: 8,
+    fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
     cursor: "pointer", border: "1px solid",
     transition: "all 0.18s ease",
     userSelect: "none",
@@ -154,16 +154,16 @@ function LeaderboardPagination({
 
   return (
     <div style={{
-      marginTop: 36,
-      display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
-      padding: "16px 28px", borderRadius: 14, minHeight: 72,
+      marginTop: 18,
+      display: "flex", alignItems: "center", justifyContent: "center", gap: 7,
+      padding: "10px 18px", borderRadius: 12, minHeight: 52,
       background: "rgba(255,255,255,0.02)",
       border: "1px solid rgba(255,255,255,0.06)",
       backdropFilter: "blur(12px)",
     }}>
       {navBtn("prev", "← Prev", currentPage - 1, currentPage === 1)}
 
-      <div style={{ display: "flex", gap: 8, marginLeft: 10, marginRight: 10 }}>
+      <div style={{ display: "flex", gap: 5, marginLeft: 6, marginRight: 6 }}>
         {pageNumbers.map((n, idx) => {
           if (n < 0) {
             return (
@@ -186,7 +186,7 @@ function LeaderboardPagination({
               onClick={() => !isActive && onPageChange(n)}
               style={{
                 ...btnBase,
-                minWidth: 40, padding: 0,
+                minWidth: 34, padding: 0,
                 borderColor: isActive ? "rgba(168,85,247,0.7)" : hov ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.08)",
                 background: isActive
                   ? "rgba(168,85,247,0.22)"
@@ -289,13 +289,13 @@ export function LeaderboardsPage() {
       {!loading && !error && myRank !== null && (
         <div style={{
           flexShrink: 0,
-          display: "flex", alignItems: "center", gap: 16,
-          padding: "18px 28px", borderRadius: 14, marginBottom: 24, marginTop: 8,
-          minHeight: 72,
+          display: "flex", alignItems: "center", gap: 12,
+          padding: "10px 20px", borderRadius: 12, marginBottom: 14, marginTop: 4,
+          minHeight: 52,
           background: "rgba(168,85,247,0.07)",
           border: "1px solid rgba(168,85,247,0.22)",
         }}>
-          <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>
+          <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>
             {myRank <= 3 ? ["🥇","🥈","🥉"][myRank - 1] : `#${myRank}`}
           </span>
           <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
@@ -321,7 +321,7 @@ export function LeaderboardsPage() {
               style={{
                 flexShrink: 0,
                 fontSize: 11, fontWeight: 900, letterSpacing: "0.08em",
-                padding: "8px 18px", borderRadius: 8, cursor: "pointer",
+                padding: "6px 13px", borderRadius: 7, cursor: "pointer",
                 background: "rgba(168,85,247,0.15)", color: "#c084fc",
                 border: "1px solid rgba(168,85,247,0.35)",
                 whiteSpace: "nowrap",
@@ -350,13 +350,13 @@ export function LeaderboardsPage() {
         <div style={{
           position: "sticky", top: 0, zIndex: 10,
           display: "grid", gridTemplateColumns: colLayout,
-          padding: "16px 32px", alignItems: "center",
+          padding: "11px 28px", alignItems: "center",
           background: "rgba(10,10,18,0.88)",
           backdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
           fontSize: 10, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase",
           color: "rgba(255,255,255,0.25)",
-          minHeight: 52,
+          minHeight: 42,
         }}>
           <span>Rank</span>
           <span style={{ paddingLeft: 4 }}>Player</span>
@@ -430,8 +430,8 @@ export function LeaderboardsPage() {
                     style={{
                       flex: 1,
                       display: "grid", gridTemplateColumns: colLayout,
-                      padding: "0 32px", alignItems: "center",
-                      minHeight: 66,
+                      padding: "0 28px", alignItems: "center",
+                      minHeight: 50,
                       background: rowBg,
                       borderBottom: i < paginated.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
                       boxShadow: isMe ? "inset 3px 0 0 rgba(168,85,247,0.7)" : undefined,
@@ -445,12 +445,12 @@ export function LeaderboardsPage() {
                     </div>
 
                     {/* Player */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, paddingLeft: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, paddingLeft: 4 }}>
                       {entry.avatarUrl ? (
                         <img
                           src={entry.avatarUrl} alt=""
                           style={{
-                            width: 40, height: 40, borderRadius: "50%",
+                            width: 34, height: 34, borderRadius: "50%",
                             objectFit: "cover", flexShrink: 0,
                             border: `2px solid ${isMe ? "rgba(168,85,247,0.6)" : "rgba(255,255,255,0.08)"}`,
                             boxShadow: isMe ? "0 0 10px rgba(168,85,247,0.35)" : undefined,
@@ -458,7 +458,7 @@ export function LeaderboardsPage() {
                         />
                       ) : (
                         <div style={{
-                          width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
+                          width: 34, height: 34, borderRadius: "50%", flexShrink: 0,
                           display: "flex", alignItems: "center", justifyContent: "center",
                           fontSize: 12, fontWeight: 900,
                           background: isMe
@@ -544,7 +544,7 @@ export function LeaderboardsPage() {
 
       {/* Footer note */}
       <p style={{
-        marginTop: 20, marginBottom: 4, fontSize: 10, textAlign: "center",
+        marginTop: 10, marginBottom: 2, fontSize: 10, textAlign: "center",
         color: "rgba(255,255,255,0.18)", letterSpacing: "0.04em",
       }}>
         LIVE DATA · TREND TRACKS RANK CHANGES BETWEEN VISITS
