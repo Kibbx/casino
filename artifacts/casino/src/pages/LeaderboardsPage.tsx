@@ -66,7 +66,7 @@ function saveSnapshot(entries: RankedEntry[]): void {
 function TrendBadge({ delta }: { delta: number | null }) {
   if (delta === null || delta === 0) {
     return (
-      <span style={{ fontSize: 13, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "-0.02em" }}>
+      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.25)", fontWeight: 700, letterSpacing: "-0.02em" }}>
         ▬
       </span>
     );
@@ -75,7 +75,7 @@ function TrendBadge({ delta }: { delta: number | null }) {
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 2,
-      fontSize: 11, fontWeight: 900,
+      fontSize: 12, fontWeight: 900,
       color: up ? "#22c55e" : "#ef4444",
     }}>
       {up ? "▲" : "▼"}{Math.abs(delta)}
@@ -84,11 +84,11 @@ function TrendBadge({ delta }: { delta: number | null }) {
 }
 
 function RankCell({ rank }: { rank: number }) {
-  if (rank === 1) return <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }}>🥇</span>;
-  if (rank === 2) return <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(192,192,192,0.4))" }}>🥈</span>;
-  if (rank === 3) return <span style={{ fontSize: 22, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(205,127,50,0.4))" }}>🥉</span>;
+  if (rank === 1) return <span style={{ fontSize: 26, lineHeight: 1, filter: "drop-shadow(0 0 6px rgba(255,215,0,0.5))" }}>🥇</span>;
+  if (rank === 2) return <span style={{ fontSize: 26, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(192,192,192,0.4))" }}>🥈</span>;
+  if (rank === 3) return <span style={{ fontSize: 26, lineHeight: 1, filter: "drop-shadow(0 0 5px rgba(205,127,50,0.4))" }}>🥉</span>;
   return (
-    <span style={{ fontSize: 12, fontWeight: 900, color: "rgba(255,255,255,0.3)", fontVariantNumeric: "tabular-nums" }}>
+    <span style={{ fontSize: 13, fontWeight: 900, color: "rgba(255,255,255,0.3)", fontVariantNumeric: "tabular-nums" }}>
       #{rank}
     </span>
   );
@@ -118,8 +118,8 @@ function LeaderboardPagination({
 
   const btnBase: React.CSSProperties = {
     display: "inline-flex", alignItems: "center", justifyContent: "center",
-    height: 34, minWidth: 34, padding: "0 12px", borderRadius: 8,
-    fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
+    height: 40, minWidth: 40, padding: "0 16px", borderRadius: 10,
+    fontSize: 13, fontWeight: 800, letterSpacing: "0.04em",
     cursor: "pointer", border: "1px solid",
     transition: "all 0.18s ease",
     userSelect: "none",
@@ -154,22 +154,22 @@ function LeaderboardPagination({
 
   return (
     <div style={{
-      marginTop: 14,
-      display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-      padding: "12px 20px", borderRadius: 14,
+      marginTop: 36,
+      display: "flex", alignItems: "center", justifyContent: "center", gap: 10,
+      padding: "16px 28px", borderRadius: 14, minHeight: 72,
       background: "rgba(255,255,255,0.02)",
       border: "1px solid rgba(255,255,255,0.06)",
       backdropFilter: "blur(12px)",
     }}>
       {navBtn("prev", "← Prev", currentPage - 1, currentPage === 1)}
 
-      <div style={{ display: "flex", gap: 4, marginLeft: 6, marginRight: 6 }}>
+      <div style={{ display: "flex", gap: 8, marginLeft: 10, marginRight: 10 }}>
         {pageNumbers.map((n, idx) => {
           if (n < 0) {
             return (
               <span key={`ellipsis-${idx}`} style={{
                 ...btnBase, border: "none", background: "none",
-                color: "rgba(255,255,255,0.22)", minWidth: 24, padding: 0,
+                color: "rgba(255,255,255,0.22)", minWidth: 28, padding: 0,
               }}>
                 …
               </span>
@@ -186,7 +186,7 @@ function LeaderboardPagination({
               onClick={() => !isActive && onPageChange(n)}
               style={{
                 ...btnBase,
-                minWidth: 34, padding: 0,
+                minWidth: 40, padding: 0,
                 borderColor: isActive ? "rgba(168,85,247,0.7)" : hov ? "rgba(168,85,247,0.4)" : "rgba(255,255,255,0.08)",
                 background: isActive
                   ? "rgba(168,85,247,0.22)"
@@ -280,7 +280,7 @@ export function LeaderboardsPage() {
   const myEntry = ranked.find(e => e.id === playerId || e.username === playerUsername);
   const myRank  = myEntry?.rank ?? null;
 
-  const colLayout = "48px 1fr 72px 72px 100px 68px";
+  const colLayout = "64px 1fr 92px 92px 130px 84px";
 
   return (
     <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7" fillHeight>
@@ -289,38 +289,47 @@ export function LeaderboardsPage() {
       {!loading && !error && myRank !== null && (
         <div style={{
           flexShrink: 0,
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "10px 16px", borderRadius: 12, marginBottom: 10,
+          display: "flex", alignItems: "center", gap: 16,
+          padding: "18px 28px", borderRadius: 14, marginBottom: 24, marginTop: 8,
+          minHeight: 72,
           background: "rgba(168,85,247,0.07)",
           border: "1px solid rgba(168,85,247,0.22)",
         }}>
-          <span style={{ fontSize: 16 }}>
+          <span style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>
             {myRank <= 3 ? ["🥇","🥈","🥉"][myRank - 1] : `#${myRank}`}
           </span>
-          <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)" }}>
-            Your current rank ·{" "}
-            <span style={{ color: "#c084fc", fontWeight: 800 }}>#{myRank}</span>
-            {" "}of {ranked.length} players
-            {myEntry && myEntry.trendDelta !== null && myEntry.trendDelta !== 0 && (
-              <span style={{ marginLeft: 8 }}>
-                <TrendBadge delta={myEntry.trendDelta} />
-                {" "}since last visit
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 10, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase", color: "rgba(255,255,255,0.3)" }}>
+              Your current rank
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span style={{ fontSize: 15, color: "rgba(255,255,255,0.6)", fontWeight: 500 }}>
+                <span style={{ color: "#c084fc", fontWeight: 900 }}>#{myRank}</span>
+                {" "}of {ranked.length} players
               </span>
-            )}
-            {myRank > 0 && (
-              <button
-                onClick={() => goToPage(Math.ceil(myRank / ITEMS_PER_PAGE))}
-                style={{
-                  marginLeft: 12, fontSize: 10, fontWeight: 800, letterSpacing: "0.06em",
-                  padding: "2px 8px", borderRadius: 6, cursor: "pointer",
-                  background: "rgba(168,85,247,0.15)", color: "#c084fc",
-                  border: "1px solid rgba(168,85,247,0.35)",
-                }}
-              >
-                JUMP TO MY PAGE
-              </button>
-            )}
-          </span>
+              {myEntry && myEntry.trendDelta !== null && myEntry.trendDelta !== 0 && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "rgba(255,255,255,0.4)" }}>
+                  <TrendBadge delta={myEntry.trendDelta} />
+                  since last visit
+                </span>
+              )}
+            </div>
+          </div>
+          {myRank > 0 && (
+            <button
+              onClick={() => goToPage(Math.ceil(myRank / ITEMS_PER_PAGE))}
+              style={{
+                flexShrink: 0,
+                fontSize: 11, fontWeight: 900, letterSpacing: "0.08em",
+                padding: "8px 18px", borderRadius: 8, cursor: "pointer",
+                background: "rgba(168,85,247,0.15)", color: "#c084fc",
+                border: "1px solid rgba(168,85,247,0.35)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              JUMP TO MY PAGE
+            </button>
+          )}
         </div>
       )}
 
@@ -329,7 +338,7 @@ export function LeaderboardsPage() {
         ref={tableRef}
         style={{
           flex: 1, minHeight: 0,
-          borderRadius: 16,
+          borderRadius: 18,
           border: "1px solid rgba(255,255,255,0.07)",
           background: "rgba(255,255,255,0.02)",
           backdropFilter: "blur(12px)",
@@ -341,15 +350,16 @@ export function LeaderboardsPage() {
         <div style={{
           position: "sticky", top: 0, zIndex: 10,
           display: "grid", gridTemplateColumns: colLayout,
-          padding: "11px 20px", alignItems: "center",
+          padding: "16px 32px", alignItems: "center",
           background: "rgba(10,10,18,0.88)",
           backdropFilter: "blur(16px)",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
-          fontSize: 9, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase",
+          fontSize: 10, fontWeight: 900, letterSpacing: "0.14em", textTransform: "uppercase",
           color: "rgba(255,255,255,0.25)",
+          minHeight: 52,
         }}>
           <span>Rank</span>
-          <span>Player</span>
+          <span style={{ paddingLeft: 4 }}>Player</span>
           <span>Games</span>
           <span>Win %</span>
           <span style={{ textAlign: "right" }}>Biggest Win</span>
@@ -360,24 +370,24 @@ export function LeaderboardsPage() {
         {loading && (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 12 }}>
             <div style={{
-              width: 20, height: 20, borderRadius: "50%",
+              width: 22, height: 22, borderRadius: "50%",
               border: "2px solid transparent", borderTopColor: "#a855f7",
               animation: "spin 0.7s linear infinite",
             }} />
-            <span style={{ fontSize: 13, color: "rgba(255,255,255,0.3)" }}>Loading leaderboard…</span>
+            <span style={{ fontSize: 14, color: "rgba(255,255,255,0.3)" }}>Loading leaderboard…</span>
           </div>
         )}
 
         {/* Error */}
         {error && (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,100,100,0.55)" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "rgba(255,100,100,0.55)" }}>
             {error}
           </div>
         )}
 
         {/* Empty */}
         {!loading && !error && ranked.length === 0 && (
-          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "rgba(255,255,255,0.22)" }}>
+          <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "rgba(255,255,255,0.22)" }}>
             No players yet
           </div>
         )}
@@ -420,9 +430,10 @@ export function LeaderboardsPage() {
                     style={{
                       flex: 1,
                       display: "grid", gridTemplateColumns: colLayout,
-                      padding: "0 20px", alignItems: "center",
+                      padding: "0 32px", alignItems: "center",
+                      minHeight: 66,
                       background: rowBg,
-                      borderBottom: i < paginated.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                      borderBottom: i < paginated.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
                       boxShadow: isMe ? "inset 3px 0 0 rgba(168,85,247,0.7)" : undefined,
                       transition: "background 0.15s ease, box-shadow 0.15s ease",
                       cursor: "default", position: "relative",
@@ -434,12 +445,12 @@ export function LeaderboardsPage() {
                     </div>
 
                     {/* Player */}
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, minWidth: 0, paddingLeft: 4 }}>
                       {entry.avatarUrl ? (
                         <img
                           src={entry.avatarUrl} alt=""
                           style={{
-                            width: 32, height: 32, borderRadius: "50%",
+                            width: 40, height: 40, borderRadius: "50%",
                             objectFit: "cover", flexShrink: 0,
                             border: `2px solid ${isMe ? "rgba(168,85,247,0.6)" : "rgba(255,255,255,0.08)"}`,
                             boxShadow: isMe ? "0 0 10px rgba(168,85,247,0.35)" : undefined,
@@ -447,9 +458,9 @@ export function LeaderboardsPage() {
                         />
                       ) : (
                         <div style={{
-                          width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                          width: 40, height: 40, borderRadius: "50%", flexShrink: 0,
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 11, fontWeight: 900,
+                          fontSize: 12, fontWeight: 900,
                           background: isMe
                             ? "linear-gradient(135deg, rgba(168,85,247,0.3), rgba(168,85,247,0.1))"
                             : "rgba(255,255,255,0.06)",
@@ -462,9 +473,9 @@ export function LeaderboardsPage() {
                       )}
 
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                           <span style={{
-                            fontSize: 13, fontWeight: 800,
+                            fontSize: 14, fontWeight: 800,
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                             color: isMe ? "#c084fc" : "rgba(255,255,255,0.88)",
                             textShadow: isMe ? "0 0 14px rgba(192,132,252,0.45)" : undefined,
@@ -473,8 +484,8 @@ export function LeaderboardsPage() {
                           </span>
                           {isMe && (
                             <span style={{
-                              fontSize: 8, fontWeight: 900, letterSpacing: "0.12em",
-                              padding: "2px 6px", borderRadius: 999, textTransform: "uppercase",
+                              fontSize: 9, fontWeight: 900, letterSpacing: "0.12em",
+                              padding: "3px 8px", borderRadius: 999, textTransform: "uppercase",
                               background: "rgba(168,85,247,0.2)", color: "#a855f7",
                               border: "1px solid rgba(168,85,247,0.4)",
                               boxShadow: "0 0 8px rgba(168,85,247,0.2)",
@@ -487,13 +498,13 @@ export function LeaderboardsPage() {
                     </div>
 
                     {/* Games */}
-                    <span style={{ fontSize: 13, fontVariantNumeric: "tabular-nums", color: "rgba(255,255,255,0.45)" }}>
+                    <span style={{ fontSize: 14, fontVariantNumeric: "tabular-nums", color: "rgba(255,255,255,0.45)" }}>
                       {fmtGames(entry.games)}
                     </span>
 
                     {/* Win % */}
                     <span style={{
-                      fontSize: 13, fontWeight: 800, fontVariantNumeric: "tabular-nums",
+                      fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums",
                       color: entry.games > 0 ? winRateColor : "rgba(255,255,255,0.2)",
                     }}>
                       {entry.games > 0 ? entry.winRate + "%" : "—"}
@@ -502,7 +513,7 @@ export function LeaderboardsPage() {
                     {/* Biggest Win */}
                     <div style={{ textAlign: "right" }}>
                       <span style={{
-                        fontSize: 13, fontWeight: 900, fontVariantNumeric: "tabular-nums",
+                        fontSize: 14, fontWeight: 900, fontVariantNumeric: "tabular-nums",
                         color: entry.biggestWin > 0 ? profitColor : "rgba(255,255,255,0.2)",
                         textShadow: entry.biggestWin > 0 && isHov ? `0 0 12px ${profitGlow}` : undefined,
                       }}>
@@ -533,7 +544,7 @@ export function LeaderboardsPage() {
 
       {/* Footer note */}
       <p style={{
-        marginTop: 12, fontSize: 10, textAlign: "center",
+        marginTop: 20, marginBottom: 4, fontSize: 10, textAlign: "center",
         color: "rgba(255,255,255,0.18)", letterSpacing: "0.04em",
       }}>
         LIVE DATA · TREND TRACKS RANK CHANGES BETWEEN VISITS
