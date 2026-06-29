@@ -1151,16 +1151,20 @@ export default function BlackjackPage() {
         </div>
       </div>
 
-      {/* ── Timer zone — a grid cell spanning the open felt between header and HUD.
-           This is the only centering mechanism; no hardcoded top/left offsets. ── */}
+      {/* ── Timer zone — spans the open felt between header and HUD.
+           alignItems: flex-end floats the timer to the bottom of the zone so it
+           sits just above the Current Bet / HUD area on every screen size.
+           paddingBottom gives a responsive gap so it never overlaps the HUD. ── */}
       <div style={{
         position: "absolute",
-        top: 54,      // flush below the header bar
+        top: 54,
         left: 0,
         right: 0,
-        bottom: hudH, // flush above the HUD (hudH already varies with phase/seat)
-        display: "grid",
-        placeItems: "center",
+        bottom: hudH,
+        display: "flex",
+        alignItems: "flex-end",
+        justifyContent: "center",
+        paddingBottom: "clamp(14px, 2.5vh, 32px)",
         zIndex: 15,
         pointerEvents: "none",
       }}>
