@@ -1586,6 +1586,25 @@ export async function runMigrations(): Promise<void> {
       name: "blackjack_games.shoe column",
       sql: `ALTER TABLE blackjack_games ADD COLUMN IF NOT EXISTS shoe JSONB`,
     },
+    // ── Sportsbook bet slips (parlay/single tracking) ─────────────────────────
+    {
+      name: "sport_bet_slips table",
+      sql: `CREATE TABLE IF NOT EXISTS sport_bet_slips (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL,
+        player_username TEXT NOT NULL,
+        type TEXT NOT NULL DEFAULT 'single',
+        wager_amount INTEGER NOT NULL,
+        potential_payout INTEGER NOT NULL DEFAULT 0,
+        actual_payout INTEGER,
+        status TEXT NOT NULL DEFAULT 'pending',
+        selections TEXT NOT NULL DEFAULT '[]',
+        admin_note TEXT,
+        settled_at TIMESTAMP,
+        settled_by TEXT,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+    },
   ];
 
   for (const step of steps) {
