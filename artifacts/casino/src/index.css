@@ -1125,7 +1125,7 @@
 
 /* ── Section transition ──────────────────────────────────────────── */
 .section-content {
-  will-change: opacity, transform;
+  will-change: opacity;
   min-height: 100%;
 }
 .section-exit {

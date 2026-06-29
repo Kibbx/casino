@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Activity, Coins, Trophy, Star, TrendingUp, TrendingDown, Percent, X, Package, Trash2, Clock, CheckCircle2, Hourglass, ArrowRightLeft } from "lucide-react";
 import { useLocation } from "wouter";
 import { fmtETDateTime } from "../utils/timezone";
@@ -182,6 +183,16 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
   const [transferAmt,     setTransferAmt]     = useState("");
   const [transferLoading, setTransferLoading] = useState(false);
   const [transferResult,  setTransferResult]  = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    const anyOpen = showSecurity || showItems || showPrizes || showTransfer;
+    if (anyOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [showSecurity, showItems, showPrizes, showTransfer]);
 
   const loadPrizes = useCallback(async () => {
     if (!sessionToken) return;
@@ -871,10 +882,10 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
       )}
 
       {/* ── Items Inventory modal ───────────────────────────────── */}
-      {showItems && (
+      {showItems && createPortal(
         <div
           style={{
-            position: "fixed", inset: 0, zIndex: 9999,
+            position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9999,
             background: "rgba(0,0,0,0.78)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 16,
@@ -1026,11 +1037,12 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Prizes modal ────────────────────────────────────────── */}
-      {showPrizes && (() => {
+      {showPrizes && createPortal((() => {
         const pending   = prizes.filter(r => !r.delivered_at);
         const delivered = prizes.filter(r =>  r.delivered_at);
         const visible   = prizeFilter === "pending"   ? pending
@@ -1039,7 +1051,7 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
         return (
           <div
             style={{
-              position: "fixed", inset: 0, zIndex: 9999,
+              position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9999,
               background: "rgba(0,0,0,0.78)",
               display: "flex", alignItems: "center", justifyContent: "center",
               padding: 16,
@@ -1201,13 +1213,13 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
             </div>
           </div>
         );
-      })()}
+      })(), document.body)}
 
       {/* ── Security / Change PIN modal ─────────────────────────── */}
-      {showSecurity && (
+      {showSecurity && createPortal(
         <div
           style={{
-            position: "fixed", inset: 0, zIndex: 9999,
+            position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9999,
             background: "rgba(0,0,0,0.72)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 16,
@@ -1293,14 +1305,15 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
               {pinSaving ? "Saving…" : "Change PIN"}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Transfer Chips modal ─────────────────────────────────── */}
-      {isViewing && showTransfer && pubData && (
+      {isViewing && showTransfer && pubData && createPortal(
         <div
           style={{
-            position: "fixed", inset: 0, zIndex: 9999,
+            position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", zIndex: 9999,
             background: "rgba(0,0,0,0.78)",
             display: "flex", alignItems: "center", justifyContent: "center",
             padding: 16,
@@ -1392,7 +1405,8 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
               {transferLoading ? "Sending…" : "Confirm Transfer"}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </PageWrapper>
