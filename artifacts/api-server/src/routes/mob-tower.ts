@@ -60,7 +60,7 @@ function validateBetSteps(steps: unknown): { ok: true; steps: number[] } | { ok:
 }
 
 router.get("/status", async (_req, res) => {
-  const enabled = (await getSetting("mobTowerEnabled", "false")) === "true";
+  const enabled = (await getSetting("mobTowerEnabled", "true")) === "true";
   const minBet = parseInt(await getSetting("mobTowerMinBet", "100"));
   const maxBet = parseInt(await getSetting("mobTowerMaxBet", "50000"));
   const betSteps = parseBetSteps(await getSetting("mobTowerBetSteps"));
@@ -68,7 +68,7 @@ router.get("/status", async (_req, res) => {
 });
 
 router.get("/banker-settings", requireBanker, async (_req, res) => {
-  const enabled = (await getSetting("mobTowerEnabled", "false")) === "true";
+  const enabled = (await getSetting("mobTowerEnabled", "true")) === "true";
   const minBet = parseInt(await getSetting("mobTowerMinBet", "100"));
   const maxBet = parseInt(await getSetting("mobTowerMaxBet", "50000"));
   const betSteps = parseBetSteps(await getSetting("mobTowerBetSteps"));
@@ -112,7 +112,7 @@ router.post("/start", requirePlayer, async (req, res) => {
   const banCheck = await isPlayerGameBanned(playerId, "mob-tower");
   if (banCheck.banned) return res.status(403).json({ error: `You are banned from Mob Tower${banCheck.reason ? ": " + banCheck.reason : ""}` });
 
-  const enabled = (await getSetting("mobTowerEnabled", "false")) === "true";
+  const enabled = (await getSetting("mobTowerEnabled", "true")) === "true";
   if (!enabled) return res.status(403).json({ error: "Mob Tower is currently closed" });
 
   const minBet = parseInt(await getSetting("mobTowerMinBet", "100"));

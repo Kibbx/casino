@@ -25,7 +25,7 @@ async function setSetting(key: string, value: string) {
 
 // GET /roulette/status — public
 router.get("/status", async (_req, res) => {
-  const enabled = (await getSetting("rouletteEnabled", "false")) === "true";
+  const enabled = (await getSetting("rouletteEnabled", "true")) === "true";
   const wheelType = (await getSetting("rouletteType", "european")) as WheelType;
   const minBet = parseInt(await getSetting("rouletteMinBet", "50"));
   const maxBet = parseInt(await getSetting("rouletteMaxBet", "5000"));
@@ -48,7 +48,7 @@ router.post("/verify-password", async (req, res) => {
 
 // GET /roulette/banker-settings — banker only
 router.get("/banker-settings", requireBanker, async (_req, res) => {
-  const enabled = (await getSetting("rouletteEnabled", "false")) === "true";
+  const enabled = (await getSetting("rouletteEnabled", "true")) === "true";
   const wheelType = await getSetting("rouletteType", "european");
   const minBet = parseInt(await getSetting("rouletteMinBet", "50"));
   const maxBet = parseInt(await getSetting("rouletteMaxBet", "5000"));

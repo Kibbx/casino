@@ -81,7 +81,7 @@ function isRateLimited(playerId: number): boolean {
 
 // GET /mines/status — public
 router.get("/status", async (_req, res) => {
-  const enabled = (await getSetting("minesEnabled", "false")) === "true";
+  const enabled = (await getSetting("minesEnabled", "true")) === "true";
   const minBet = parseInt(await getSetting("minesMinBet", "50"));
   const maxBet = parseInt(await getSetting("minesMaxBet", "10000"));
   const pwHash = await getSetting("minesPassword");
@@ -102,7 +102,7 @@ router.post("/verify-password", async (req, res) => {
 
 // GET /mines/banker-settings — banker only
 router.get("/banker-settings", requireBanker, async (_req, res) => {
-  const enabled = (await getSetting("minesEnabled", "false")) === "true";
+  const enabled = (await getSetting("minesEnabled", "true")) === "true";
   const minBet = parseInt(await getSetting("minesMinBet", "50"));
   const maxBet = parseInt(await getSetting("minesMaxBet", "10000"));
   res.json({ enabled, minBet, maxBet });
@@ -147,7 +147,7 @@ router.post("/start", requirePlayer, async (req, res) => {
   const banCheck = await isPlayerGameBanned(playerId, "mines");
   if (banCheck.banned) return res.status(403).json({ error: `You are banned from Mines${banCheck.reason ? ": " + banCheck.reason : ""}` });
 
-  const enabled = (await getSetting("minesEnabled", "false")) === "true";
+  const enabled = (await getSetting("minesEnabled", "true")) === "true";
   if (!enabled) return res.status(403).json({ error: "Mines is currently closed" });
 
   const minBet = parseInt(await getSetting("minesMinBet", "50"));

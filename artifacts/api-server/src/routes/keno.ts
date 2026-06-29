@@ -64,7 +64,7 @@ const lastPlayMs = new Map<number, number>();
 
 // GET /keno/status — public (lobby)
 router.get("/status", async (_req, res) => {
-  const enabled = (await getSetting("kenoEnabled", "false")) === "true";
+  const enabled = (await getSetting("kenoEnabled", "true")) === "true";
   const minBet   = parseInt(await getSetting("kenoMinBet", "100"));
   const maxBet   = parseInt(await getSetting("kenoMaxBet", "50000"));
   const pwHash   = await getSetting("kenoPassword");
@@ -85,7 +85,7 @@ router.post("/verify-password", async (req, res) => {
 
 // GET /keno/banker-settings — banker only
 router.get("/banker-settings", requireBanker, async (_req, res) => {
-  const enabled = (await getSetting("kenoEnabled", "false")) === "true";
+  const enabled = (await getSetting("kenoEnabled", "true")) === "true";
   const minBet  = parseInt(await getSetting("kenoMinBet", "100"));
   const maxBet  = parseInt(await getSetting("kenoMaxBet", "50000"));
   res.json({ enabled, minBet, maxBet });
@@ -113,7 +113,7 @@ router.post("/play", requirePlayer, async (req, res) => {
   const banCheck = await isPlayerGameBanned(playerId, "keno");
   if (banCheck.banned) return res.status(403).json({ error: `You are banned from Keno${banCheck.reason ? ": " + banCheck.reason : ""}` });
 
-  const enabled = (await getSetting("kenoEnabled", "false")) === "true";
+  const enabled = (await getSetting("kenoEnabled", "true")) === "true";
   if (!enabled) return res.status(403).json({ error: "Keno is currently closed" });
 
   const minBet = parseInt(await getSetting("kenoMinBet", "100"));
