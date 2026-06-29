@@ -543,7 +543,7 @@ export function TournamentsPage() {
           </div>
         )}
 
-        {!loading && !error && !lobbyEnabled && (
+        {!loading && !error && !lobbyEnabled && tournaments.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ textAlign: "center", padding: "64px 0" }}
