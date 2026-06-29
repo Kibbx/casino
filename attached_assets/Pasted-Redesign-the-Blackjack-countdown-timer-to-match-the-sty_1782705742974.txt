@@ -1,0 +1,83 @@
+Redesign the Blackjack countdown timer to match the style of the reference image.
+
+The goal is **not** to copy the exact asset, but to recreate the same clean, modern countdown style using our own UI.
+
+### Desired appearance
+
+The timer should be a simple circular countdown with:
+
+* A **thick circular progress ring** around the outside.
+* The ring should animate **smoothly clockwise** as the countdown decreases.
+* The ring should have a subtle neon glow matching the Blackjack theme.
+* A dark, semi-transparent circular center.
+* **Only the countdown number** displayed in the middle.
+* No "SEC", "SECONDS", icons, labels, or extra text.
+* The number should be:
+
+  * Large
+  * Bold
+  * White
+  * Perfectly centered both horizontally and vertically.
+* The progress ring should be noticeably thicker than the current implementation.
+
+### Animation
+
+* The progress ring should move continuously, not once every second.
+* The number updates every second.
+* The animation should feel smooth and polished (60fps if possible).
+* When the timer resets, the ring should refill smoothly.
+
+### Visual style
+
+The timer should feel premium and modern:
+
+* Minimalistic
+* Clean
+* Easy to read at a glance
+* Soft outer glow
+* Smooth rounded stroke caps
+* Slight inner shadow inside the circle
+* Slight glass effect on the center
+* No unnecessary text or decorations
+
+### Technical implementation
+
+Use:
+
+* SVG circular progress
+* `stroke-dasharray`
+* `stroke-dashoffset`
+* `stroke-linecap="round"`
+* CSS transitions or `requestAnimationFrame` for smooth animation
+
+The progress should be driven by the existing backend countdown timer. Do **not** create a separate countdown.
+
+### Responsive
+
+Scale automatically using `clamp()` so it looks good on:
+
+* 1080p
+* 1440p
+* Ultrawide
+* Laptop screens
+* Tablets
+
+### Do not change
+
+* Blackjack timing
+* Backend countdown logic
+* Betting phase duration
+* Dealer logic
+
+Only redesign the visual component.
+
+### Expected result
+
+The finished timer should resemble a modern esports/game countdown:
+
+* Thick animated progress ring
+* Large centered countdown number
+* Dark center
+* Smooth glowing animation
+* No "SEC" text
+* Premium casino quality that fits the rest of the Big House Casino UI.

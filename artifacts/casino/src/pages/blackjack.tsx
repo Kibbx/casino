@@ -223,63 +223,83 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
 
   if (secs === null) return null;
 
+  // Geometry — all relative to the 120×120 viewBox
   const SIZE   = 120;
-  const R      = 46;
+  const STROKE = 11;           // noticeably thick ring, matching reference
+  const R      = 43;           // ring centre-line radius (outer edge ≈ 48.5, well within viewBox)
   const C      = 2 * Math.PI * R;
-  const cx     = SIZE / 2;
-  const cy     = SIZE / 2;
+  const cx     = SIZE / 2;     // 60
+  const cy     = SIZE / 2;     // 60
   const frac   = Math.max(0, Math.min(1, fraction));
-  const offset = C * (1 - frac);   // 0 = full ring, C = empty
+  const offset = C * (1 - frac);   // 0 = full ring, C = empty ring
+
   const urgent = secs <= 5;
-  const color  = urgent ? "#f87171" : "#4ade80";
-  const glowA  = urgent ? "rgba(248,113,113,0.65)" : "rgba(74,222,128,0.6)";
-  const glowB  = urgent ? "rgba(248,113,113,0.22)" : "rgba(74,222,128,0.22)";
+  const ringColor  = urgent ? "#f87171" : "#4ade80";
+  const glowStrong = urgent ? "rgba(248,113,113,0.7)"  : "rgba(74,222,128,0.65)";
+  const glowSoft   = urgent ? "rgba(248,113,113,0.25)" : "rgba(74,222,128,0.25)";
 
   return (
     <svg
       viewBox={`0 0 ${SIZE} ${SIZE}`}
       style={{
         display: "block",
-        width:  "clamp(72px, 7vw, 110px)",
-        height: "clamp(72px, 7vw, 110px)",
-        filter: `drop-shadow(0 0 18px ${glowA}) drop-shadow(0 0 6px ${glowB})`,
-        transition: "filter 0.3s ease",
+        width:  "clamp(80px, 8vw, 120px)",
+        height: "clamp(80px, 8vw, 120px)",
+        filter: [
+          `drop-shadow(0 0 20px ${glowStrong})`,
+          `drop-shadow(0 0 8px  ${glowSoft})`,
+        ].join(" "),
+        transition: "filter 0.35s ease",
+        overflow: "visible",
       }}
     >
-      {/* dark glass backdrop */}
-      <circle cx={cx} cy={cy} r={R + 5}
-        fill="rgba(0,0,0,0.62)"
-        stroke="rgba(255,255,255,0.05)"
+      <defs>
+        {/* Radial glass gradient for the dark centre */}
+        <radialGradient id="bj-timer-glass" cx="42%" cy="32%" r="65%">
+          <stop offset="0%"   stopColor="rgba(255,255,255,0.10)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0.72)" />
+        </radialGradient>
+      </defs>
+
+      {/* Outer dark disc — fills the whole ring area + margin */}
+      <circle cx={cx} cy={cy} r={R + STROKE / 2 + 3}
+        fill="url(#bj-timer-glass)"
+        stroke="rgba(255,255,255,0.06)"
         strokeWidth={1}
       />
-      {/* dim track ring */}
+
+      {/* Dim track ring (unlit portion) */}
       <circle cx={cx} cy={cy} r={R}
         fill="none"
-        stroke="rgba(255,255,255,0.08)"
-        strokeWidth={7}
+        stroke="rgba(255,255,255,0.12)"
+        strokeWidth={STROKE}
+        strokeLinecap="round"
       />
-      {/* progress arc — origin at 12 o'clock, drains clockwise; no CSS transition
-          because RAF already provides per-frame updates */}
+
+      {/* Active progress arc — 12 o'clock origin, drains clockwise.
+          No CSS transition on dashoffset — RAF updates every frame. */}
       <circle cx={cx} cy={cy} r={R}
         fill="none"
-        stroke={color}
-        strokeWidth={7}
+        stroke={ringColor}
+        strokeWidth={STROKE}
         strokeLinecap="round"
         strokeDasharray={`${C} ${C}`}
         strokeDashoffset={offset}
         transform={`rotate(-90 ${cx} ${cy})`}
-        style={{ transition: "stroke 0.3s ease" }}
+        style={{ transition: "stroke 0.35s ease" }}
       />
-      {/* seconds number */}
+
+      {/* Countdown number — perfectly centred, always white for legibility */}
       <text
-        x={cx} y={cy - 4}
+        x={cx}
+        y={cy}
         textAnchor="middle"
-        dominantBaseline="auto"
-        fill={color}
-        fontSize={28}
+        dominantBaseline="central"
+        fill="white"
+        fontSize={36}
         fontWeight={900}
         fontFamily="'Rajdhani', 'Orbitron', monospace"
-        style={{ transition: "fill 0.3s ease", userSelect: "none" } as React.CSSProperties}
+        style={{ userSelect: "none", letterSpacing: -1 } as React.CSSProperties}
       >
         {secs}
       </text>
