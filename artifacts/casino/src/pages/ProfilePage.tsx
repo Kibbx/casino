@@ -127,6 +127,23 @@ function creditLabel(score: number) {
   return { label: "POOR", color: "#ef4444" };
 }
 
+function getTierFromXP(handsPlayed: number, netResult: number): string {
+  const xp = Math.floor(Math.max(0, netResult) * 0.003) + Math.floor(handsPlayed * 3);
+  if (xp >= 100_000) return "Diamond";
+  if (xp >= 40_000)  return "Platinum";
+  if (xp >= 15_000)  return "Gold";
+  if (xp >= 5_000)   return "Silver";
+  return "Bronze";
+}
+
+const TIER_COLORS: Record<string, string> = {
+  Diamond:  "#06b6d4",
+  Platinum: "#a855f7",
+  Gold:     "#f5c518",
+  Silver:   "#9ca3af",
+  Bronze:   "#cd7c32",
+};
+
 interface PublicProfileData {
   id: number; username: string; stateId: string | null; avatarUrl: string | null;
   createdAt: string; referralCode: string | null; creditScore: number | null;
@@ -444,15 +461,27 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
     : player!.creditScore;
   const csInfo = cs !== undefined ? creditLabel(cs) : null;
 
+  const casinoTier = isViewing
+    ? getTierFromXP(pubData!.handsPlayed, pubData!.statNetResult ?? 0)
+    : getTierFromXP(Number((player as any).handsPlayed ?? 0), netResult);
+
   const pCreatedAt = isViewing ? pubData!.createdAt    : player!.createdAt;
   const pStateId   = isViewing ? pubData!.stateId      : player!.stateId;
-  const pReferral  = isViewing ? pubData!.referralCode : player!.referralCode;
+  // Show the referral code the player used at signup (referredByCode = promoter code,
+  // referredBy = player-to-player code). Never show the player's own code here.
+  // For viewed profiles, referral info is private — only show on own profile.
+  const pReferral = isViewing
+    ? null
+    : ((player as any).referredByCode ?? (player as any).referredBy ?? null);
 
   const details: [string, string, string?][] = [
     ["Member Since", fmtDate(pCreatedAt)],
     ["Stat ID",      pStateId ? `#${pStateId}` : "—"],
-    ...(pReferral ? [["Referral", pReferral] as [string, string]] : []),
+    // Referral: own profile only — show the code used at signup or "—" if none.
+    // Hidden entirely when viewing another player's profile (private data).
+    ...(!isViewing ? [["Referral", pReferral ?? "—"] as [string, string]] : []),
     ...(cs !== undefined ? [["Credit Score", `${cs} — ${csInfo!.label}`, "credit"] as [string, string, string]] : []),
+    ["Casino Tier", casinoTier, "tier"],
     ...(chips !== null ? [["Chips", fmt(chips), "gold"] as [string, string, string]] : []),
   ];
 
@@ -549,6 +578,7 @@ export function ProfilePage({ viewedPlayerId = null, onBack }: ProfilePageProps 
               const color =
                 accent === "credit" ? csInfo!.color :
                 accent === "gold"   ? "#f5c518" :
+                accent === "tier"   ? (TIER_COLORS[val] ?? "#9ca3af") :
                 accent === "purple" ? "#a855f7" :
                 "rgba(255,255,255,0.68)";
               return (
