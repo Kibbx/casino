@@ -7,12 +7,12 @@
  */
 
 import { WebSocket } from "ws";
-import { db, playersTable, transactionsTable, settingsTable, blackjackTablesTable, blackjackHandsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { db, playersTable, transactionsTable, blackjackTablesTable, blackjackHandsTable } from "@workspace/db";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { recordPlayerActivity } from "./player-activity.js";
 import {
   createDeck, handValue, isBust, isBlackjack,
-  determineWinner, calculatePayout, biasedDraw,
+  determineWinner, calculatePayout, drawCard, needsReshuffle, shouldDealerHit,
   type Card,
 } from "./blackjack-engine.js";
 
@@ -94,13 +94,6 @@ export function injectBJBroadcastBalance(fn: BroadcastBalanceFn) {
   _broadcastBalance = fn;
 }
 
-// ── DB helpers ─────────────────────────────────────────────────────────────────
-
-async function getSetting(key: string, fallback: string): Promise<string> {
-  const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
-  return rows[0]?.value ?? fallback;
-}
-
 // ── BlackjackRoom class ────────────────────────────────────────────────────────
 
 export class BlackjackRoom {
@@ -126,8 +119,6 @@ export class BlackjackRoom {
   private subs: Set<BJSub> = new Set();
   /** Players with a DB-backed action currently in flight — prevents double-fire on slow connections */
   private actingPlayers: Set<number> = new Set();
-  /** Odds mode cached at the start of each round — used for biased dealing */
-  private roundOddsMode = "standard";
 
   constructor(cfg: BJTableConfig) {
     this.tableId = cfg.id;
@@ -256,7 +247,7 @@ export class BlackjackRoom {
     }
     this.dealerCards = [];
     this.currentTurnSeat = null;
-    if (this.deck.length < 52) this.deck = createDeck(NUM_DECKS);
+    if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
 
     const anySeated = this.seats.some(s => s.playerId !== null);
     if (!anySeated) {
@@ -274,9 +265,6 @@ export class BlackjackRoom {
     this.clearTimers();
     const bettors = this.seats.filter(s => s.bet > 0 && s.playerId !== null);
     if (bettors.length === 0) { this.startBetting(); return; }
-
-    // Cache odds mode once per round so all card draws use the same setting
-    this.roundOddsMode = await getSetting("blackjackOddsMode", "standard");
 
     this.setPhase("DEALING", DEALING_MS);
 
@@ -362,15 +350,14 @@ export class BlackjackRoom {
 
   private dealerDrawStep() {
     this.clearTimers();
-    if (handValue(this.dealerCards) >= 17) {
-      // Dealer stands — wait a moment so players can read the hand, then resolve
+    if (!shouldDealerHit(this.dealerCards)) {
+      // Dealer stands (per the soft-17 rule) — pause so players can read the hand, then resolve
       this.phaseTimer = setTimeout(() => this.resolveRound(), DEALER_STAND_MS);
       return;
     }
-    // Draw one card — biased in danger zone to protect dealer (house) or bust dealer (player modes)
-    if (this.deck.length < 8) this.deck = createDeck(NUM_DECKS);
-    const dv = handValue(this.dealerCards);
-    this.dealerCards.push(biasedDraw(this.deck, this.roundOddsMode, dv, false));
+    // Draw one fair card off the top of the shoe
+    if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
+    this.dealerCards.push(drawCard(this.deck));
     this.broadcastState();
     // Schedule next card
     this.phaseTimer = setTimeout(() => this.dealerDrawStep(), DEALER_CARD_MS);
@@ -380,7 +367,7 @@ export class BlackjackRoom {
     this.clearTimers();
     this.roundCounter++;
     const roundId = this.roundCounter;
-    const oddsMode = this.roundOddsMode; // cached at deal time
+    const oddsMode = "fair"; // dealing is never rigged — retained for the hand-history schema column
 
     const fmtCards = (cards: Card[]): string =>
       cards.map(c => c.hidden ? "??" : `${c.rank}${c.suit}`).join(" ");
@@ -425,11 +412,13 @@ export class BlackjackRoom {
       }
 
       if (totalPayout > 0) {
-        const [fresh] = await db.select().from(playersTable).where(eq(playersTable.id, seat.playerId));
-        if (fresh) {
-          const chipsBefore = Number(fresh.chips);
-          const chipsAfter = chipsBefore + totalPayout;
-          await db.update(playersTable).set({ chips: chipsAfter }).where(eq(playersTable.id, seat.playerId));
+        const [credited] = await db.update(playersTable)
+          .set({ chips: sql`${playersTable.chips} + ${totalPayout}` })
+          .where(eq(playersTable.id, seat.playerId))
+          .returning();
+        if (credited) {
+          const chipsAfter = Number(credited.chips);
+          const chipsBefore = chipsAfter - totalPayout;
           await db.insert(transactionsTable).values({
             playerId: seat.playerId,
             amount: totalPayout,
@@ -646,22 +635,35 @@ export class BlackjackRoom {
       return { error: `Bet must be between ${this.minBet.toLocaleString()} and ${this.maxBet.toLocaleString()} chips` };
     }
 
-    let [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
+    const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
     if (!player) return { error: "Player not found" };
 
-    if (seat.bet > 0) {
-      await db.update(playersTable).set({ chips: player.chips + seat.bet }).where(eq(playersTable.id, playerId));
-      const [refetched] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-      player = refetched;
+    // Move this seat's held wager from its current value (seat.bet) to `amount`.
+    // Each chip mutation is a single atomic statement; the debit is guarded by a
+    // `chips >= delta` predicate, so a balance can never go negative even if two
+    // bet actions race.
+    const delta = amount - seat.bet;
+    let chipsAfter: number;
+    if (delta > 0) {
+      const debited = await db.update(playersTable)
+        .set({ chips: sql`${playersTable.chips} - ${delta}` })
+        .where(and(eq(playersTable.id, playerId), gte(playersTable.chips, delta)))
+        .returning();
+      if (debited.length === 0) return { error: "Insufficient chips" };
+      chipsAfter = Number(debited[0].chips);
+      await db.insert(transactionsTable).values({ playerId, amount: delta, type: "loss", description: "Blackjack bet" });
+    } else if (delta < 0) {
+      const [refunded] = await db.update(playersTable)
+        .set({ chips: sql`${playersTable.chips} + ${-delta}` })
+        .where(eq(playersTable.id, playerId))
+        .returning();
+      chipsAfter = Number(refunded.chips);
+    } else {
+      chipsAfter = Number(player.chips);
     }
 
-    if (Number(player.chips) < amount) return { error: "Insufficient chips" };
-
-    await db.update(playersTable).set({ chips: player.chips - amount }).where(eq(playersTable.id, playerId));
-    await db.insert(transactionsTable).values({ playerId, amount, type: "loss", description: "Blackjack bet" });
-
     seat.bet = amount;
-    seat.chips = Number(player.chips) - amount;
+    seat.chips = chipsAfter;
     seat.status = "bet_placed";
     _broadcastBalance(playerId, seat.chips);
     console.log(`[BJ T${this.tableId} BET] seat=${seat.seatIndex} ${seat.username}(${playerId}) bet=${amount} chips_after=${seat.chips}`);
@@ -685,9 +687,8 @@ export class BlackjackRoom {
     try {
 
     if (action === "hit") {
-      if (this.deck.length < 4) this.deck = createDeck(NUM_DECKS);
-      const activeCards = seat.activeHand === "split" ? (seat.splitCards ?? []) : seat.cards;
-      const newCard = biasedDraw(this.deck, this.roundOddsMode, handValue(activeCards), true);
+      if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
+      const newCard = drawCard(this.deck);
 
       if (seat.activeHand === "split") {
         seat.splitCards = [...(seat.splitCards ?? []), newCard];
@@ -729,20 +730,21 @@ export class BlackjackRoom {
     }
 
     if (action === "double") {
-      if (this.deck.length < 4) this.deck = createDeck(NUM_DECKS);
+      if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
       const activeCards = seat.activeHand === "split" ? seat.splitCards! : seat.cards;
       if (activeCards.length !== 2) return { error: "Can only double on first two cards" };
       const betAmt = seat.activeHand === "split" ? seat.splitBet : seat.bet;
 
-      const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-      if (!player || Number(player.chips) < betAmt) return { error: "Insufficient chips to double" };
-
-      await db.update(playersTable).set({ chips: player.chips - betAmt }).where(eq(playersTable.id, playerId));
+      const debited = await db.update(playersTable)
+        .set({ chips: sql`${playersTable.chips} - ${betAmt}` })
+        .where(and(eq(playersTable.id, playerId), gte(playersTable.chips, betAmt)))
+        .returning();
+      if (debited.length === 0) return { error: "Insufficient chips to double" };
       await db.insert(transactionsTable).values({ playerId, amount: betAmt, type: "loss", description: "Blackjack double" });
-      seat.chips = Number(player.chips) - betAmt;
+      seat.chips = Number(debited[0].chips);
       _broadcastBalance(playerId, seat.chips);
 
-      const newCard = biasedDraw(this.deck, this.roundOddsMode, handValue(activeCards), true);
+      const newCard = drawCard(this.deck);
       if (seat.activeHand === "split") {
         seat.splitCards = [...activeCards, newCard];
         seat.splitBet = betAmt * 2;
@@ -769,22 +771,23 @@ export class BlackjackRoom {
     }
 
     if (action === "split") {
-      if (this.deck.length < 4) this.deck = createDeck(NUM_DECKS);
+      if (needsReshuffle(this.deck)) this.deck = createDeck(NUM_DECKS);
       if (seat.cards.length !== 2) return { error: "Can only split first two cards" };
       if (seat.cards[0].rank !== seat.cards[1].rank) return { error: "Cards must be a matching pair to split" };
       if (seat.splitCards) return { error: "Already split" };
 
-      const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-      if (!player || Number(player.chips) < seat.bet) return { error: "Insufficient chips to split" };
-
-      await db.update(playersTable).set({ chips: player.chips - seat.bet }).where(eq(playersTable.id, playerId));
+      const debited = await db.update(playersTable)
+        .set({ chips: sql`${playersTable.chips} - ${seat.bet}` })
+        .where(and(eq(playersTable.id, playerId), gte(playersTable.chips, seat.bet)))
+        .returning();
+      if (debited.length === 0) return { error: "Insufficient chips to split" };
       await db.insert(transactionsTable).values({ playerId, amount: seat.bet, type: "loss", description: "Blackjack split" });
-      seat.chips = Number(player.chips) - seat.bet;
+      seat.chips = Number(debited[0].chips);
       _broadcastBalance(playerId, seat.chips);
 
       const [cardA, cardB] = seat.cards;
-      seat.cards = [cardA, this.deck.pop()!];
-      seat.splitCards = [cardB, this.deck.pop()!];
+      seat.cards = [cardA, drawCard(this.deck)];
+      seat.splitCards = [cardB, drawCard(this.deck)];
       seat.splitBet = seat.bet;
       seat.activeHand = "main";
       this.broadcastState();

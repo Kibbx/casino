@@ -8,7 +8,7 @@ import {
   dealerPlay,
   handValue,
   isBust,
-  biasedDraw,
+  drawCard,
   determineWinner,
   calculatePayout,
   type Card,
@@ -37,19 +37,6 @@ async function setSetting(key: string, value: string) {
   }
 }
 
-function applyHouseEdge(bet: number, rawPayout: number, houseEdgePct: number): { finalPayout: number; rake: number } {
-  if (rawPayout <= bet || houseEdgePct <= 0) return { finalPayout: rawPayout, rake: 0 };
-  const profit = rawPayout - bet;
-  const rake = Math.floor(profit * houseEdgePct / 100);
-  return { finalPayout: rawPayout - rake, rake };
-}
-
-async function recordRake(rake: number) {
-  if (rake <= 0) return;
-  const current = parseInt(await getSetting("totalRakeCollected", "0"));
-  await setSetting("totalRakeCollected", String(current + rake));
-}
-
 function gameResponse(game: any, playerCards: Card[], splitCards: Card[] | null, dealerCards: Card[], activeHand: string) {
   return {
     ...game,
@@ -69,26 +56,18 @@ async function resolveAndPayout(
   mainBet: number,
   splitBetAmt: number | null,
 ) {
-  const houseEdgePct = parseFloat(await getSetting("blackjackHouseEdge", "0"));
-
   const mainResult = determineWinner(finalPlayerCards, finalDealerCards);
-  const mainRaw = calculatePayout(mainBet, mainResult);
-  const { finalPayout: mainPayout, rake: mainRake } = applyHouseEdge(mainBet, mainRaw, houseEdgePct);
+  const mainPayout = calculatePayout(mainBet, mainResult);
 
   let splitResult: GameStatus | null = null;
   let splitPayoutAmt = 0;
-  let splitRake = 0;
 
   if (finalSplitCards && splitBetAmt) {
     splitResult = determineWinner(finalSplitCards, finalDealerCards);
-    const splitRaw = calculatePayout(splitBetAmt, splitResult);
-    const applied = applyHouseEdge(splitBetAmt, splitRaw, houseEdgePct);
-    splitPayoutAmt = applied.finalPayout;
-    splitRake = applied.rake;
+    splitPayoutAmt = calculatePayout(splitBetAmt, splitResult);
   }
 
   const totalPayout = mainPayout + splitPayoutAmt;
-  const totalRake = mainRake + splitRake;
   const totalBet = mainBet + (splitBetAmt ?? 0);
 
   await trackRakebackBet(playerId, totalBet).catch(() => {});
@@ -103,7 +82,6 @@ async function resolveAndPayout(
       type: "win",
       description: `Blackjack payout (${mainResult}${splitResult ? `, split: ${splitResult}` : ""})`,
     });
-    await recordRake(totalRake);
   }
 
   const totalHands = parseInt(await getSetting("totalHandsPlayed", "0"));
@@ -220,16 +198,13 @@ router.post("/deal", requirePlayer, async (req, res) => {
 
   if (handValue(playerCards) === 21) {
     const fullDealerCards = dealerCards.map(c => ({ ...c, hidden: false }));
-    const houseEdgePct = parseFloat(await getSetting("blackjackHouseEdge", "0"));
     const result = determineWinner(playerCards, fullDealerCards);
-    const rawPayout = calculatePayout(bet, result);
-    const { finalPayout: payout, rake } = applyHouseEdge(bet, rawPayout, houseEdgePct);
+    const payout = calculatePayout(bet, result);
     status = result;
 
     if (payout > 0) {
       await db.update(playersTable).set({ chips: player.chips - bet + payout }).where(eq(playersTable.id, playerId));
       await db.insert(transactionsTable).values({ playerId, amount: payout, type: "win", description: `Blackjack payout (${result})` });
-      await recordRake(rake);
     }
 
     const [game] = await db.insert(blackjackGamesTable).values({
@@ -268,16 +243,15 @@ router.post("/:gameId/hit", requirePlayer, async (req, res) => {
 
   const deck = createDeck(6);
   const activeHand = (game.activeHand ?? "main") as string;
-  const oddsMode = await getSetting("blackjackOddsMode", "standard");
 
   if (activeHand === "split") {
-    const splitCards = [...(game.splitCards as Card[]), biasedDraw(deck, oddsMode, handValue(game.splitCards as Card[]), true)];
+    const splitCards = [...(game.splitCards as Card[]), drawCard(deck)];
     const splitBustValue = handValue(splitCards);
 
     if (isBust(splitCards)) {
       // Dealer must play to completion before resolving — pass through dealerPlay
       // so the hidden card is revealed and the dealer draws to 17+
-      const { dealerCards: playedDealerCards } = dealerPlay(game.dealerCards as Card[], deck, oddsMode);
+      const { dealerCards: playedDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
       const { updated, finalDealerCards, mainResult, splitResult } = await resolveAndPayout(
         gameId, playerId,
         game.playerCards as Card[], splitCards,
@@ -316,7 +290,7 @@ router.post("/:gameId/hit", requirePlayer, async (req, res) => {
   }
 
   // Main hand hit
-  const playerCards = [...(game.playerCards as Card[]), biasedDraw(deck, oddsMode, handValue(game.playerCards as Card[]), true)];
+  const playerCards = [...(game.playerCards as Card[]), drawCard(deck)];
 
   if (isBust(playerCards)) {
     if (game.splitCards) {
@@ -397,10 +371,9 @@ router.post("/:gameId/stand", requirePlayer, async (req, res) => {
 
   // Otherwise resolve: dealer plays, both hands evaluated
   const deck = createDeck(6);
-  const standOddsMode = await getSetting("blackjackOddsMode", "standard");
   const finalPlayerCards = game.playerCards as Card[];
   const finalSplitCards = game.splitCards ? (game.splitCards as Card[]) : null;
-  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck, standOddsMode);
+  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
 
   const { updated, finalDealerCards: fd, mainResult, splitResult } = await resolveAndPayout(
     gameId, playerId,
@@ -438,7 +411,6 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
   const activeHand = (game.activeHand ?? "main") as string;
 
   const deck = createDeck(6);
-  const doubleOddsMode = await getSetting("blackjackOddsMode", "standard");
   const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
 
   if (activeHand === "split") {
@@ -450,11 +422,11 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
     await db.update(playersTable).set({ chips: player.chips - splitBetAmt }).where(eq(playersTable.id, playerId));
     await db.insert(transactionsTable).values({ playerId, amount: splitBetAmt, type: "loss", description: "Blackjack double (split hand)" });
 
-    const newSplitCards = [...splitCards, biasedDraw(deck, doubleOddsMode, handValue(splitCards), true)];
+    const newSplitCards = [...splitCards, drawCard(deck)];
     const newSplitBet = splitBetAmt * 2;
     await db.update(blackjackGamesTable).set({ splitBet: newSplitBet }).where(eq(blackjackGamesTable.id, gameId));
 
-    const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck, doubleOddsMode);
+    const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
     const { updated, finalDealerCards: fd } = await resolveAndPayout(
       gameId, playerId,
       game.playerCards as Card[], newSplitCards,
@@ -485,7 +457,7 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
   await db.update(playersTable).set({ chips: player.chips - game.bet }).where(eq(playersTable.id, playerId));
   await db.insert(transactionsTable).values({ playerId, amount: game.bet, type: "loss", description: "Blackjack double down bet" });
 
-  const playerCards = [...(game.playerCards as Card[]), biasedDraw(deck, doubleOddsMode, handValue(game.playerCards as Card[]), true)];
+  const playerCards = [...(game.playerCards as Card[]), drawCard(deck)];
   const newMainBet = game.bet * 2;
 
   if (isBust(playerCards)) {
@@ -542,7 +514,7 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
   }
 
   // Regular double — resolve immediately
-  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck, doubleOddsMode);
+  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
   const { updated, finalDealerCards: fd } = await resolveAndPayout(
     gameId, playerId, playerCards, null, finalDealerCards, newMainBet, null,
   );

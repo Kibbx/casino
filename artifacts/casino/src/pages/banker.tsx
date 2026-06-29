@@ -13596,11 +13596,13 @@ function OwnerDashboardTab() {
   if (loading) return <div className="flex items-center justify-center py-8 gap-3 text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>;
   if (!liveSettings) return <div className="flex items-center justify-center py-8 gap-2 text-red-400"><AlertCircle className="w-4 h-4" /> Failed to load.</div>;
 
-  const GAME_SLIDERS: { label: string; emoji: string; pct: number; set: (v: number) => void; rtp: number; game: LerpGame | "crash" }[] = [
+  const GAME_SLIDERS: { label: string; emoji: string; pct: number; set: (v: number) => void; rtp: number; game: LerpGame | "crash"; locked?: boolean; lockNote?: string }[] = [
     {
       label: "Blackjack", emoji: "🃏",
       pct: bjTemp, set: setBjTemp,
-      rtp: lerpRTP(bjTemp, "blackjack"), game: "blackjack",
+      rtp: 99.5, game: "blackjack",
+      locked: true,
+      lockNote: "Rule-locked — fair shuffled shoe (6 decks, dealer stands on soft 17, blackjack pays 3:2). RTP ~99.5% under basic strategy, set by rules only.",
     },
     {
       label: "Roulette", emoji: "🎡",
@@ -13625,39 +13627,46 @@ function OwnerDashboardTab() {
         </div>
 
         <div className="space-y-3">
-          {GAME_SLIDERS.map(({ label, emoji, pct, set, rtp, game }) => (
-            <div key={label} className="grid grid-cols-[80px_1fr_80px_64px] items-center gap-3">
-              {/* Label */}
-              <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                <span>{emoji}</span> {label}
+          {GAME_SLIDERS.map(({ label, emoji, pct, set, rtp, game, locked, lockNote }) => (
+            <div key={label} className="space-y-1">
+              <div className="grid grid-cols-[80px_1fr_80px_64px] items-center gap-3">
+                {/* Label */}
+                <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                  <span>{emoji}</span> {label}
+                </div>
+                {/* Slider */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs">🧊</span>
+                  <input
+                    type="range" min={0} max={100} step={1}
+                    value={pct}
+                    disabled={locked}
+                    onChange={e => { if (locked) return; set(Number(e.target.value)); setRtpInputs(prev => { const n = { ...prev }; delete n[label]; return n; }); }}
+                    className={`flex-1 h-1.5 rounded-full ${locked ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
+                    style={{ background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${pct}%, #374151 ${pct}%, #374151 100%)`, accentColor: "#6366f1" }}
+                  />
+                  <span className="text-xs">🔥</span>
+                </div>
+                {/* RTP input */}
+                <div className="flex items-center gap-0.5">
+                  <input
+                    type="number"
+                    min={0} max={100} step={0.1}
+                    value={locked ? rtp : (rtpInputs[label] !== undefined ? rtpInputs[label] : rtp)}
+                    disabled={locked}
+                    onChange={e => { if (!locked) setRtpInputs(prev => ({ ...prev, [label]: e.target.value })); }}
+                    onBlur={() => { if (!locked) applyRtpInput(label, game, set); }}
+                    onKeyDown={e => { if (!locked && e.key === "Enter") applyRtpInput(label, game, set); }}
+                    className={`w-full text-xs font-bold font-mono text-foreground bg-transparent border border-zinc-700 rounded px-1.5 py-0.5 text-right focus:outline-none focus:border-primary/60 ${locked ? "opacity-60 cursor-not-allowed" : ""}`}
+                  />
+                  <span className="text-[10px] text-muted-foreground">%</span>
+                </div>
+                {/* Temp label */}
+                <span className={`text-[10px] font-semibold ${locked ? "text-emerald-400" : tempColor(pct)} truncate`}>{locked ? "Locked" : oddsMode(pct)}</span>
               </div>
-              {/* Slider */}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs">🧊</span>
-                <input
-                  type="range" min={0} max={100} step={1}
-                  value={pct}
-                  onChange={e => { set(Number(e.target.value)); setRtpInputs(prev => { const n = { ...prev }; delete n[label]; return n; }); }}
-                  className="flex-1 h-1.5 rounded-full cursor-pointer"
-                  style={{ background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${pct}%, #374151 ${pct}%, #374151 100%)`, accentColor: "#6366f1" }}
-                />
-                <span className="text-xs">🔥</span>
-              </div>
-              {/* RTP input */}
-              <div className="flex items-center gap-0.5">
-                <input
-                  type="number"
-                  min={0} max={100} step={0.1}
-                  value={rtpInputs[label] !== undefined ? rtpInputs[label] : rtp}
-                  onChange={e => setRtpInputs(prev => ({ ...prev, [label]: e.target.value }))}
-                  onBlur={() => applyRtpInput(label, game, set)}
-                  onKeyDown={e => { if (e.key === "Enter") applyRtpInput(label, game, set); }}
-                  className="w-full text-xs font-bold font-mono text-foreground bg-transparent border border-zinc-700 rounded px-1.5 py-0.5 text-right focus:outline-none focus:border-primary/60"
-                />
-                <span className="text-[10px] text-muted-foreground">%</span>
-              </div>
-              {/* Temp label */}
-              <span className={`text-[10px] font-semibold ${tempColor(pct)} truncate`}>{oddsMode(pct)}</span>
+              {locked && lockNote && (
+                <p className="text-[10px] text-muted-foreground/80 pl-[92px] leading-snug">🔒 {lockNote}</p>
+              )}
             </div>
           ))}
         </div>

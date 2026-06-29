@@ -5,7 +5,38 @@ export type Card = { rank: Rank; suit: Suit; hidden?: boolean };
 const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
 
-export function createDeck(numDecks = 6): Card[] {
+/**
+ * Blackjack rule configuration — the ONLY levers that affect house edge / RTP.
+ *
+ * The shoe is ALWAYS dealt fairly: every card dealt is the next card off a
+ * cryptographically shuffled multi-deck shoe. There is no per-hand rigging, no
+ * peeking ahead in the shoe, and no result manipulation. To change the long-run
+ * RTP, adjust these rules — nothing else.
+ *
+ * Current rule set:
+ *   - 6-deck shoe, reshuffled when it runs low
+ *   - Dealer STANDS on all 17, including soft 17 ("S17") — player-favorable
+ *   - Blackjack pays 3:2 (1.5x)
+ *   - Player may double on any first two cards; double after split allowed
+ *   - Split once on a matching rank pair
+ *   - No surrender; dealer checks the hole card for blackjack
+ *
+ * Expected long-run RTP under optimal (basic-strategy) play with this rule set
+ * is ~99.5% (house edge ~0.5%). Run `pnpm --filter @workspace/api-server simulate:blackjack`
+ * to measure it empirically.
+ */
+export const BLACKJACK_RULES = {
+  /** Number of 52-card decks in the shoe. */
+  numDecks: 6,
+  /** true = dealer hits soft 17 (H17); false = dealer stands on all 17 (S17). */
+  dealerHitsSoft17: false,
+  /** Blackjack payout multiplier on the bet (1.5 = 3:2, 1.2 = 6:5). */
+  blackjackPayout: 1.5,
+  /** Build a fresh shoe once the live shoe drops below this many cards. */
+  reshuffleAt: 52,
+} as const;
+
+export function createDeck(numDecks = BLACKJACK_RULES.numDecks): Card[] {
   const deck: Card[] = [];
   for (let d = 0; d < numDecks; d++) {
     for (const suit of SUITS) {
@@ -37,17 +68,35 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
+/** True when the shoe should be replaced with a fresh, freshly-shuffled one. */
+export function needsReshuffle(deck: Card[]): boolean {
+  return deck.length < BLACKJACK_RULES.reshuffleAt;
+}
+
+/**
+ * Draw the next card off the top of the shoe. This is the ONLY way cards leave
+ * the shoe during play — it is a plain, unbiased pop with no look-ahead.
+ */
+export function drawCard(deck: Card[]): Card {
+  if (deck.length === 0) throw new Error("drawCard: shoe is empty");
+  return deck.pop()!;
+}
+
 export function cardValue(rank: Rank): number {
   if (["J", "Q", "K"].includes(rank)) return 10;
   if (rank === "A") return 11;
   return parseInt(rank);
 }
 
+/**
+ * Best (highest non-busting) total for a hand. Aces count as 11 until that would
+ * bust, then drop to 1. Pure function of the cards passed — counts every card,
+ * including face-down ones. Hide cards at the display layer, not here.
+ */
 export function handValue(cards: Card[]): number {
-  const visible = cards.filter((c) => !c.hidden);
   let total = 0;
   let aces = 0;
-  for (const card of visible) {
+  for (const card of cards) {
     total += cardValue(card.rank);
     if (card.rank === "A") aces++;
   }
@@ -58,6 +107,22 @@ export function handValue(cards: Card[]): number {
   return total;
 }
 
+/** A hand is "soft" when it holds an ace still counted as 11 (e.g. A-6 = soft 17). */
+export function isSoftHand(cards: Card[]): boolean {
+  let total = 0;
+  let aces = 0;
+  for (const card of cards) {
+    total += cardValue(card.rank);
+    if (card.rank === "A") aces++;
+  }
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
+  // Any ace left after reduction is still being counted as 11 → soft.
+  return aces > 0;
+}
+
 export function isBust(cards: Card[]): boolean {
   return handValue(cards) > 21;
 }
@@ -66,18 +131,34 @@ export function isBlackjack(cards: Card[]): boolean {
   return cards.length === 2 && handValue(cards) === 21;
 }
 
+/**
+ * Whether the dealer must take another card, per the configured soft-17 rule.
+ * Dealer always hits below 17. On exactly 17 the dealer hits only when the hand
+ * is soft AND the house rule says hit soft 17.
+ */
+export function shouldDealerHit(cards: Card[]): boolean {
+  const v = handValue(cards);
+  if (v < 17) return true;
+  if (v === 17 && BLACKJACK_RULES.dealerHitsSoft17 && isSoftHand(cards)) return true;
+  return false;
+}
+
 export function dealInitialHand(deck: Card[]): { playerCards: Card[]; dealerCards: Card[]; remainingDeck: Card[] } {
   const remaining = [...deck];
-  const playerCards: Card[] = [remaining.pop()!, remaining.pop()!];
-  const dealerCards: Card[] = [remaining.pop()!, { ...remaining.pop()!, hidden: true }];
+  const playerCards: Card[] = [drawCard(remaining), drawCard(remaining)];
+  const dealerCards: Card[] = [drawCard(remaining), { ...drawCard(remaining), hidden: true }];
   return { playerCards, dealerCards, remainingDeck: remaining };
 }
 
-export function dealerPlay(dealerCards: Card[], deck: Card[], oddsMode = "standard"): { dealerCards: Card[]; remainingDeck: Card[] } {
+/**
+ * Play out the dealer's hand to completion using fair draws and the configured
+ * soft-17 rule. Reveals the hole card first.
+ */
+export function dealerPlay(dealerCards: Card[], deck: Card[]): { dealerCards: Card[]; remainingDeck: Card[] } {
   const remaining = [...deck];
   const cards = dealerCards.map((c) => ({ ...c, hidden: false }));
-  while (handValue(cards) < 17) {
-    cards.push({ ...biasedDraw(remaining, oddsMode, handValue(cards), false), hidden: false });
+  while (shouldDealerHit(cards)) {
+    cards.push({ ...drawCard(remaining), hidden: false });
   }
   return { dealerCards: cards, remainingDeck: remaining };
 }
@@ -107,108 +188,15 @@ export function determineWinner(playerCards: Card[], dealerCards: Card[]): GameS
 }
 
 /**
- * Odds bias — applied at the DEALING level, not the result level.
- *
- * House-favoring modes (cool/cold/frozen/glacier):
- *   When a player is in the "danger zone" (hand value 12–16) and hits,
- *   we look ahead in the shoe for a 10-value card to deal them (likely bust).
- *   When the dealer is in the danger zone, we look for a non-10 card (keep dealer alive).
- *
- * Player-favoring modes (warm/hot):
- *   Opposite — protect players in danger zone, try to bust the dealer.
- *
- * "standard" → pure random draw, no peeking.
- *
- * The window controls how far ahead in the shoe we peek.
- * A larger window = more aggressive bias.
+ * Total chips returned to the player for a resolved hand (original bet + winnings).
+ *   - player_blackjack → bet + 3:2 (or whatever BLACKJACK_RULES.blackjackPayout is)
+ *   - player_win / dealer_bust → bet + 1:1
+ *   - push → bet refunded
+ *   - loss / bust → 0 (the already-deducted bet is kept by the house)
  */
-
-const TEN_VALUE = new Set<Rank>(["10", "J", "Q", "K"]);
-const NON_TEN   = new Set<Rank>(["A", "2", "3", "4", "5", "6", "7", "8", "9"]);
-
-const HOUSE_WINDOW: Partial<Record<string, number>> = {
-  glacier: 14,
-  frozen:  10,
-  cold:     7,
-  cool:     4,
-};
-const PLAYER_WINDOW: Partial<Record<string, number>> = {
-  hot:  14,
-  warm:  7,
-};
-
-function findInWindow(deck: Card[], wanted: Set<Rank>, windowSize: number): Card | null {
-  const start = Math.max(0, deck.length - windowSize);
-  for (let i = deck.length - 1; i >= start; i--) {
-    if (wanted.has(deck[i].rank)) {
-      const [card] = deck.splice(i, 1);
-      return card;
-    }
-  }
-  return null;
-}
-
-/**
- * Draw the next card from the shoe, optionally biased by odds mode.
- * @param deck      Live shoe array (mutated in-place)
- * @param oddsMode  Current odds preset
- * @param handValue The value of the hand BEFORE this card is drawn
- * @param isPlayer  true = player drawing, false = dealer drawing
- */
-export function biasedDraw(deck: Card[], oddsMode: string, handValue: number, isPlayer: boolean): Card {
-  if (deck.length === 0) throw new Error("biasedDraw: deck empty");
-
-  // Bias only applies in the danger zone where the next card decides bust/survive
-  const inDangerZone = handValue >= 12 && handValue <= 16;
-  if (!inDangerZone || oddsMode === "standard") return deck.pop()!;
-
-  const houseWin = HOUSE_WINDOW[oddsMode];
-  if (houseWin !== undefined) {
-    // House mode: bust players, protect dealer
-    const wanted = isPlayer ? TEN_VALUE : NON_TEN;
-    return findInWindow(deck, wanted, houseWin) ?? deck.pop()!;
-  }
-
-  const playerWin = PLAYER_WINDOW[oddsMode];
-  if (playerWin !== undefined) {
-    // Player mode: protect players, bust dealer
-    const wanted = isPlayer ? NON_TEN : TEN_VALUE;
-    return findInWindow(deck, wanted, playerWin) ?? deck.pop()!;
-  }
-
-  return deck.pop()!;
-}
-
-/**
- * @deprecated Result-level bias. Kept only for the legacy single-player /api/blackjack/play
- * endpoint. Multi-player tables use biasedDraw() at deal-time instead.
- */
-export function applyOddsBias(result: GameStatus, oddsMode: string, r = Math.random()): GameStatus {
-  if (oddsMode === "glacier") {
-    if ((result === "player_win" || result === "dealer_bust") && r < 0.32) return "push";
-    if (result === "push" && r < 0.40) return "dealer_win";
-  } else if (oddsMode === "frozen") {
-    if ((result === "player_win" || result === "dealer_bust") && r < 0.22) return "push";
-    if (result === "push" && r < 0.28) return "dealer_win";
-  } else if (oddsMode === "cold") {
-    if ((result === "player_win" || result === "dealer_bust") && r < 0.14) return "push";
-    if (result === "push" && r < 0.18) return "dealer_win";
-  } else if (oddsMode === "cool") {
-    if ((result === "player_win" || result === "dealer_bust") && r < 0.07) return "push";
-    if (result === "push" && r < 0.09) return "dealer_win";
-  } else if (oddsMode === "warm") {
-    if (result === "dealer_win" && r < 0.06) return "push";
-    if (result === "push" && r < 0.04) return "player_win";
-  } else if (oddsMode === "hot") {
-    if (result === "dealer_win" && r < 0.13) return "push";
-    if (result === "push" && r < 0.09) return "player_win";
-  }
-  return result;
-}
-
 export function calculatePayout(bet: number, status: GameStatus): number {
   switch (status) {
-    case "player_blackjack": return Math.floor(bet * 2.5);
+    case "player_blackjack": return bet + Math.floor(bet * BLACKJACK_RULES.blackjackPayout);
     case "player_win":
     case "dealer_bust": return bet * 2;
     case "push": return bet;

@@ -6,14 +6,10 @@ import { validatePlayerToken } from "./sessions.js";
 import { trackWsConnect, trackWsDisconnect } from "./req-stats.js";
 import { handlePokerAction, standUpPlayer } from "./poker-action-handler.js";
 import {
-  db, playersTable, settingsTable, transactionsTable, blackjackGamesTable,
+  db, playersTable, transactionsTable,
 } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { WheelType } from "./roulette-engine.js";
-import {
-  createDeck, dealInitialHand, dealerPlay, handValue, isBust,
-  biasedDraw, determineWinner, calculatePayout, type Card,
-} from "./blackjack-engine.js";
 import {
   injectBroadcastBalance, injectAddFloorEvent, initRouletteRoom,
   subscribeRoulette, roulettePlaceBet, rouletteClearBets, removeRouletteSub,
@@ -28,39 +24,6 @@ import {
 } from "./baccarat-room.js";
 import { recordPlayerActivity } from "./player-activity.js";
 import { addFloorEvent } from "./floor-events.js";
-import { trackRakebackBet, trackRakebackWin } from "./rakeback.js";
-
-// ── Per-player rakeback realRatio for active blackjack hands ───────────────
-// gameId → realRatio (0–1)
-const bjRakebackRatio = new Map<number, number>();
-
-// ── Shared DB helpers ──────────────────────────────────────────────────────
-async function getSetting(key: string, fallback: string): Promise<string> {
-  const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
-  return rows[0]?.value ?? fallback;
-}
-
-async function setSetting(key: string, value: string) {
-  const existing = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
-  if (existing.length === 0) {
-    await db.insert(settingsTable).values({ key, value });
-  } else {
-    await db.update(settingsTable).set({ value }).where(eq(settingsTable.key, key));
-  }
-}
-
-function applyHouseEdge(bet: number, rawPayout: number, houseEdgePct: number) {
-  if (rawPayout <= bet || houseEdgePct <= 0) return { finalPayout: rawPayout, rake: 0 };
-  const profit = rawPayout - bet;
-  const rake = Math.floor(profit * houseEdgePct / 100);
-  return { finalPayout: rawPayout - rake, rake };
-}
-
-async function recordRake(rake: number) {
-  if (rake <= 0) return;
-  const current = parseInt(await getSetting("totalRakeCollected", "0"));
-  await setSetting("totalRakeCollected", String(current + rake));
-}
 
 function wsSend(ws: WebSocket, msg: object) {
   try {
@@ -260,157 +223,6 @@ function cleanupDeadClient(ws: WebSocket, tableId: number | null, playerId: numb
   if (tournamentId !== null) removeTournamentClient(ws, tournamentId);
 }
 
-
-// ── Blackjack WS handler ───────────────────────────────────────────────────
-async function handleBjAction(ws: WebSocket, msg: any) {
-  const { token, action, bet, gameId } = msg;
-  const playerId = typeof token === "string" ? (validatePlayerToken(token)?.playerId ?? null) : null;
-  if (!playerId) return wsSend(ws, { type: "bj_error", message: "Unauthorized" });
-
-  if (action === "deal") {
-    if (!bet) return wsSend(ws, { type: "bj_error", message: "bet is required" });
-
-    const enabled = (await getSetting("blackjackEnabled", "true")) === "true";
-    if (!enabled) return wsSend(ws, { type: "bj_error", message: "Blackjack table is currently closed" });
-
-    const minBet = parseInt(await getSetting("blackjackMinBet", "100"));
-    const maxBet = parseInt(await getSetting("blackjackMaxBet", "10000"));
-    if (bet < minBet || bet > maxBet)
-      return wsSend(ws, { type: "bj_error", message: `Bet must be between ${minBet} and ${maxBet} chips` });
-
-    const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-    if (!player) return wsSend(ws, { type: "bj_error", message: "Player not found" });
-    if (player.chips < bet) return wsSend(ws, { type: "bj_error", message: "Insufficient chips" });
-
-    await db.update(blackjackGamesTable).set({ status: "abandoned" })
-      .where(and(eq(blackjackGamesTable.playerId, playerId), eq(blackjackGamesTable.status, "active")));
-
-    await db.update(playersTable).set({ chips: player.chips - bet }).where(eq(playersTable.id, playerId));
-    await db.insert(transactionsTable).values({ playerId, amount: bet, type: "loss", description: "Blackjack bet" });
-
-    const bjRealRatio = await trackRakebackBet(playerId, bet);
-
-    const deck = createDeck(6);
-    const { playerCards, dealerCards } = dealInitialHand(deck);
-
-    let status = "active";
-    let payout: number | null = null;
-
-    if (handValue(playerCards) === 21) {
-      const fullDealerCards = dealerCards.map((c: Card) => ({ ...c, hidden: false }));
-      const result = determineWinner(playerCards, fullDealerCards);
-      const fp = calculatePayout(bet, result);
-      status = result; payout = fp;
-      if (fp > 0) {
-        await db.update(playersTable).set({ chips: player.chips - bet + fp }).where(eq(playersTable.id, playerId));
-        await db.insert(transactionsTable).values({ playerId, amount: fp, type: "win", description: `Blackjack payout (${result})` });
-        await trackRakebackWin(playerId, fp, bjRealRatio);
-      }
-      const [game] = await db.insert(blackjackGamesTable).values({ playerId, status, playerCards: playerCards as any, dealerCards: fullDealerCards as any, bet, payout: fp }).returning();
-      bjRakebackRatio.delete(game.id);
-      const [up] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-      broadcastPlayerBalance(playerId, Number(up.chips));
-      return wsSend(ws, { type: "bj_result", action: "deal", game: { ...game, playerValue: handValue(playerCards), dealerValue: handValue(fullDealerCards) }, playerChips: Number(up.chips) });
-    }
-
-    const [game] = await db.insert(blackjackGamesTable).values({ playerId, status, playerCards: playerCards as any, dealerCards: dealerCards as any, bet }).returning();
-    bjRakebackRatio.set(game.id, bjRealRatio);
-    const [up] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-    broadcastPlayerBalance(playerId, Number(up.chips));
-    return wsSend(ws, { type: "bj_result", action: "deal", game: { ...game, playerValue: handValue(playerCards), dealerValue: handValue([dealerCards[0]]) }, playerChips: Number(up.chips) });
-  }
-
-  // hit / stand / double — all need a gameId
-  if (!gameId) return wsSend(ws, { type: "bj_error", message: "gameId is required" });
-  const [game] = await db.select().from(blackjackGamesTable).where(eq(blackjackGamesTable.id, gameId));
-  if (!game) return wsSend(ws, { type: "bj_error", message: "Game not found" });
-  if (game.playerId !== playerId) return wsSend(ws, { type: "bj_error", message: "Not your game" });
-  if (game.status !== "active") return wsSend(ws, { type: "bj_error", message: "Game is not active" });
-
-  if (action === "hit") {
-    const deck = createDeck(6);
-    const wsHitOddsMode = await getSetting("blackjackOddsMode", "standard");
-    const playerCards = [...(game.playerCards as Card[]), biasedDraw(deck, wsHitOddsMode, handValue(game.playerCards as Card[]), true)];
-    let status: string = "active";
-    if (isBust(playerCards)) status = "player_bust";
-    const [updated] = await db.update(blackjackGamesTable)
-      .set({ playerCards: playerCards as any, status, updatedAt: new Date() })
-      .where(eq(blackjackGamesTable.id, gameId)).returning();
-    const dealerCards = game.dealerCards as Card[];
-    const visibleDealer = status === "player_bust" ? dealerCards.map((c: Card) => ({ ...c, hidden: false })) : dealerCards;
-    if (status === "player_bust") await db.update(blackjackGamesTable).set({ dealerCards: visibleDealer as any }).where(eq(blackjackGamesTable.id, gameId));
-    return wsSend(ws, { type: "bj_result", action: "hit", game: { ...updated, dealerCards: visibleDealer, playerValue: handValue(playerCards), dealerValue: handValue([visibleDealer[0]]) } });
-  }
-
-  if (action === "stand") {
-    const playerCards = game.playerCards as Card[];
-    const deck = createDeck(6);
-    const wsStandOddsMode = await getSetting("blackjackOddsMode", "standard");
-    const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck, wsStandOddsMode);
-    const result = determineWinner(playerCards, finalDealerCards);
-    const payout = calculatePayout(game.bet, result);
-    if (payout > 0) {
-      const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-      await db.update(playersTable).set({ chips: player.chips + payout }).where(eq(playersTable.id, playerId));
-      await db.insert(transactionsTable).values({ playerId, amount: payout, type: "win", description: `Blackjack payout (${result})` });
-      const ratio = bjRakebackRatio.get(gameId) ?? 0;
-      await trackRakebackWin(playerId, payout, ratio);
-    }
-    bjRakebackRatio.delete(gameId);
-    const totalHands = parseInt(await getSetting("totalHandsPlayed", "0"));
-    await setSetting("totalHandsPlayed", String(totalHands + 1));
-    const [updated] = await db.update(blackjackGamesTable).set({ dealerCards: finalDealerCards as any, status: result, payout, updatedAt: new Date() }).where(eq(blackjackGamesTable.id, gameId)).returning();
-    const [up] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-    broadcastPlayerBalance(playerId, Number(up.chips));
-    return wsSend(ws, { type: "bj_result", action: "stand", game: { ...updated, dealerCards: finalDealerCards, playerValue: handValue(playerCards), dealerValue: handValue(finalDealerCards) }, playerChips: Number(up.chips) });
-  }
-
-  if (action === "double") {
-    if ((game.playerCards as Card[]).length !== 2) return wsSend(ws, { type: "bj_error", message: "Can only double on first two cards" });
-    const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-    if (player.chips < game.bet) return wsSend(ws, { type: "bj_error", message: "Insufficient chips to double down" });
-
-    await db.update(playersTable).set({ chips: player.chips - game.bet }).where(eq(playersTable.id, playerId));
-    await db.insert(transactionsTable).values({ playerId, amount: game.bet, type: "loss", description: "Blackjack double down bet" });
-
-    const doubleRatio = await trackRakebackBet(playerId, game.bet);
-    const origRatio = bjRakebackRatio.get(gameId) ?? 0;
-    const combinedRatio = (origRatio + doubleRatio) / 2;
-
-    const deck = createDeck(6);
-    const wsDoubleOddsMode = await getSetting("blackjackOddsMode", "standard");
-    const playerCards = [...(game.playerCards as Card[]), biasedDraw(deck, wsDoubleOddsMode, handValue(game.playerCards as Card[]), true)];
-    const totalBet = game.bet * 2;
-    let status: string;
-    let finalDealerCards = game.dealerCards as Card[];
-
-    if (isBust(playerCards)) {
-      status = "player_bust";
-      finalDealerCards = finalDealerCards.map((c: Card) => ({ ...c, hidden: false }));
-    } else {
-      const { dealerCards } = dealerPlay(game.dealerCards as Card[], deck, wsDoubleOddsMode);
-      finalDealerCards = dealerCards;
-      status = determineWinner(playerCards, finalDealerCards);
-    }
-
-    const payout = calculatePayout(totalBet, status as any);
-    if (payout > 0) {
-      const [fresh] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-      await db.update(playersTable).set({ chips: fresh.chips + payout }).where(eq(playersTable.id, playerId));
-      await db.insert(transactionsTable).values({ playerId, amount: payout, type: "win", description: `Blackjack payout (double, ${status})` });
-      await trackRakebackWin(playerId, payout, combinedRatio);
-    }
-    bjRakebackRatio.delete(gameId);
-    const totalHands = parseInt(await getSetting("totalHandsPlayed", "0"));
-    await setSetting("totalHandsPlayed", String(totalHands + 1));
-    const [updated] = await db.update(blackjackGamesTable).set({ playerCards: playerCards as any, dealerCards: finalDealerCards as any, status, bet: totalBet, payout, updatedAt: new Date() }).where(eq(blackjackGamesTable.id, gameId)).returning();
-    const [up] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
-    broadcastPlayerBalance(playerId, Number(up.chips));
-    return wsSend(ws, { type: "bj_result", action: "double", game: { ...updated, dealerCards: finalDealerCards, playerValue: handValue(playerCards), dealerValue: handValue(finalDealerCards) }, playerChips: Number(up.chips) });
-  }
-
-  wsSend(ws, { type: "bj_error", message: `Unknown blackjack action: ${action}` });
-}
 
 // ── Tournament subscribers ─────────────────────────────────────────────────
 const tournamentSubscribers = new Map<number, Set<WebSocket>>();
@@ -646,10 +458,6 @@ export function setupWebSocketServer(server: Server): WebSocketServer {
           bjRoom.playerAction(validated.playerId, action)
             .then(r => { if (r.error) wsSend(ws, { type: "bj_error", message: r.error }); })
             .catch(() => wsSend(ws, { type: "bj_error", message: "Internal error" }));
-
-        // ── Legacy singleplayer blackjack actions ──────────────────────────
-        } else if (msg.type === "bj_action") {
-          handleBjAction(ws, msg).catch(() => wsSend(ws, { type: "bj_error", message: "Blackjack error" }));
 
         // ── Baccarat channel ────────────────────────────────────────────────
         } else if (msg.type === "bac_subscribe" && typeof msg.tableId === "number") {
