@@ -70,7 +70,7 @@ export const tableGamesData: GameDef[] = [
     neonClass: "neon-blue", neonColor: "#06b6d4",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#06b6d4",
     route: "/high-low", tokenId: "highlow",
-    image: `${IMGS}images/card-mini-games.png`, gameKey: "highlow",
+    image: `${IMGS}images/card-mini-games.webp`, gameKey: "highlow",
     displayCategory: "TABLE GAMES",
   },
 ];
@@ -99,7 +99,7 @@ export const miniGamesData: GameDef[] = [
     neonClass: "neon-pink", neonColor: "#ec4899",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#ec4899",
     route: "/keno", tokenId: "keno",
-    image: `${IMGS}images/card-keno.png`,
+    image: `${IMGS}images/card-keno.webp`,
     displayCategory: "MINI GAMES",
   },
   {
@@ -111,7 +111,7 @@ export const miniGamesData: GameDef[] = [
     badge: "NEW", badgeColor: "#7c3aed",
     actionLabel: "Start Climb", statusLabel: "OPEN", statusColor: "#f97316",
     route: "/mob-tower",
-    image: `${IMGS}images/card-mob-tower.png`, gameKey: "mobtower",
+    image: `${IMGS}images/card-mob-tower.webp`, gameKey: "mobtower",
     displayCategory: "MINI GAMES",
   },
   {
@@ -140,7 +140,7 @@ export const slotsData: GameDef[] = [
     badge: "POPULAR", badgeColor: "#e8400a",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#a855f7",
     route: "/rome-slots", tokenId: "slots",
-    image: `${IMGS}images/card-fortuna.png?v=2`, gameKey: "slots",
+    image: `${IMGS}images/card-fortuna.webp`, gameKey: "slots",
     displayCategory: "SLOTS",
   },
   {
@@ -152,7 +152,7 @@ export const slotsData: GameDef[] = [
     badge: "NEW", badgeColor: "#7c3aed",
     actionLabel: "Play Now", statusLabel: "OPEN", statusColor: "#22c55e",
     route: "/western-slots", tokenId: "slots",
-    image: `${IMGS}images/card-deadwood.png?v=2`, gameKey: "slots",
+    image: `${IMGS}images/card-deadwood.webp`, gameKey: "slots",
     displayCategory: "SLOTS",
   },
 ];
@@ -170,7 +170,7 @@ export const bingoData: GameDef[] = [
     players: "4 waiting", betRange: "$1 – $10 / card",
     actionLabel: "Join Room", statusLabel: "FILLING", statusColor: "#22c55e",
     route: "/bingo", launchKey: "bingo",
-    image: `${IMGS}images/card-bingo.png`,
+    image: `${IMGS}images/card-bingo.webp`,
     displayCategory: "EVENTS",
   },
   {
@@ -183,7 +183,7 @@ export const bingoData: GameDef[] = [
     players: "7 playing", betRange: "$2 – $20 / card",
     actionLabel: "Join Room", statusLabel: "LIVE", statusColor: "#22c55e",
     route: "/bingo", launchKey: "bingo",
-    image: `${IMGS}images/card-bingo.png`,
+    image: `${IMGS}images/card-bingo.webp`,
   },
   {
     id: "75ball",
@@ -194,7 +194,7 @@ export const bingoData: GameDef[] = [
     players: "12 playing", betRange: "$0.50 – $5 / card",
     actionLabel: "Join Room", statusLabel: "LIVE", statusColor: "#22c55e",
     route: "/bingo", launchKey: "bingo",
-    image: `${IMGS}images/card-bingo.png`,
+    image: `${IMGS}images/card-bingo.webp`,
   },
   {
     id: "pattern",
@@ -205,7 +205,7 @@ export const bingoData: GameDef[] = [
     players: "2 waiting", betRange: "$3 – $25 / card",
     actionLabel: "Join Room", statusLabel: "OPEN", statusColor: "#06b6d4",
     route: "/bingo", launchKey: "bingo",
-    image: `${IMGS}images/card-bingo.png`,
+    image: `${IMGS}images/card-bingo.webp`,
   },
 ];
 
@@ -243,12 +243,12 @@ export const GAME_DISPLAY: Record<string, { name: string; category: string; imag
   rome_slots:    { name: "Rome Slots",       category: "SLOTS",        image: `${IMGS}images/card-rome-slots.webp`,      gameKey: "slots"      },
   western_slots: { name: "Big House Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, gameKey: "slots"      },
   mines:         { name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           gameKey: "mines"      },
-  mob_tower:     { name: "Mob Tower",        category: "MINI GAMES",   image: `${IMGS}images/card-mob-tower.png`,        gameKey: "mobtower"   },
-  fortune:       { name: "Fortune Spin",     category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "slots"      },
-  highlow:       { name: "High Low",         category: "MINI GAMES",   image: `${IMGS}images/mini-games.png`,            gameKey: "highlow"    },
+  mob_tower:     { name: "Mob Tower",        category: "MINI GAMES",   image: `${IMGS}images/card-mob-tower.webp`,        gameKey: "mobtower"   },
+  fortune:       { name: "Fortune Spin",     category: "MINI GAMES",   image: `${IMGS}images/mini-games.webp`,            gameKey: "slots"      },
+  highlow:       { name: "High Low",         category: "MINI GAMES",   image: `${IMGS}images/mini-games.webp`,            gameKey: "highlow"    },
   horse:         { name: "Horse Racing",     category: "LIVE EVENTS",  image: `${IMGS}images/card-horseracing.webp`,     gameKey: "horse"      },
-  bingo:         { name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.png`                                   },
-  lottery:       { name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.png`                                 },
+  bingo:         { name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.webp`                                   },
+  lottery:       { name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.webp`                                 },
   tournament:    { name: "Slots Tournament", category: "EVENTS",       image: `${IMGS}images/card-tournaments.webp`,    gameKey: "slots"      },
 };
 
@@ -265,6 +265,6 @@ export const FALLBACK_LIVE: FallbackLiveGame[] = [
   { id: 4, name: "Horse Racing",     category: "LIVE EVENTS",  image: `${IMGS}images/card-horseracing.webp`,     players: 14, maxPlayers: 20, activeBets: "$14,200", status: "Race Live"   },
   { id: 5, name: "Mines",            category: "MINI GAMES",   image: `${IMGS}images/card-mines.webp`,           players: 9,  maxPlayers: 0,  activeBets: "$1,870",  status: "In Progress" },
   { id: 6, name: "Big House Slots",  category: "SLOTS",        image: `${IMGS}images/card-backalley-slots.webp`, players: 6,  maxPlayers: 0,  activeBets: "$3,200",  status: "In Progress" },
-  { id: 7, name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.png`,            players: 12, maxPlayers: 20, activeBets: "$480",    status: "Live Draw"   },
-  { id: 8, name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.png`,          players: 88, maxPlayers: 0,  activeBets: "$22,600", status: "Open"        },
+  { id: 7, name: "Bingo",            category: "EVENTS",       image: `${IMGS}images/card-bingo.webp`,            players: 12, maxPlayers: 20, activeBets: "$480",    status: "Live Draw"   },
+  { id: 8, name: "Lottery",          category: "EVENTS",       image: `${IMGS}images/card-lottery.webp`,          players: 88, maxPlayers: 0,  activeBets: "$22,600", status: "Open"        },
 ];

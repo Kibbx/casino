@@ -196,7 +196,7 @@ export default function MiniGamesPage() {
               className="group relative rounded-2xl overflow-hidden cursor-pointer disabled:cursor-default focus:outline-none"
               style={{ width: 200, height: 280, background: "#08020f", flexShrink: 0 }}
             >
-              <img src={`${IMGS}images/card-mob-tower.png`} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
+              <img src={`${IMGS}images/card-mob-tower.webp`} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
               <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.88) 100%)" }} />
               <div className="absolute top-2 left-1/2" style={{ transform: "translateX(-50%)" }}>
                 <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: "10px", letterSpacing: "0.14em", color: "rgba(167,139,250,0.95)", background: "rgba(0,0,0,0.65)", border: "1px solid rgba(124,58,237,0.5)", borderRadius: 4, padding: "2px 8px", textTransform: "uppercase", whiteSpace: "nowrap" }}>UP TO 24.86×</span>

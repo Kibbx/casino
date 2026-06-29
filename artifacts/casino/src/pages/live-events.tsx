@@ -147,7 +147,7 @@ export default function LiveEventsPage() {
           className="group relative rounded-2xl overflow-hidden cursor-pointer focus:outline-none"
           style={{ width: 200, height: 280, background: "#050010", flexShrink: 0 }}
         >
-          <img src={`${IMGS}images/card-bingo.png`} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
+          <img src={`${IMGS}images/card-bingo.webp`} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.92) 100%)" }} />
           <div className="absolute bottom-0 inset-x-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)" }}>
             <p style={{ color: "#fff", fontWeight: 900, fontSize: "15px", textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.2, margin: 0 }}>Bingo</p>
@@ -164,7 +164,7 @@ export default function LiveEventsPage() {
           className="group relative rounded-2xl overflow-hidden cursor-pointer focus:outline-none"
           style={{ width: 200, height: 280, background: "#0d0900", flexShrink: 0 }}
         >
-          <img src={`${IMGS}images/card-lottery.png`} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
+          <img src={`${IMGS}images/card-lottery.webp`} alt="" className="absolute inset-0 w-full h-full" style={{ objectFit: "cover", objectPosition: "center top" }} />
           <div className="absolute inset-0" style={{ background: "linear-gradient(to bottom, transparent 45%, rgba(0,0,0,0.92) 100%)" }} />
           <div className="absolute bottom-0 inset-x-0 px-4 py-3" style={{ background: "rgba(0,0,0,0.85)" }}>
             <p style={{ color: "#fff", fontWeight: 900, fontSize: "15px", textTransform: "uppercase", letterSpacing: "0.06em", lineHeight: 1.2, margin: 0 }}>Lottery</p>
