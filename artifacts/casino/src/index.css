@@ -1166,6 +1166,12 @@
   }
 }
 
+/* ── Blackjack countdown warning pulse ──────────────────────────── */
+@keyframes bj-timer-pulse {
+  0%, 100% { opacity: 1;    transform: scale(1);    }
+  50%       { opacity: 0.5; transform: scale(1.08); }
+}
+
 /* ── Reduced motion ──────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .neon-card,

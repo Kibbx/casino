@@ -247,8 +247,12 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         width:  "clamp(80px, 8vw, 120px)",
         height: "clamp(80px, 8vw, 120px)",
         overflow: "visible",
-        /* Ring-only outer glow — nothing behind the number */
-        filter: `drop-shadow(0 0 10px ${glowColor}) drop-shadow(0 0 4px ${glowColor})`,
+        transformOrigin: "50% 50%",
+        /* Stronger glow + pulse animation when ≤5 s remain */
+        filter: urgent
+          ? `drop-shadow(0 0 18px ${glowColor}) drop-shadow(0 0 8px ${glowColor})`
+          : `drop-shadow(0 0 10px ${glowColor}) drop-shadow(0 0 4px ${glowColor})`,
+        animation: urgent ? "bj-timer-pulse 0.65s ease-in-out infinite" : "none",
         transition: "filter 0.3s ease",
       }}
     >
