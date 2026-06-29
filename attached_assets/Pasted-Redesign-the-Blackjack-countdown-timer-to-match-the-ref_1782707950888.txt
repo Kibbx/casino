@@ -1,0 +1,96 @@
+Redesign the Blackjack countdown timer to match the reference style more closely.
+
+The current implementation still has a dark/black center background. That is **not** what I want.
+
+### Desired appearance
+
+The timer should consist of **only two visible elements**:
+
+* The countdown number
+* The animated circular progress ring
+
+Everything else should be transparent.
+
+### Remove
+
+Completely remove:
+
+* Black center circle
+* Dark background behind the number
+* Glass effect
+* Spotlight effect
+* Red glow
+* Inner shadows
+* Background fills
+* Outer container
+* Borders
+* Drop shadows behind the timer
+* Any solid circle behind the number
+
+The timer should appear to float directly over the Blackjack table.
+
+### Progress ring
+
+The progress ring should be:
+
+* Thick
+* Smooth
+* Bright neon green
+* Rounded ends (`stroke-linecap="round"`)
+* Slight outer glow only
+* No glow behind the number
+* No background ring unless it's an extremely faint (5–10% opacity) guide
+
+The ring should smoothly drain clockwise as the countdown decreases.
+
+### Countdown number
+
+The number should be:
+
+* Large
+* Bold
+* Pure white
+* Centered perfectly
+* No outline
+* No shadow
+* No background
+* No circle behind it
+
+It should simply float inside the ring.
+
+### Transparency
+
+Everything except the ring and number should be transparent.
+
+The Blackjack table artwork should remain fully visible through the middle of the timer.
+
+### Technical implementation
+
+Use an SVG progress ring:
+
+* Transparent SVG background
+* Green stroke only
+* No filled `<circle>`
+* `fill="none"`
+* `stroke-dasharray`
+* `stroke-dashoffset`
+* Smooth animation
+* `stroke-linecap="round"`
+
+### Do not change
+
+* Countdown logic
+* Blackjack timing
+* Backend state
+* Timer position
+
+Only redesign the visuals.
+
+### Expected result
+
+The timer should look like a floating countdown overlay:
+
+* Transparent center
+* No black disc
+* No container
+* Just a thick neon green animated ring surrounding a large white countdown number, with the Blackjack table fully visible through the middle.

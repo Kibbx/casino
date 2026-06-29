@@ -246,25 +246,16 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         display: "block",
         width:  "clamp(80px, 8vw, 120px)",
         height: "clamp(80px, 8vw, 120px)",
-        filter: `drop-shadow(0 0 12px ${glowColor})`,
-        transition: "filter 0.35s ease",
         overflow: "visible",
+        /* Ring-only outer glow — nothing behind the number */
+        filter: `drop-shadow(0 0 10px ${glowColor}) drop-shadow(0 0 4px ${glowColor})`,
+        transition: "filter 0.3s ease",
       }}
     >
-      {/* Flat dark centre disc — no gradient bloom */}
-      <circle cx={cx} cy={cy} r={R + STROKE / 2 + 2}
-        fill="rgba(0,0,0,0.82)"
-        stroke="none"
-      />
+      {/* No disc, no background, no track — SVG is fully transparent.
+          The table felt shows through the centre of the ring. */}
 
-      {/* Unlit track — very dim so drained segments are clearly dark */}
-      <circle cx={cx} cy={cy} r={R}
-        fill="none"
-        stroke="rgba(255,255,255,0.07)"
-        strokeWidth={STROKE}
-      />
-
-      {/* Active arc — drains clockwise from 12 o'clock; RAF drives offset each frame */}
+      {/* Neon arc — drains clockwise from 12 o'clock; RAF drives offset each frame */}
       <circle cx={cx} cy={cy} r={R}
         fill="none"
         stroke={ringColor}
@@ -276,7 +267,7 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
         style={{ transition: "stroke 0.3s ease" }}
       />
 
-      {/* Countdown number — always white, perfectly centred */}
+      {/* Countdown number — white, no background, no shadow, floats inside the ring */}
       <text
         x={cx}
         y={cy}
