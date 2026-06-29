@@ -700,9 +700,19 @@ export function Lobby() {
                   {recentlyPlayed.length > 0 ? (
                     <CardGrid>
                       {recentlyPlayed.map((entry) => {
-                        const live = gamesMeta[entry.id];
+                        // BJ table entries use id "bj-table-N" — status lives on the "blackjack" key
+                        const metaKey = entry.id.startsWith("bj-table-") ? "blackjack" : entry.id;
+                        const live = gamesMeta[metaKey];
+                        const isClosed = live?.status === "closed";
                         const game = live
-                          ? { ...entry.game, players: `${live.currentPlayers} playing`, betRange: formatBetRange(live.minBet, live.maxBet) }
+                          ? {
+                              ...entry.game,
+                              players: isClosed ? "0 playing" : `${live.currentPlayers} playing`,
+                              betRange: formatBetRange(live.minBet, live.maxBet),
+                              disabled: isClosed,
+                              statusLabel: isClosed ? "CLOSED" : entry.game.statusLabel,
+                              statusColor: isClosed ? "#ef4444" : entry.game.statusColor,
+                            }
                           : { ...entry.game, players: undefined, betRange: undefined };
                         return <CatalogCard key={entry.id} game={game} onClick={() => {
                           if (entry.launchData?.tableId !== undefined) {
@@ -727,8 +737,9 @@ export function Lobby() {
                   {liveActivity.length > 0 ? (
                     <CardGrid>
                       {liveActivity.map(({ username, game }) => {
-                        const m   = ACTIVITY_MAP[game]!;
-                        const cfg = GAME_CFG[m.cfgKey] ?? GAME_CFG.blackjack;
+                        const m        = ACTIVITY_MAP[game]!;
+                        const cfg      = GAME_CFG[m.cfgKey] ?? GAME_CFG.blackjack;
+                        const isClosed = gamesMeta[game]?.status === "closed";
                         const g: CatalogGame = {
                           id:          `live-${username}-${game}`,
                           name:        m.name,
@@ -737,8 +748,9 @@ export function Lobby() {
                           neonClass:   cfg.neonClass,
                           neonColor:   cfg.neonColor,
                           players:     `${username} is playing`,
-                          statusLabel: "ACTIVE",
-                          statusColor: "#22c55e",
+                          statusLabel: isClosed ? "CLOSED" : "ACTIVE",
+                          statusColor: isClosed ? "#ef4444" : "#22c55e",
+                          disabled:    isClosed,
                         };
                         return (
                           <CatalogCard

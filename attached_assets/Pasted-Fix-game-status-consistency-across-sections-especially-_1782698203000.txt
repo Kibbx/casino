@@ -1,0 +1,75 @@
+Fix game status consistency across sections, especially Recently Played.
+
+Current issue:
+Games are correctly showing as **CLOSED** inside their main sections, like Table Games, but the same games still show as **OPEN**, **JOIN TABLE**, or **PLAY NOW** inside **Recently Played** on the Home page. Their player/stat counts also do not match the closed state.
+
+Expected behavior:
+If a game is closed/disabled anywhere, it must show closed everywhere:
+
+* Main game section
+* Recently Played
+* Home page cards
+* Search results
+* Any carousel/list using game cards
+* Game stats/player counts
+* Join/play buttons
+* Direct route access
+
+### Fix requirements
+
+1. Use one backend source of truth for game status.
+
+   * Recently Played must not use hardcoded `OPEN` status.
+   * Recently Played must read the same backend `enabled`, `active`, `isOpen`, or `status` value as the main game pages.
+
+2. Reuse the same GameCard logic everywhere.
+
+   * Do not duplicate card status logic.
+   * Recently Played cards should use the same closed-state component/classes as Table Games.
+
+3. Closed games should display:
+
+   * `CLOSED` badge
+   * dimmed/faded card
+   * disabled button
+   * no hover/click navigation
+   * no join/play action
+
+4. Stats must match closed state.
+
+   * Closed games should not show misleading live/open stats.
+   * Player counts should show `0 playing` unless backend has a specific closed-state value.
+   * Table availability should not show active seats when closed.
+   * Recently Played stats should refresh from backend instead of stale cached/mock data.
+
+5. Backend enforcement:
+
+   * Even if a user clicks a stale Recently Played card or goes directly to the URL, backend must block access if the game is closed.
+   * Return a clear error: `Game is currently closed`.
+
+6. Check for stale/mock data.
+
+   * Inspect Recently Played data source.
+   * Remove or override hardcoded `OPEN`, `LIVE`, `PLAY NOW`, and fake stats.
+   * Make sure production uses live backend status, not static frontend seed data.
+
+7. Refresh behavior:
+
+   * After an admin closes or opens a game, all sections should update consistently.
+   * Home page Recently Played should refresh game status when loaded and after status changes.
+
+### Investigate
+
+* Home page Recently Played component
+* Shared GameCard component
+* Table Games card logic
+* Backend game status API
+* Game stats API
+* Admin enable/disable API
+* Any cached Zustand/Redux/localStorage game data
+* Any mock/static recently played list
+* Route guards for entering games
+
+### Expected result
+
+If Baccarat is closed in Table Games, it must also show closed in Recently Played. Same for Blackjack/VIP, Roulette, High Low, slots, and every other game. The visual status, button state, stats, and backend access must all match the backend game status.
