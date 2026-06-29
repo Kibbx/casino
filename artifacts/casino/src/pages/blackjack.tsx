@@ -194,6 +194,98 @@ function PhaseTimer({ phaseEndsAt }: { phaseEndsAt: number | null }) {
   );
 }
 
+// ── Circular countdown — centered on felt during BETTING phase ────────────────
+
+function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null }) {
+  const secs = useCountdown(phaseEndsAt);
+
+  // Track the initial seconds for this phase to use as the ring's denominator.
+  // Refs so we never cause re-renders; reset whenever phaseEndsAt changes.
+  const maxRef     = useRef<number>(30);
+  const prevEndRef = useRef<number | null>(null);
+  if (prevEndRef.current !== phaseEndsAt) {
+    prevEndRef.current = phaseEndsAt;
+    maxRef.current     = secs ?? 30;
+  }
+  if (secs !== null && secs > maxRef.current) maxRef.current = secs;
+
+  if (secs === null) return null;
+
+  const SIZE   = 120;
+  const R      = 46;
+  const C      = 2 * Math.PI * R;
+  const cx     = SIZE / 2;
+  const cy     = SIZE / 2;
+  const frac   = maxRef.current > 0 ? Math.max(0, Math.min(1, secs / maxRef.current)) : 0;
+  const offset = C * (1 - frac);   // 0 = full ring, C = empty
+  const urgent = secs <= 5;
+  const color  = urgent ? "#f87171" : "#4ade80";
+  const glowA  = urgent ? "rgba(248,113,113,0.65)" : "rgba(74,222,128,0.6)";
+  const glowB  = urgent ? "rgba(248,113,113,0.22)" : "rgba(74,222,128,0.22)";
+
+  return (
+    <svg
+      width={SIZE}
+      height={SIZE}
+      style={{
+        display: "block",
+        filter: `drop-shadow(0 0 18px ${glowA}) drop-shadow(0 0 6px ${glowB})`,
+        transition: "filter 0.3s ease",
+      }}
+    >
+      {/* dark glass backdrop */}
+      <circle cx={cx} cy={cy} r={R + 5}
+        fill="rgba(0,0,0,0.62)"
+        stroke="rgba(255,255,255,0.05)"
+        strokeWidth={1}
+      />
+      {/* dim track ring */}
+      <circle cx={cx} cy={cy} r={R}
+        fill="none"
+        stroke="rgba(255,255,255,0.08)"
+        strokeWidth={7}
+      />
+      {/* progress arc — origin at 12 o'clock, drains clockwise */}
+      <circle cx={cx} cy={cy} r={R}
+        fill="none"
+        stroke={color}
+        strokeWidth={7}
+        strokeLinecap="round"
+        strokeDasharray={`${C} ${C}`}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${cx} ${cy})`}
+        style={{ transition: "stroke-dashoffset 0.22s linear, stroke 0.3s ease" }}
+      />
+      {/* seconds number */}
+      <text
+        x={cx} y={cy - 4}
+        textAnchor="middle"
+        dominantBaseline="auto"
+        fill={color}
+        fontSize={28}
+        fontWeight={900}
+        fontFamily="'Rajdhani', 'Orbitron', monospace"
+        style={{ transition: "fill 0.3s ease", userSelect: "none" } as React.CSSProperties}
+      >
+        {secs}
+      </text>
+      {/* unit label */}
+      <text
+        x={cx} y={cy + 18}
+        textAnchor="middle"
+        dominantBaseline="auto"
+        fill={urgent ? "rgba(248,113,113,0.6)" : "rgba(74,222,128,0.5)"}
+        fontSize={10}
+        fontWeight={700}
+        fontFamily="inherit"
+        style={{ transition: "fill 0.3s ease", userSelect: "none", letterSpacing: 2 } as React.CSSProperties}
+      >
+        SEC
+      </text>
+    </svg>
+  );
+}
+
 // ── Stacked chip visual ───────────────────────────────────────────────────────
 
 const CHIP_FILE_MAP: Record<number, string> = Object.fromEntries(CHIP_DEFS.map(c => [c.value, c.file]));
@@ -1056,6 +1148,29 @@ export default function BlackjackPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* ── Circular betting countdown — centered on the felt ── */}
+      <AnimatePresence>
+        {phase === "BETTING" && table?.phaseEndsAt && (
+          <motion.div
+            key="circ-timer"
+            initial={{ opacity: 0, scale: 0.65 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.65 }}
+            transition={{ type: "spring", stiffness: 360, damping: 28 }}
+            style={{
+              position: "absolute",
+              top: "38%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 15,
+              pointerEvents: "none",
+            }}
+          >
+            <CircularCountdownTimer phaseEndsAt={table.phaseEndsAt} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Seats ── */}
       {displaySeats.map((seat, i) => (
