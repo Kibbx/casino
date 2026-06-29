@@ -237,10 +237,11 @@ function CircularCountdownTimer({ phaseEndsAt }: { phaseEndsAt: number | null })
 
   return (
     <svg
-      width={SIZE}
-      height={SIZE}
+      viewBox={`0 0 ${SIZE} ${SIZE}`}
       style={{
         display: "block",
+        width:  "clamp(72px, 7vw, 110px)",
+        height: "clamp(72px, 7vw, 110px)",
         filter: `drop-shadow(0 0 18px ${glowA}) drop-shadow(0 0 6px ${glowB})`,
         transition: "filter 0.3s ease",
       }}
@@ -1161,28 +1162,33 @@ export default function BlackjackPage() {
         </div>
       </div>
 
-      {/* ── Circular betting countdown — centered on the felt ── */}
-      <AnimatePresence>
-        {phase === "BETTING" && table?.phaseEndsAt && (
-          <motion.div
-            key="circ-timer"
-            initial={{ opacity: 0, scale: 0.65 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.65 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              zIndex: 15,
-              pointerEvents: "none",
-            }}
-          >
-            <CircularCountdownTimer phaseEndsAt={table.phaseEndsAt} />
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ── Timer zone — a grid cell spanning the open felt between header and HUD.
+           This is the only centering mechanism; no hardcoded top/left offsets. ── */}
+      <div style={{
+        position: "absolute",
+        top: 54,      // flush below the header bar
+        left: 0,
+        right: 0,
+        bottom: hudH, // flush above the HUD (hudH already varies with phase/seat)
+        display: "grid",
+        placeItems: "center",
+        zIndex: 15,
+        pointerEvents: "none",
+      }}>
+        <AnimatePresence>
+          {phase === "BETTING" && table?.phaseEndsAt && (
+            <motion.div
+              key="circ-timer"
+              initial={{ opacity: 0, scale: 0.65 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.65 }}
+              transition={{ type: "spring", stiffness: 360, damping: 28 }}
+            >
+              <CircularCountdownTimer phaseEndsAt={table.phaseEndsAt} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* ── Seats ── */}
       {displaySeats.map((seat, i) => (
