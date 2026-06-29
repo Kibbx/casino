@@ -250,10 +250,9 @@ export function LeaderboardsPage() {
       .catch((e: any) => { setError(typeof e === "string" ? e : "Failed to load"); setLoading(false); });
   }, [sessionToken]);
 
-  /* sorted + ranked + trend — netProfit DESC → biggestWin DESC → games DESC */
+  /* sorted + ranked + trend — biggestWin DESC → games DESC */
   const ranked = useMemo((): RankedEntry[] => {
     const copy = [...data].sort((a, b) =>
-      b.netProfit !== a.netProfit   ? b.netProfit - a.netProfit :
       b.biggestWin !== a.biggestWin ? b.biggestWin - a.biggestWin :
                                       b.games - a.games
     );
@@ -291,7 +290,7 @@ export function LeaderboardsPage() {
   const myEntry = ranked.find(e => e.id === playerId || e.username === playerUsername);
   const myRank  = myEntry?.rank ?? null;
 
-  const colLayout = "64px 1fr 92px 92px 130px 84px";
+  const colLayout = "64px 1fr 100px 160px 90px";
 
   return (
     <PageWrapper title="Leaderboards" breadcrumb="The Hub / Leaderboards" accentColor="#a855f7" fillHeight>
@@ -371,9 +370,8 @@ export function LeaderboardsPage() {
         }}>
           <span>Rank</span>
           <span style={{ paddingLeft: 4 }}>Player</span>
-          <span>Games</span>
-          <span>Net Profit</span>
-          <span style={{ textAlign: "right" }}>Biggest Win</span>
+          <span style={{ textAlign: "center" }}>Games</span>
+          <span style={{ textAlign: "center" }}>Biggest Win</span>
           <span style={{ textAlign: "center" }}>Trend</span>
         </div>
 
@@ -427,8 +425,6 @@ export function LeaderboardsPage() {
 
                 const profitColor = "#22c55e";
                 const profitGlow  = "rgba(34,197,94,0.3)";
-
-                const netProfitColor = entry.netProfit >= 0 ? "#22c55e" : "#ef4444";
 
                 return (
                   <div
@@ -506,20 +502,12 @@ export function LeaderboardsPage() {
                     </div>
 
                     {/* Games */}
-                    <span style={{ fontSize: 14, fontVariantNumeric: "tabular-nums", color: "rgba(255,255,255,0.45)" }}>
+                    <span style={{ fontSize: 14, fontVariantNumeric: "tabular-nums", color: "rgba(255,255,255,0.45)", textAlign: "center" }}>
                       {fmtGames(entry.games)}
                     </span>
 
-                    {/* Net Profit */}
-                    <span style={{
-                      fontSize: 14, fontWeight: 800, fontVariantNumeric: "tabular-nums",
-                      color: entry.games > 0 ? netProfitColor : "rgba(255,255,255,0.2)",
-                    }}>
-                      {entry.games > 0 ? fmtNetProfit(entry.netProfit) : "—"}
-                    </span>
-
                     {/* Biggest Win */}
-                    <div style={{ textAlign: "right" }}>
+                    <div style={{ textAlign: "center" }}>
                       <span style={{
                         fontSize: 14, fontWeight: 900, fontVariantNumeric: "tabular-nums",
                         color: entry.biggestWin > 0 ? profitColor : "rgba(255,255,255,0.2)",
