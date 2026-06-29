@@ -37,6 +37,8 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 /* ── Sport key mapping (frontend tab → the-odds-api.com sport keys) ─────── */
 
+const UNSUPPORTED_SPORTS = new Set(["Tennis", "Golf"]);
+
 const SPORT_TO_KEYS: Record<string, string[]> = {
   "NFL":                ["americanfootball_nfl"],
   "NBA":                ["basketball_nba"],
@@ -45,8 +47,6 @@ const SPORT_TO_KEYS: Record<string, string[]> = {
   "UFC":                ["mma_mixed_martial_arts"],
   "Soccer":             ["soccer_epl", "soccer_usa_mls", "soccer_spain_la_liga", "soccer_germany_bundesliga", "soccer_france_ligue_one"],
   "Boxing":             ["boxing_boxing"],
-  "Tennis":             ["tennis_atp_us_open", "tennis_wta_us_open"],
-  "Golf":               ["golf_pga_championship_winner", "golf_us_open_winner"],
   "College Football":   ["americanfootball_ncaaf"],
   "College Basketball": ["basketball_ncaab"],
 };
@@ -64,10 +64,6 @@ const SPORT_KEY_TO_LEAGUE: Record<string, string> = {
   "soccer_germany_bundesliga":     "Bundesliga",
   "soccer_france_ligue_one":       "Ligue 1",
   "boxing_boxing":                 "Boxing",
-  "tennis_atp_us_open":            "ATP US Open",
-  "tennis_wta_us_open":            "WTA US Open",
-  "golf_pga_championship_winner":  "PGA Championship",
-  "golf_us_open_winner":           "US Open",
   "americanfootball_ncaaf":        "NCAAF",
   "basketball_ncaab":              "NCAAB",
 };
@@ -94,8 +90,6 @@ const STAFF_SPORT_TO_KEY: Record<string, string> = {
   "UFC":                "mma_mixed_martial_arts",
   "Soccer":             "soccer_usa_mls",
   "Boxing":             "boxing_boxing",
-  "Tennis":             "tennis_atp_us_open",
-  "Golf":               "golf_pga_championship_winner",
   "College Football":   "americanfootball_ncaaf",
   "College Basketball": "basketball_ncaab",
 };
@@ -155,9 +149,10 @@ async function getStaffEvents(): Promise<SbEvent[]> {
 }
 
 function filterStaffForSport(events: SbEvent[], sport: string): SbEvent[] {
-  if (sport === "all") return events;
+  const supported = events.filter(e => !UNSUPPORTED_SPORTS.has(e.sport));
+  if (sport === "all") return supported;
   if (sport === "Live") return []; // staff events are never live
-  return events.filter(e => e.sport === sport);
+  return supported.filter(e => e.sport === sport);
 }
 
 /* ── Manual events helpers ──────────────────────────────────────────────── */
@@ -192,9 +187,10 @@ async function getManualEvents(): Promise<SbEvent[]> {
 }
 
 function filterManualForSport(events: SbEvent[], sport: string): SbEvent[] {
-  if (sport === "all") return events;
-  if (sport === "Live") return events.filter(e => e.live);
-  return events.filter(e => e.sport === sport);
+  const supported = events.filter(e => !UNSUPPORTED_SPORTS.has(e.sport));
+  if (sport === "all") return supported;
+  if (sport === "Live") return supported.filter(e => e.live);
+  return supported.filter(e => e.sport === sport);
 }
 
 function clearAllCache() {
@@ -300,10 +296,6 @@ function makeMockEvents(): SbEvent[] {
     { sportKey: "soccer_spain_la_liga",    sport: "Soccer",           league: "La Liga",     homeTeam: "Real Madrid",             awayTeam: "FC Barcelona",           commenceTime: new Date(now + 3  * d).toISOString(),       live: false, bestHomeOdds: -110, bestAwayOdds:  290, bestHomeBook: "betmgm",    bestAwayBook: "fanduel" },
     // Boxing
     { sportKey: "boxing_boxing",           sport: "Boxing",           league: "Boxing",      homeTeam: "Canelo Alvarez",          awayTeam: "David Benavidez",        commenceTime: new Date(now + 5  * d).toISOString(),       live: false, bestHomeOdds: -300, bestAwayOdds:  250, bestHomeBook: "draftkings", bestAwayBook: "fanduel",   eventName: "Super Middleweight WBC Title" },
-    // Tennis
-    { sportKey: "tennis_atp_us_open",      sport: "Tennis",           league: "ATP US Open", homeTeam: "Carlos Alcaraz",          awayTeam: "Novak Djokovic",         commenceTime: new Date(now + 6  * d).toISOString(),       live: false, bestHomeOdds: -145, bestAwayOdds:  125, bestHomeBook: "betmgm",    bestAwayBook: "betmgm",    eventName: "Wimbledon Final" },
-    // Golf
-    { sportKey: "golf_pga_championship_winner", sport: "Golf",        league: "PGA",         homeTeam: "Scottie Scheffler",       awayTeam: "Rory McIlroy",           commenceTime: new Date(now + 7  * d).toISOString(),       live: false, bestHomeOdds: -140, bestAwayOdds:  120, bestHomeBook: "draftkings", bestAwayBook: "fanduel",   eventName: "The Open Championship" },
     // College Football
     { sportKey: "americanfootball_ncaaf",  sport: "College Football", league: "NCAAF",       homeTeam: "Alabama Crimson Tide",    awayTeam: "Georgia Bulldogs",       commenceTime: new Date(now + 3  * d + h).toISOString(),  live: false, bestHomeOdds: -120, bestAwayOdds:  100, bestHomeBook: "fanduel",   bestAwayBook: "betmgm" },
     // College Basketball
@@ -445,8 +437,6 @@ const SPORT_TO_DEFAULT_KEY: Record<string, string> = {
   "UFC":                "mma_mixed_martial_arts",
   "Soccer":             "soccer_usa_mls",
   "Boxing":             "boxing_boxing",
-  "Tennis":             "tennis_atp_us_open",
-  "Golf":               "golf_pga_championship_winner",
   "College Football":   "americanfootball_ncaaf",
   "College Basketball": "basketball_ncaab",
 };

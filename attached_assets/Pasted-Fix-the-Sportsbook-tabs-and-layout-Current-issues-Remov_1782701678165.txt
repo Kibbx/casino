@@ -1,0 +1,67 @@
+Fix the Sportsbook tabs and layout.
+
+Current issues:
+
+Remove Golf and Tennis from Sportsbook completely.
+The sports category tabs are cutting off behind/under the bet slip panel on the right.
+Remove Golf and Tennis
+
+Remove Golf and Tennis from:
+
+Frontend sportsbook category tabs
+Backend sportsbook supported leagues/sports list
+Any mock/static sportsbook data
+Any filters, enums, constants, or API responses
+Popular bets if they include Golf or Tennis
+Any seed data or test fixtures
+
+Expected behavior:
+
+Golf and Tennis should not appear as selectable tabs.
+Golf and Tennis events should not be returned to the frontend.
+The app should not break if old Golf/Tennis data exists in the database; just filter it out or mark unsupported.
+Fix tab layout cutting off
+
+Current issue:
+The category tabs extend underneath the right-side bet slip panel.
+
+Fix the layout so:
+
+Tabs stay inside the available sportsbook content area.
+Tabs do not go behind the bet slip.
+Tabs wrap to a second row or become horizontally scrollable before overlapping.
+The bet slip remains fixed/sticky on the right.
+The main sportsbook content respects the bet slip width.
+Search bar should also align within the content area and not run under the bet slip.
+
+Recommended approach:
+
+Make the sportsbook page use a two-column layout:
+left/main content column
+right bet slip column
+Set the main content column to min-width: 0.
+Make the tab row use overflow-x: auto or flex-wrap: wrap.
+Ensure the bet slip has a fixed width and does not overlap content.
+Add proper gap between content and bet slip.
+Responsive behavior
+
+Desktop:
+
+Bet slip on the right.
+Tabs fit/wrap/scroll within the left content area only.
+
+Tablet/mobile:
+
+Bet slip should move below the sportsbook content or become a drawer.
+Tabs should remain usable and not clipped.
+Do not change
+
+Do not change:
+
+Bet placement logic
+Odds logic
+Sportsbook API behavior except removing unsupported Golf/Tennis
+Existing visual theme/colors
+
+Expected result:
+Golf and Tennis are gone everywhere, and the sportsbook tabs/search/content no longer get cut off by the bet slip panel.

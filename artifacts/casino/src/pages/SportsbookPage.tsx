@@ -59,8 +59,6 @@ const SPORTS = [
   "UFC",
   "Soccer",
   "Boxing",
-  "Tennis",
-  "Golf",
   "College Football",
   "College Basketball",
 ] as const;
@@ -74,8 +72,6 @@ const SPORT_ICONS: Record<string, string> = {
   "UFC":                  "🥊",
   "Soccer":               "⚽",
   "Boxing":               "🥊",
-  "Tennis":               "🎾",
-  "Golf":                 "⛳",
   "College Football":     "🏈",
   "College Basketball":   "🏀",
 };
@@ -88,8 +84,6 @@ const SPORT_COLORS: Record<string, string> = {
   "UFC":              "#a855f7",
   Soccer:             "#22c55e",
   Boxing:             "#f5c518",
-  Tennis:             "#84cc16",
-  Golf:               "#10b981",
   "College Football": "#fb923c",
   "College Basketball": "#38bdf8",
 };
@@ -105,8 +99,6 @@ const SPORT_LIVE_WINDOWS_MS: Record<string, number> = {
   Soccer:               2.5 * 60 * 60 * 1000,
   UFC:                  6   * 60 * 60 * 1000,
   Boxing:               6   * 60 * 60 * 1000,
-  Tennis:               4   * 60 * 60 * 1000,
-  Golf:                 8   * 60 * 60 * 1000,
   "College Football":   4   * 60 * 60 * 1000,
   "College Basketball": 3   * 60 * 60 * 1000,
 };
@@ -547,7 +539,7 @@ function getFlagUrl(name: string): string | null {
   return `https://flagcdn.com/w40/${code}.png`;
 }
 
-const NO_LOGO_SPORTS = new Set(["UFC", "Boxing", "Golf", "Tennis"]);
+const NO_LOGO_SPORTS = new Set(["UFC", "Boxing"]);
 
 function TeamLogo({ name, accent, sport }: { name: string; accent: string; sport?: string }) {
   const isSoccer = sport === "Soccer";
@@ -588,8 +580,8 @@ function TeamLogo({ name, accent, sport }: { name: string; accent: string; sport
 function getCompetitionName(event: SbEvent): string {
   const { sport, league, eventName } = event;
 
-  // Soccer & Golf & Tennis already carry the tournament name in `league`
-  if (sport === "Soccer" || sport === "Golf" || sport === "Tennis") return league;
+  // Soccer already carries the tournament name in `league`
+  if (sport === "Soccer") return league;
 
   // MMA — prefer the card name (e.g. "UFC 317") from eventName
   if (sport === "UFC") return eventName ?? league ?? "UFC Fight Card";
@@ -1719,9 +1711,8 @@ export function SportsbookPage() {
         {/* ── Events column ── */}
         <div className="flex-1 min-w-0 flex flex-col gap-3">
 
-          {/* Sport tabs — nowrap so tabs never reflow; transition-colors only so layout never shifts */}
-          <div className="flex flex-nowrap gap-1.5 overflow-x-auto pb-0.5"
-            style={{ scrollbarWidth: "none" }}>
+          {/* Sport tabs — wrap so tabs stay within the events column, never bleed into the bet slip */}
+          <div className="flex flex-wrap gap-1.5 pb-0.5">
             {SPORTS.map(s => {
               const isLiveTab = s === "Live";
               const isActive  = sport === s;
