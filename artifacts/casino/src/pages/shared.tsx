@@ -89,6 +89,7 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
   const [, setLocation] = useLocation();
   const [hov, setHov] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const closed = !!game.disabled;
   const handleClick = closed ? undefined : (onClick ?? (route ? () => setLocation(route) : undefined));
   return (
@@ -118,11 +119,12 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
         }}
       >
         {/* Themed artwork image */}
-        {game.image && (
+        {game.image && !imgError && (
           <img
             src={game.image}
             alt={game.name}
             onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
             style={{
               position: "absolute",
               inset: 0,
@@ -136,8 +138,8 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             }}
           />
         )}
-        {/* Gradient colour tint overlay — only shown when there is no artwork image */}
-        {!game.image && (
+        {/* Gradient colour tint overlay — shown when there is no artwork image or image failed */}
+        {(!game.image || imgError) && (
           <div
             style={{
               position: "absolute",
@@ -184,8 +186,8 @@ export function CatalogCard({ game, delay = "0s", route, onClick }: { game: Cata
             </span>
           </div>
         )}
-        {/* Ghost watermark text — only shown when there is no artwork image */}
-        {!game.image && !closed && (
+        {/* Ghost watermark text — only shown when there is no artwork image or image failed */}
+        {(!game.image || imgError) && !closed && (
           <div
             className="absolute inset-0 flex items-center justify-center select-none"
             style={{

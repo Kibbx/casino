@@ -73,6 +73,7 @@ function bjTableToGame(table: BJTable): CatalogGame {
 export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick: () => void; delay: string }) {
   const [hov, setHov] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const th = THEME_CFG[table.theme as keyof typeof THEME_CFG] ?? THEME_CFG.velvet;
   const fmtBet = (n: number) => n >= 1000 ? `$${(n / 1000).toFixed(n % 1000 === 0 ? 0 : 1)}k` : `$${n}`;
 
@@ -103,19 +104,25 @@ export function BJTableCard({ table, onClick, delay }: { table: BJTable; onClick
         overflow: "hidden",
       }}>
         {/* Blackjack artwork image */}
-        <img
-          src={`${IMGS}images/card-blackjack.webp`}
-          alt="Blackjack"
-          onLoad={() => setImgLoaded(true)}
-          style={{
-            position: "absolute", inset: 0,
-            width: "100%", height: "100%",
-            objectFit: "cover", objectPosition: "center",
-            transform: hov && table.isOpen ? "scale(1.07)" : "scale(1)",
-            opacity: imgLoaded ? 1 : 0,
-            transition: "transform 0.4s ease, opacity 0.4s ease",
-          }}
-        />
+        {!imgError && (
+          <img
+            src={`${IMGS}images/card-blackjack.webp`}
+            alt="Blackjack"
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
+            style={{
+              position: "absolute", inset: 0,
+              width: "100%", height: "100%",
+              objectFit: "cover", objectPosition: "center",
+              transform: hov && table.isOpen ? "scale(1.07)" : "scale(1)",
+              opacity: imgLoaded ? 1 : 0,
+              transition: "transform 0.4s ease, opacity 0.4s ease",
+            }}
+          />
+        )}
+        {imgError && (
+          <div style={{ position: "absolute", inset: 0, background: th.gradient }} />
+        )}
         {/* Brightness lift on hover */}
         <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.06)", opacity: hov && table.isOpen ? 1 : 0, transition: "opacity 0.2s" }} />
         {/* Neon edge glow */}
