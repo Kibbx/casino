@@ -14,6 +14,7 @@ export const blackjackGamesTable = pgTable("blackjack_games", {
   splitPayout: integer("split_payout"),
   splitBet: integer("split_bet"),
   activeHand: text("active_hand").default("main"),
+  shoe: jsonb("shoe"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

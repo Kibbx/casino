@@ -201,6 +201,48 @@ test("dealInitialHand: deals 2 to player and 2 to dealer (one hidden), shrinking
   assert.equal(remainingDeck.length, before - 4);
 });
 
+test("shoe integrity: no rank+suit pair appears more than numDecks times in a freshly built shoe", () => {
+  const numDecks = 6;
+  const shoe = createDeck(numDecks);
+  const counts = new Map<string, number>();
+  for (const card of shoe) {
+    const key = `${card.rank}${card.suit}`;
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  assert.equal(counts.size, 52, "expected exactly 52 unique rank+suit combinations");
+  for (const [key, count] of counts) {
+    assert.equal(count, numDecks, `Card ${key}: expected ${numDecks} copies, got ${count}`);
+  }
+});
+
+test("shoe integrity: dealing through a 1-deck shoe never produces a duplicate card instance", () => {
+  const numDecks = 1;
+  const shoe = createDeck(numDecks);
+  const seen = new Set<string>();
+  while (shoe.length > 0) {
+    const card = drawCard(shoe);
+    const key = `${card.rank}${card.suit}`;
+    assert.equal(seen.has(key), false, `Duplicate card drawn: ${key}`);
+    seen.add(key);
+  }
+  assert.equal(seen.size, 52);
+});
+
+test("shoe integrity: a single hand cannot receive the same rank+suit more than numDecks times", () => {
+  // Simulate hit-heavy play on a 6-deck shoe. Pull 52 cards (one full deck's worth)
+  // and confirm no specific card appears more than 6 times.
+  const numDecks = 6;
+  const shoe = createDeck(numDecks);
+  const counts = new Map<string, number>();
+  for (let i = 0; i < 52; i++) {
+    const card = drawCard(shoe);
+    const key = `${card.rank}${card.suit}`;
+    const n = (counts.get(key) ?? 0) + 1;
+    counts.set(key, n);
+    assert.ok(n <= numDecks, `Card ${key} appeared ${n} times within 52 draws of a ${numDecks}-deck shoe`);
+  }
+});
+
 test("multi-hand continuity: consecutive deals keep drawing off the same shrinking shoe", () => {
   let deck = createDeck(6);
   const start = deck.length;

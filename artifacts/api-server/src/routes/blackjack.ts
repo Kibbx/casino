@@ -37,6 +37,28 @@ async function setSetting(key: string, value: string) {
   }
 }
 
+/**
+ * Returns the stored shoe for a game, or reconstructs a valid shoe by
+ * removing all already-dealt cards from a fresh 6-deck shoe.
+ * This fallback handles legacy games created before shoe tracking existed.
+ */
+function getShoe(game: any): Card[] {
+  if (game.shoe && Array.isArray(game.shoe) && (game.shoe as Card[]).length > 0) {
+    return [...(game.shoe as Card[])];
+  }
+  const shoe = createDeck(6);
+  const dealtCards: Card[] = [
+    ...(game.playerCards as Card[]),
+    ...(game.dealerCards as Card[]).map((c: Card) => ({ ...c, hidden: false })),
+    ...(game.splitCards ? (game.splitCards as Card[]) : []),
+  ];
+  for (const dealt of dealtCards) {
+    const idx = shoe.findLastIndex((c: Card) => c.rank === dealt.rank && c.suit === dealt.suit);
+    if (idx !== -1) shoe.splice(idx, 1);
+  }
+  return shoe;
+}
+
 function gameResponse(game: any, playerCards: Card[], splitCards: Card[] | null, dealerCards: Card[], activeHand: string) {
   return {
     ...game,
@@ -192,7 +214,7 @@ router.post("/deal", requirePlayer, async (req, res) => {
   db.execute(sql`UPDATE players SET hands_played = hands_played + 1 WHERE id = ${playerId}`).catch(console.error);
 
   const deck = createDeck(6);
-  const { playerCards, dealerCards } = dealInitialHand(deck);
+  const { playerCards, dealerCards, remainingDeck } = dealInitialHand(deck);
 
   let status: string = "active";
 
@@ -208,7 +230,7 @@ router.post("/deal", requirePlayer, async (req, res) => {
     }
 
     const [game] = await db.insert(blackjackGamesTable).values({
-      playerId, status, playerCards: playerCards as any, dealerCards: fullDealerCards as any, bet, payout, activeHand: "main",
+      playerId, status, playerCards: playerCards as any, dealerCards: fullDealerCards as any, bet, payout, activeHand: "main", shoe: remainingDeck as any,
     }).returning();
 
     const [updatedPlayer] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
@@ -220,7 +242,7 @@ router.post("/deal", requirePlayer, async (req, res) => {
   }
 
   const [game] = await db.insert(blackjackGamesTable).values({
-    playerId, status, playerCards: playerCards as any, dealerCards: dealerCards as any, bet, activeHand: "main",
+    playerId, status, playerCards: playerCards as any, dealerCards: dealerCards as any, bet, activeHand: "main", shoe: remainingDeck as any,
   }).returning();
 
   const [updatedPlayer] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
@@ -241,17 +263,17 @@ router.post("/:gameId/hit", requirePlayer, async (req, res) => {
   if (game.playerId !== playerId) return res.status(403).json({ error: "Not your game" });
   if (game.status !== "active") return res.status(400).json({ error: "Game is not active" });
 
-  const deck = createDeck(6);
+  const shoe = getShoe(game);
   const activeHand = (game.activeHand ?? "main") as string;
 
   if (activeHand === "split") {
-    const splitCards = [...(game.splitCards as Card[]), drawCard(deck)];
+    const splitCards = [...(game.splitCards as Card[]), drawCard(shoe)];
     const splitBustValue = handValue(splitCards);
 
     if (isBust(splitCards)) {
       // Dealer must play to completion before resolving — pass through dealerPlay
       // so the hidden card is revealed and the dealer draws to 17+
-      const { dealerCards: playedDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
+      const { dealerCards: playedDealerCards } = dealerPlay(game.dealerCards as Card[], shoe);
       const { updated, finalDealerCards, mainResult, splitResult } = await resolveAndPayout(
         gameId, playerId,
         game.playerCards as Card[], splitCards,
@@ -275,7 +297,7 @@ router.post("/:gameId/hit", requirePlayer, async (req, res) => {
     }
 
     const [updated] = await db.update(blackjackGamesTable)
-      .set({ splitCards: splitCards as any, updatedAt: new Date() })
+      .set({ splitCards: splitCards as any, shoe: shoe as any, updatedAt: new Date() })
       .where(eq(blackjackGamesTable.id, gameId)).returning();
 
     return res.json({
@@ -290,13 +312,13 @@ router.post("/:gameId/hit", requirePlayer, async (req, res) => {
   }
 
   // Main hand hit
-  const playerCards = [...(game.playerCards as Card[]), drawCard(deck)];
+  const playerCards = [...(game.playerCards as Card[]), drawCard(shoe)];
 
   if (isBust(playerCards)) {
     if (game.splitCards) {
       // Main hand busted — switch to split hand instead of resolving
       const [updated] = await db.update(blackjackGamesTable)
-        .set({ playerCards: playerCards as any, activeHand: "split", updatedAt: new Date() })
+        .set({ playerCards: playerCards as any, activeHand: "split", shoe: shoe as any, updatedAt: new Date() })
         .where(eq(blackjackGamesTable.id, gameId)).returning();
       return res.json({
         game: {
@@ -328,7 +350,7 @@ router.post("/:gameId/hit", requirePlayer, async (req, res) => {
   }
 
   const [updated] = await db.update(blackjackGamesTable)
-    .set({ playerCards: playerCards as any, updatedAt: new Date() })
+    .set({ playerCards: playerCards as any, shoe: shoe as any, updatedAt: new Date() })
     .where(eq(blackjackGamesTable.id, gameId)).returning();
 
   return res.json({
@@ -370,10 +392,10 @@ router.post("/:gameId/stand", requirePlayer, async (req, res) => {
   }
 
   // Otherwise resolve: dealer plays, both hands evaluated
-  const deck = createDeck(6);
+  const shoe = getShoe(game);
   const finalPlayerCards = game.playerCards as Card[];
   const finalSplitCards = game.splitCards ? (game.splitCards as Card[]) : null;
-  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
+  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], shoe);
 
   const { updated, finalDealerCards: fd, mainResult, splitResult } = await resolveAndPayout(
     gameId, playerId,
@@ -410,7 +432,7 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
 
   const activeHand = (game.activeHand ?? "main") as string;
 
-  const deck = createDeck(6);
+  const shoe = getShoe(game);
   const [player] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
 
   if (activeHand === "split") {
@@ -422,11 +444,11 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
     await db.update(playersTable).set({ chips: player.chips - splitBetAmt }).where(eq(playersTable.id, playerId));
     await db.insert(transactionsTable).values({ playerId, amount: splitBetAmt, type: "loss", description: "Blackjack double (split hand)" });
 
-    const newSplitCards = [...splitCards, drawCard(deck)];
+    const newSplitCards = [...splitCards, drawCard(shoe)];
     const newSplitBet = splitBetAmt * 2;
     await db.update(blackjackGamesTable).set({ splitBet: newSplitBet }).where(eq(blackjackGamesTable.id, gameId));
 
-    const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
+    const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], shoe);
     const { updated, finalDealerCards: fd } = await resolveAndPayout(
       gameId, playerId,
       game.playerCards as Card[], newSplitCards,
@@ -457,14 +479,14 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
   await db.update(playersTable).set({ chips: player.chips - game.bet }).where(eq(playersTable.id, playerId));
   await db.insert(transactionsTable).values({ playerId, amount: game.bet, type: "loss", description: "Blackjack double down bet" });
 
-  const playerCards = [...(game.playerCards as Card[]), drawCard(deck)];
+  const playerCards = [...(game.playerCards as Card[]), drawCard(shoe)];
   const newMainBet = game.bet * 2;
 
   if (isBust(playerCards)) {
     if (game.splitCards) {
       // Main hand busted after double — switch to split hand
       const [updated] = await db.update(blackjackGamesTable)
-        .set({ playerCards: playerCards as any, bet: newMainBet, activeHand: "split", updatedAt: new Date() })
+        .set({ playerCards: playerCards as any, bet: newMainBet, activeHand: "split", shoe: shoe as any, updatedAt: new Date() })
         .where(eq(blackjackGamesTable.id, gameId)).returning();
       const [updatedPlayer] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
       broadcastPlayerBalance(playerId, Number(updatedPlayer.chips));
@@ -497,7 +519,7 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
   if (game.splitCards) {
     // Switch to split hand (don't run dealer yet)
     const [updated] = await db.update(blackjackGamesTable)
-      .set({ playerCards: playerCards as any, bet: newMainBet, activeHand: "split", updatedAt: new Date() })
+      .set({ playerCards: playerCards as any, bet: newMainBet, activeHand: "split", shoe: shoe as any, updatedAt: new Date() })
       .where(eq(blackjackGamesTable.id, gameId)).returning();
     const [updatedPlayer] = await db.select().from(playersTable).where(eq(playersTable.id, playerId));
     broadcastPlayerBalance(playerId, Number(updatedPlayer.chips));
@@ -514,7 +536,7 @@ router.post("/:gameId/double", requirePlayer, async (req, res) => {
   }
 
   // Regular double — resolve immediately
-  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], deck);
+  const { dealerCards: finalDealerCards } = dealerPlay(game.dealerCards as Card[], shoe);
   const { updated, finalDealerCards: fd } = await resolveAndPayout(
     gameId, playerId, playerCards, null, finalDealerCards, newMainBet, null,
   );
@@ -548,15 +570,16 @@ router.post("/:gameId/split", requirePlayer, async (req, res) => {
   await db.update(playersTable).set({ chips: player.chips - game.bet }).where(eq(playersTable.id, playerId));
   await db.insert(transactionsTable).values({ playerId, amount: game.bet, type: "loss", description: "Blackjack split bet" });
 
-  const deck = createDeck(6);
-  const hand1: Card[] = [playerCards[0], deck.pop()!];
-  const hand2: Card[] = [playerCards[1], deck.pop()!];
+  const shoe = getShoe(game);
+  const hand1: Card[] = [playerCards[0], drawCard(shoe)];
+  const hand2: Card[] = [playerCards[1], drawCard(shoe)];
 
   const [updated] = await db.update(blackjackGamesTable).set({
     playerCards: hand1 as any,
     splitCards: hand2 as any,
     splitBet: game.bet,
     activeHand: "main",
+    shoe: shoe as any,
     updatedAt: new Date(),
   }).where(eq(blackjackGamesTable.id, gameId)).returning();
 

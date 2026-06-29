@@ -1582,6 +1582,10 @@ export async function runMigrations(): Promise<void> {
         ON CONFLICT (username) DO NOTHING
       `,
     },
+    {
+      name: "blackjack_games.shoe column",
+      sql: `ALTER TABLE blackjack_games ADD COLUMN IF NOT EXISTS shoe JSONB`,
+    },
   ];
 
   for (const step of steps) {
