@@ -7,6 +7,10 @@ import { recordPlayerActivity } from "../lib/player-activity.js";
 import { isPlayerGameBanned } from "./security.js";
 import { trackRakebackBet, trackRakebackWin } from "../lib/rakeback.js";
 
+// Per-player spin cooldown — prevents scripted spin abuse
+const lastSpinAt = new Map<number, number>();
+const SPIN_COOLDOWN_MS = 100;
+
 async function getSetting(key: string, fallback: string): Promise<string> {
   const rows = await db.select().from(settingsTable).where(eq(settingsTable.key, key));
   return rows[0]?.value ?? fallback;
@@ -167,6 +171,14 @@ router.post("/spin", requirePlayer, async (req, res) => {
     console.log(`[rome-slots] /spin blocked — slotsEnabled=false (player=${playerId})`);
     return res.status(403).json({ error: "Slots are currently closed" });
   }
+
+  const now = Date.now();
+  const lastSpin = lastSpinAt.get(playerId) ?? 0;
+  if (now - lastSpin < SPIN_COOLDOWN_MS) {
+    return res.status(429).json({ error: "Spinning too fast" });
+  }
+  lastSpinAt.set(playerId, now);
+
   const totalBet = parseInt(req.body.bet);
   const minBet = parseInt(await getSetting("slotsMinBet", "50"));
   const maxBet = parseInt(await getSetting("slotsMaxBet", "5000"));

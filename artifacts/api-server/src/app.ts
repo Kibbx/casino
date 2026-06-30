@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
+import helmet from "helmet";
 import compression from "compression";
 import router from "./routes";
 import { reqStatsMiddleware } from "./lib/req-stats.js";
@@ -18,14 +19,36 @@ fs.mkdirSync(SECURITY_PHOTOS_DIR, { recursive: true });
 
 const app: Express = express();
 
+// Security headers — set before any routes.
+// CSP and COEP disabled because the casino loads inline scripts/styles and
+// FiveM CEF has its own embedding context.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
 app.use(compression());
 
-// Explicit CORS — must be before all routes so preflight OPTIONS responses are
-// handled by Express rather than falling through to Nginx or other proxies.
-// `origin: true` reflects the request Origin back (required when credentials are
-// sent). `credentials: true` is needed so Authorization headers are permitted.
+// CORS — in production, restrict to the configured allowlist.
+// Set ALLOWED_ORIGINS=https://yourdomain.com (comma-separated) in the VPS env.
+// If ALLOWED_ORIGINS is not set, all origins are permitted (dev/FiveM fallback).
+const CONFIGURED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? "")
+  .split(",").map((s) => s.trim()).filter(Boolean);
+
+function corsOriginFn(
+  origin: string | undefined,
+  callback: (err: Error | null, allow?: boolean) => void,
+): void {
+  if (!origin) return callback(null, true); // same-origin, curl, or FiveM CEF (no Origin header)
+  if (process.env.NODE_ENV !== "production") return callback(null, true);
+  if (CONFIGURED_ORIGINS.length === 0) return callback(null, true); // no allowlist configured
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) return callback(null, true);
+  if (CONFIGURED_ORIGINS.includes(origin)) return callback(null, true);
+  callback(new Error(`CORS blocked for origin: ${origin}`));
+}
+
 app.use(cors({
-  origin: true,
+  origin: corsOriginFn,
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   exposedHeaders: ["Content-Type"],

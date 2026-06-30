@@ -4,6 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { requirePlayer, requireBanker } from "../middleware/auth.js";
 import { broadcastPlayerBalance, broadcastPlayerBalanceDelayed } from "../lib/table-ws.js";
 import bcrypt from "bcryptjs";
+import { checkVerifyPasswordLocked, recordVerifyPasswordFailure, clearVerifyPasswordFailures } from "../lib/sessions.js";
 import { isPlayerGameBanned } from "./security.js";
 import { recordPlayerActivity } from "../lib/player-activity.js";
 
@@ -54,12 +55,15 @@ router.get("/status", async (_req, res) => {
 
 // POST /crash/verify-password
 router.post("/verify-password", async (req, res) => {
+  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
+  if (checkVerifyPasswordLocked(ip)) return res.status(429).json({ error: "Too many failed attempts. Try again in 15 minutes." });
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: "Password required" });
   const hash = await getSetting("crashPassword", "");
   if (!hash) return res.json({ valid: true, token: null });
   const valid = await bcrypt.compare(password, hash);
-  if (!valid) return res.status(403).json({ error: "Incorrect room password" });
+  if (!valid) { recordVerifyPasswordFailure(ip); return res.status(403).json({ error: "Incorrect room password" }); }
+  clearVerifyPasswordFailures(ip);
   const token = await getSetting("crashPasswordToken", "");
   return res.json({ valid: true, token: token || null });
 });
