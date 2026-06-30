@@ -4,7 +4,6 @@ import { highlowGamesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requirePlayer, requireBanker } from "../middleware/auth.js";
 import bcrypt from "bcryptjs";
-import { checkVerifyPasswordLocked, recordVerifyPasswordFailure, clearVerifyPasswordFailures } from "../lib/sessions.js";
 import { broadcastPlayerBalance } from "../lib/table-ws.js";
 import { recordPlayerActivity } from "../lib/player-activity.js";
 import { trackRakebackBet, trackRakebackWin } from "../lib/rakeback.js";
@@ -64,15 +63,12 @@ router.get("/status", async (_req, res) => {
 
 // POST /high-low/verify-password — public
 router.post("/verify-password", async (req, res) => {
-  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
-  if (checkVerifyPasswordLocked(ip)) return res.status(429).json({ error: "Too many failed attempts. Try again in 15 minutes." });
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: "Password required" });
   const hash = await getSetting("highlowPassword", "");
   if (!hash) return res.json({ valid: true, token: null });
   const valid = await bcrypt.compare(password, hash);
-  if (!valid) { recordVerifyPasswordFailure(ip); return res.status(403).json({ error: "Incorrect room password" }); }
-  clearVerifyPasswordFailures(ip);
+  if (!valid) return res.status(403).json({ error: "Incorrect room password" });
   const token = await getSetting("highlowPasswordToken", "");
   return res.json({ valid: true, token: token || null });
 });

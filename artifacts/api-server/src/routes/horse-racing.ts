@@ -4,7 +4,6 @@ import { eq, ilike, inArray, and, lte, isNull, isNotNull, sql } from "drizzle-or
 import { requirePlayer, requireBanker, requireBankerOrOwner } from "../middleware/auth.js";
 import { broadcastAll, broadcastPlayerBalance } from "../lib/table-ws.js";
 import bcrypt from "bcryptjs";
-import { checkVerifyPasswordLocked, recordVerifyPasswordFailure, clearVerifyPasswordFailures } from "../lib/sessions.js";
 import { randomUUID } from "crypto";
 
 const router = Router();
@@ -57,15 +56,12 @@ router.post("/horse/banker-settings", requireBanker, async (req, res) => {
 
 // POST /horse/verify-password — player room password check
 router.post("/horse/verify-password", async (req, res) => {
-  const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ?? req.ip ?? "unknown";
-  if (checkVerifyPasswordLocked(ip)) return res.status(429).json({ error: "Too many failed attempts. Try again in 15 minutes." });
   const { password } = req.body;
   if (!password) return res.status(400).json({ error: "Password required" });
   const hash = await getSetting("horsePassword");
   if (!hash) return res.json({ valid: true, token: null });
   const valid = await bcrypt.compare(password, hash);
-  if (!valid) { recordVerifyPasswordFailure(ip); return res.status(403).json({ error: "Incorrect room password" }); }
-  clearVerifyPasswordFailures(ip);
+  if (!valid) return res.status(403).json({ error: "Incorrect room password" });
   const token = await getSetting("horsePasswordToken");
   return res.json({ valid: true, token: token || null });
 });

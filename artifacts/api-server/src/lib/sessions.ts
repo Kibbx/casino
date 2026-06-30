@@ -4,15 +4,12 @@ import { eq, inArray } from "drizzle-orm";
 
 // ── Player sessions ────────────────────────────────────────────────────────────
 
-const PLAYER_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
-
 export interface PlayerSession {
   playerId: number;
   username: string;
   staffRole: string | null;
   staffRole2: string | null;
   staffRoles: string[]; // full list (always includes staffRole and staffRole2 when present)
-  createdAt: number;
 }
 
 const playerSessions = new Map<string, PlayerSession>();
@@ -33,7 +30,6 @@ export function createPlayerSession(
     staffRole: staffRoles[0] ?? null,
     staffRole2: staffRoles[1] ?? null,
     staffRoles,
-    createdAt: Date.now(),
   };
   playerSessions.set(token, session);
   db.insert(playerSessionsTable)
@@ -44,14 +40,7 @@ export function createPlayerSession(
 }
 
 export function validatePlayerToken(token: string): PlayerSession | null {
-  const session = playerSessions.get(token);
-  if (!session) return null;
-  if (Date.now() - session.createdAt > PLAYER_SESSION_TTL_MS) {
-    playerSessions.delete(token);
-    db.delete(playerSessionsTable).where(eq(playerSessionsTable.token, token)).catch(() => {});
-    return null;
-  }
-  return session;
+  return playerSessions.get(token) ?? null;
 }
 
 export function invalidatePlayerSessions(playerId: number): void {
@@ -251,7 +240,6 @@ export async function loadSessionsFromDb(): Promise<void> {
         staffRole: fullRoles[0] ?? row.staffRole ?? null,
         staffRole2: fullRoles[1] ?? row.staffRole2 ?? null,
         staffRoles: fullRoles,
-        createdAt: Date.now(), // treat restored sessions as fresh — they'll expire 12h after next restart
       });
     }
     console.log(`[sessions] Loaded ${playerRows.length} player session(s) from DB`);
@@ -332,31 +320,4 @@ export function recordIpFailure(ip: string): void {
 
 export function clearIpFailures(ip: string): void {
   ipFailures.delete(ip);
-}
-
-// ── Game-room verify-password rate limiter ────────────────────────────────────
-// Separate from the main login lockout — shorter lockout, fewer allowed attempts.
-
-const VP_MAX_FAILS = 5;
-const VP_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
-
-const vpFailures = new Map<string, IpRecord>();
-
-export function checkVerifyPasswordLocked(ip: string): boolean {
-  const rec = vpFailures.get(ip);
-  if (!rec) return false;
-  if (rec.lockedUntil > Date.now()) return true;
-  vpFailures.delete(ip);
-  return false;
-}
-
-export function recordVerifyPasswordFailure(ip: string): void {
-  const rec = vpFailures.get(ip) ?? { failures: 0, lockedUntil: 0 };
-  rec.failures += 1;
-  if (rec.failures >= VP_MAX_FAILS) rec.lockedUntil = Date.now() + VP_LOCKOUT_MS;
-  vpFailures.set(ip, rec);
-}
-
-export function clearVerifyPasswordFailures(ip: string): void {
-  vpFailures.delete(ip);
 }

@@ -16,10 +16,6 @@ async function getSetting(key: string, fallback: string): Promise<string> {
 
 const BET_MIN = 20;
 
-// Per-player spin cooldown — prevents scripted spin abuse
-const lastSpinAt = new Map<number, number>();
-const SPIN_COOLDOWN_MS = 100;
-
 const SYMBOLS = [
   { id: "Bag",      weight: 32 },
   { id: "Spades",   weight: 34 },
@@ -245,18 +241,10 @@ router.post("/spin", requirePlayer, async (req, res) => {
     console.log(`[western-slots] /spin blocked — slotsEnabled=false (player=${playerId})`);
     return res.status(403).json({ error: "Slots are currently closed" });
   }
-  const now = Date.now();
-  const lastSpin = lastSpinAt.get(playerId) ?? 0;
-  if (now - lastSpin < SPIN_COOLDOWN_MS) {
-    return res.status(429).json({ error: "Spinning too fast" });
-  }
-  lastSpinAt.set(playerId, now);
-
   const totalBet = parseInt(req.body.bet);
-  const betMax = parseInt(await getSetting("slotsMaxBet", "500000"));
 
-  if (!totalBet || isNaN(totalBet) || totalBet < BET_MIN || totalBet > betMax) {
-    return res.status(400).json({ error: `Invalid bet (min ${BET_MIN}, max ${betMax})` });
+  if (!totalBet || totalBet < BET_MIN || isNaN(totalBet)) {
+    return res.status(400).json({ error: `Invalid bet (min ${BET_MIN})` });
   }
 
   const banCheck = await isPlayerGameBanned(playerId, "western-slots");

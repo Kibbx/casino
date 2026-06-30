@@ -3,7 +3,6 @@ import { Readable } from "stream";
 import { z } from "zod";
 import { ObjectStorageService, ObjectNotFoundError } from "../lib/objectStorage.js";
 import { ObjectPermission } from "../lib/objectAcl.js";
-import { validatePlayerToken, resolveBankerSession } from "../lib/sessions.js";
 
 const RequestUploadUrlBody = z.object({
   name: z.string(),
@@ -95,17 +94,25 @@ router.get("/public-objects/*filePath", async (req: Request, res: Response) => {
  */
 router.get("/objects/*path", async (req: Request, res: Response) => {
   try {
-    const auth = req.headers.authorization;
-    const token = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
-    if (!token || (!validatePlayerToken(token) && !resolveBankerSession(token))) {
-      res.status(401).json({ error: "Authentication required" });
-      return;
-    }
-
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
     const objectPath = `/objects/${wildcardPath}`;
     const objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+
+    // --- Protected route example (uncomment when using replit-auth) ---
+    // if (!req.isAuthenticated()) {
+    //   res.status(401).json({ error: "Unauthorized" });
+    //   return;
+    // }
+    // const canAccess = await objectStorageService.canAccessObjectEntity({
+    //   userId: req.user.id,
+    //   objectFile,
+    //   requestedPermission: ObjectPermission.READ,
+    // });
+    // if (!canAccess) {
+    //   res.status(403).json({ error: "Forbidden" });
+    //   return;
+    // }
 
     const response = await objectStorageService.downloadObject(objectFile);
 
