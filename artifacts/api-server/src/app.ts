@@ -2,7 +2,6 @@ import path from "path";
 import fs from "fs";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
-import helmet from "helmet";
 import compression from "compression";
 import router from "./routes";
 import { reqStatsMiddleware } from "./lib/req-stats.js";
@@ -18,14 +17,6 @@ fs.mkdirSync(AVATAR_UPLOADS_DIR, { recursive: true });
 fs.mkdirSync(SECURITY_PHOTOS_DIR, { recursive: true });
 
 const app: Express = express();
-
-// Security headers — set before any routes.
-// CSP and COEP disabled because the casino loads inline scripts/styles and
-// FiveM CEF has its own embedding context.
-app.use(helmet({
-  contentSecurityPolicy: false,
-  crossOriginEmbedderPolicy: false,
-}));
 
 app.use(compression());
 
