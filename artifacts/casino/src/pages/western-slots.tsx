@@ -449,7 +449,6 @@ export default function WesternSlots() {
   const lastWinRef = useRef(0);
   const [showInfo,setShowInfo]   = useState(false);
   const [errMsg,setErrMsg]       = useState<string|null>(null);
-  const [scatterMsg,setScatterMsg] = useState<string|null>(null);
   const [winPopup,setWinPopup]   = useState<{amount:number;bet:number;isJackpot:boolean;lineWins:any[];isFree:boolean;grid:SymId[][]}|null>(null);
   const autoRef = useRef(autoSpin);
   useEffect(()=>{ autoRef.current=autoSpin; },[autoSpin]);
@@ -570,7 +569,6 @@ export default function WesternSlots() {
     setLastWin(0);
     setWinCells(new Set());
     setWinPopup(null);
-    setScatterMsg(null);
     stopSymbolAnims();
     soundsRef.current.playSpinStart();
 
@@ -719,14 +717,6 @@ export default function WesternSlots() {
     if (isFree && totalWin > 0) {
       bonusWinRef.current += totalWin;
       setBonusWinTotal(bonusWinRef.current);
-    }
-
-    // Scatter feedback even when not enough to trigger
-    if (scatterCount > 0 && scatterCount < 3) {
-      setScatterMsg(`${scatterCount} SCATTER — need ${3 - scatterCount} more for free spins!`);
-      setTimeout(() => setScatterMsg(null), 2500);
-    } else {
-      setScatterMsg(null);
     }
 
     // Free spins triggered — show banner NOW (after reels land)
@@ -934,21 +924,6 @@ export default function WesternSlots() {
               zIndex:4,userSelect:"none"}}/>
 
           {/* win popup rendered OUTSIDE scaled canvas — see below */}
-
-          {/* Scatter near-miss message */}
-          {scatterMsg&&!spinning&&(
-            <div style={{
-              position:"absolute",left:"50%",top:lastWin>0?270:150,
-              transform:"translateX(-50%)",zIndex:19,
-              background:"rgba(20,0,40,0.88)",
-              border:"1px solid rgba(180,80,255,0.5)",
-              borderRadius:8,padding:"8px 22px",
-              fontFamily:"Oswald,sans-serif",fontSize:16,fontWeight:700,
-              color:"#d080ff",letterSpacing:"0.12em",textTransform:"uppercase",
-              textShadow:"0 0 12px rgba(180,80,255,0.8)",
-              whiteSpace:"nowrap",
-            }}>{scatterMsg}</div>
-          )}
 
           {/* Free spins counter — now rendered outside canvas as fixed overlay */}
 
