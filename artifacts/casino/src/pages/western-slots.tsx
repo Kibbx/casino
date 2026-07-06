@@ -33,7 +33,7 @@ const N_ROWS    = 3;
 // ── Reel animation (mirrors rome-slots exactly) ────────────────────────────────
 // setInterval (not RAF) because FiveM CEF throttles requestAnimationFrame.
 // Each reel has a longer prefix so they stop LEFT → RIGHT naturally.
-const REEL_PREFIXES = [12, 15, 18, 21, 24]; // random-symbols before the result
+const REEL_PREFIXES = [16, 20, 24, 28, 32]; // random-symbols before the result
 const SPIN_SPEED    = 38;                    // px per 16ms tick
 const DECEL_ZONE    = CELL_H * 3.5;         // decelerate over last ~3.5 rows
 
