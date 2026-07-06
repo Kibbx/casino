@@ -25,7 +25,20 @@ app.use(compression());
 // `origin: true` reflects the request Origin back (required when credentials are
 // sent). `credentials: true` is needed so Authorization headers are permitted.
 app.use(cors({
-  origin: true,
+  origin: (requestOrigin, callback) => {
+    if (process.env.NODE_ENV !== "production") {
+      // Development: allow any origin (Vite dev server, Replit proxy, etc.)
+      callback(null, requestOrigin ?? true);
+      return;
+    }
+    // Production: same-origin requests have no Origin header — always allow.
+    if (!requestOrigin) { callback(null, true); return; }
+    // Allow explicit extra origins via ALLOWED_ORIGINS="https://a.com,https://b.com"
+    const allowed = (process.env.ALLOWED_ORIGINS ?? "")
+      .split(",").map(s => s.trim()).filter(Boolean);
+    if (allowed.includes(requestOrigin)) { callback(null, requestOrigin); return; }
+    callback(new Error("CORS: origin not permitted"));
+  },
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
   exposedHeaders: ["Content-Type"],

@@ -4,12 +4,15 @@ import { eq, inArray } from "drizzle-orm";
 
 // ── Player sessions ────────────────────────────────────────────────────────────
 
+const PLAYER_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+
 export interface PlayerSession {
   playerId: number;
   username: string;
   staffRole: string | null;
   staffRole2: string | null;
   staffRoles: string[]; // full list (always includes staffRole and staffRole2 when present)
+  expiresAt: number;
 }
 
 const playerSessions = new Map<string, PlayerSession>();
@@ -30,6 +33,7 @@ export function createPlayerSession(
     staffRole: staffRoles[0] ?? null,
     staffRole2: staffRoles[1] ?? null,
     staffRoles,
+    expiresAt: Date.now() + PLAYER_SESSION_TTL_MS,
   };
   playerSessions.set(token, session);
   db.insert(playerSessionsTable)
@@ -40,7 +44,15 @@ export function createPlayerSession(
 }
 
 export function validatePlayerToken(token: string): PlayerSession | null {
-  return playerSessions.get(token) ?? null;
+  const session = playerSessions.get(token);
+  if (!session) return null;
+  if (Date.now() > session.expiresAt) {
+    playerSessions.delete(token);
+    db.delete(playerSessionsTable).where(eq(playerSessionsTable.token, token))
+      .catch(() => {});
+    return null;
+  }
+  return session;
 }
 
 export function invalidatePlayerSessions(playerId: number): void {
@@ -174,7 +186,7 @@ export function resolveBankerSession(token: string): BankerSession | null {
       role: roles[0] ?? ps.staffRole ?? "",
       role2: roles[1] ?? ps.staffRole2 ?? null,
       roles,
-      expiresAt: Infinity,
+      expiresAt: ps.expiresAt,
     };
   }
 
@@ -232,19 +244,21 @@ export async function loadSessionsFromDb(): Promise<void> {
       }
     }
 
+    const now = Date.now();
     for (const row of playerRows) {
       const fullRoles = playerRoleMap.get(row.playerId) ?? [row.staffRole, row.staffRole2].filter(Boolean) as string[];
+      // Sessions reloaded after a restart get a fresh 12-hour window.
       playerSessions.set(row.token, {
         playerId: row.playerId,
         username: row.username,
         staffRole: fullRoles[0] ?? row.staffRole ?? null,
         staffRole2: fullRoles[1] ?? row.staffRole2 ?? null,
         staffRoles: fullRoles,
+        expiresAt: now + PLAYER_SESSION_TTL_MS,
       });
     }
     console.log(`[sessions] Loaded ${playerRows.length} player session(s) from DB`);
 
-    const now = Date.now();
     const bankerRows = await db.select().from(bankerSessionsTable);
     const expiredTokens: string[] = [];
 

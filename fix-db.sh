@@ -51,10 +51,13 @@ systemctl enable postgresql
 # ─── 2. Create database and user ─────────────────────────────────────────────
 info "Configuring local database..."
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='casino_user'" | grep -q 1 \
-  || sudo -u postgres psql -c "CREATE USER casino_user WITH PASSWORD '$DB_PASS';"
+# Escape single quotes for SQL (SQL standard: ' → '')
+DB_PASS_SQL="${DB_PASS//\'/\'\'}"
 
-sudo -u postgres psql -c "ALTER USER casino_user WITH PASSWORD '$DB_PASS';" >/dev/null
+sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='casino_user'" | grep -q 1 \
+  || sudo -u postgres psql -c "CREATE USER casino_user WITH ENCRYPTED PASSWORD '${DB_PASS_SQL}';"
+
+sudo -u postgres psql -c "ALTER USER casino_user WITH ENCRYPTED PASSWORD '${DB_PASS_SQL}';" >/dev/null
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='casino'" | grep -q 1 \
   || sudo -u postgres psql -c "CREATE DATABASE casino OWNER casino_user;"
@@ -65,13 +68,14 @@ success "Local database ready: postgresql://casino_user@localhost:5432/casino"
 # ─── 3. Write .env for migration ─────────────────────────────────────────────
 LOCAL_DB_URL="postgresql://casino_user:${DB_PASS}@localhost:5432/casino"
 
-cat > "$APP_DIR/.env" <<EOF
-DATABASE_URL=${LOCAL_DB_URL}
-BANKER_ADMIN_PASSWORD=${BANKER_PASS}
-SESSION_SECRET=${SESSION_SECRET}
-NODE_ENV=production
-PORT=8080
-EOF
+# Use printf with %s to safely write values — no heredoc expansion issues
+{
+  printf 'DATABASE_URL=%s\n'            "$LOCAL_DB_URL"
+  printf 'BANKER_ADMIN_PASSWORD=%s\n'  "$BANKER_PASS"
+  printf 'SESSION_SECRET=%s\n'         "$SESSION_SECRET"
+  printf 'NODE_ENV=production\n'
+  printf 'PORT=8080\n'
+} > "$APP_DIR/.env"
 chmod 600 "$APP_DIR/.env"
 success ".env written."
 
@@ -79,28 +83,43 @@ success ".env written."
 info "Running database migrations on local database..."
 cd "$APP_DIR"
 set -a; source "$APP_DIR/.env"; set +a
-pnpm --filter @workspace/db run push 2>&1 | tail -10
+pnpm --filter @workspace/db run push --force 2>&1 | tail -10
 success "Schema migrated."
 
 # ─── 5. Write PM2 ecosystem config ───────────────────────────────────────────
+# ecosystem.config.cjs reads secrets from .env at startup — no raw values here.
 info "Writing ecosystem.config.cjs..."
-cat > "$APP_DIR/ecosystem.config.cjs" <<EOF
+cat > "$APP_DIR/ecosystem.config.cjs" <<'EOF'
+'use strict';
+const fs   = require('fs');
+const path = require('path');
+
+// Load .env from the app directory — keeps secrets out of this file.
+const envFile = path.join(__dirname, '.env');
+const env     = {};
+if (fs.existsSync(envFile)) {
+  fs.readFileSync(envFile, 'utf8').split(/\r?\n/).forEach(line => {
+    const m = line.match(/^([^#=\s][^=]*)=(.*)/s);
+    if (m) env[m[1].trim()] = m[2];
+  });
+}
+
 module.exports = {
   apps: [{
-    name: 'casino-api',
-    script: './artifacts/api-server/dist/index.cjs',
-    cwd: '${APP_DIR}',
+    name:                'casino-api',
+    script:              './artifacts/api-server/dist/index.cjs',
+    cwd:                 __dirname,
     env: {
-      NODE_ENV: 'production',
-      PORT: '8080',
-      DATABASE_URL: '${LOCAL_DB_URL}',
-      BANKER_ADMIN_PASSWORD: '${BANKER_PASS}',
-      SESSION_SECRET: '${SESSION_SECRET}',
+      NODE_ENV:               env.NODE_ENV              || 'production',
+      PORT:                   env.PORT                  || '8080',
+      DATABASE_URL:           env.DATABASE_URL,
+      BANKER_ADMIN_PASSWORD:  env.BANKER_ADMIN_PASSWORD,
+      SESSION_SECRET:         env.SESSION_SECRET,
     },
-    instances: 1,
-    autorestart: true,
-    max_memory_restart: '512M',
-  }]
+    instances:           1,
+    autorestart:         true,
+    max_memory_restart:  '512M',
+  }],
 };
 EOF
 success "ecosystem.config.cjs updated."
