@@ -125,52 +125,16 @@ export function playReelTick() {
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
-// Three Roman-themed variants cycle with each reel so repeated stops never sound identical.
-// Light  → soft clack + warm bronze ting   (~210 ms)
-// Standard → firm clack + bronze chink     (~250 ms)
-// Heavy  → rounded thunk + shield clang    (~300 ms)
-let _reelStopVariant = 0;
-
+// Firm clack + warm bronze chink — ~250 ms, Roman-themed
 export function playReelStop() {
-  const v = _reelStopVariant % 3;
-  _reelStopVariant++;
-  if (v === 0) _reelStopLight();
-  else if (v === 1) _reelStopStandard();
-  else _reelStopHeavy();
-}
-
-// Light — soft clack + warm bronze ting
-function _reelStopLight() {
-  // Mechanical clack: short low-mid noise
-  playNoise(0,    0.055, 0.20, 160, 2.5);
-  // Body thud: sine sweep downward
-  playOsc(120, 0, 0.09, 0.10, "sine", 68);
-  // Bronze ting accent: warm sine decay
-  playOsc(800, 0.03, 0.18, 0.09, "sine", 580);
-}
-
-// Standard — firm clack + bronze chink
-function _reelStopStandard() {
-  // Mechanical clack: medium low-mid noise
-  playNoise(0,    0.070, 0.22, 175, 2.0);
+  // Mechanical clack: low-mid noise
+  playNoise(0,     0.070, 0.22, 175, 2.0);
   // Body: low square sweep
   playOsc(100, 0, 0.10, 0.11, "square", 60);
-  // Chink: warm bronze fundamental
+  // Bronze chink: warm fundamental
   playOsc(660, 0.032, 0.20, 0.10, "sine",     480);
   // Chink shimmer: soft overtone
-  playOsc(1320, 0.04, 0.12, 0.04, "triangle", 960);
-}
-
-// Heavy — rounded thunk + shield clang
-function _reelStopHeavy() {
-  // Mechanical thunk: deeper, slightly longer noise
-  playNoise(0,    0.090, 0.24, 140, 1.6);
-  // Body: deep sine sweep
-  playOsc(80, 0, 0.12, 0.13, "sine", 48);
-  // Clang: warm shield resonance
-  playOsc(530, 0.042, 0.26, 0.11, "sine",     390);
-  // Clang overtone: subtle triangle partial
-  playOsc(1060, 0.048, 0.16, 0.04, "triangle", 780);
+  playOsc(1320, 0.04,  0.12, 0.04, "triangle", 960);
 }
 
 // ── Win sounds ───────────────────────────────────────────────────────────────
