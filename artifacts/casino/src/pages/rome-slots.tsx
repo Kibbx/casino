@@ -612,7 +612,7 @@ export default function RomeSlots() {
           }
         }, 16) as any;
       }),
-      new Promise<void>(r => setTimeout(r, 10000)),
+      new Promise<void>(r => setTimeout(r, Math.max(20000, Math.max(...targets.map(t => Math.abs(t))) / SPIN_SPEED * 16 * 1.4 + 3000))),
     ]);
     // Force-snap all reels + clear any lingering tease effects (safety)
     clearTeaseEffects();
