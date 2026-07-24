@@ -30,7 +30,7 @@ fetch(bonusMusicUrl)
 const BONUS_BASE_VOL = 0.10;
 
 // Master attenuation — every slot sound is scaled by this so the mix stays balanced.
-const SLOTS_GAIN_SCALE = 0.5;
+const SLOTS_GAIN_SCALE = 0.25;
 
 let masterVolume = parseFloat(localStorage.getItem("fortuna-sfx-volume") ?? "1") * SLOTS_GAIN_SCALE;
 let masterMuted  = localStorage.getItem("fortuna-sfx-muted") === "true";

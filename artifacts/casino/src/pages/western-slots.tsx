@@ -241,7 +241,7 @@ function useWesternSounds() {
       const src = ctx.createBufferSource();
       src.buffer = buf;
       const gain = ctx.createGain();
-      gain.gain.value = 0.275 * volRef.current;
+      gain.gain.value = 0.1375 * volRef.current;
       src.connect(gain).connect(ctx.destination);
       src.start(ctx.currentTime);
     };

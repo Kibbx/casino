@@ -1,5 +1,5 @@
 // Global sound attenuation — every sound effect on the website is scaled by this
-const GLOBAL_SOUND_SCALE = 0.5;
+const GLOBAL_SOUND_SCALE = 0.25;
 
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;

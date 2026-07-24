@@ -48,7 +48,7 @@ function useSounds() {
     flt.Q.value = 0.8;
 
     const gain = ac.createGain();
-    gain.gain.setValueAtTime(0.11, now);
+    gain.gain.setValueAtTime(0.055, now);
     gain.gain.linearRampToValueAtTime(0, now + dur);
 
     src.connect(flt); flt.connect(gain); gain.connect(ac.destination);
@@ -73,7 +73,7 @@ function useSounds() {
 
     const gain = ac.createGain();
     gain.gain.setValueAtTime(0.0, now);
-    gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0.03, now + 0.05);
     gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
     osc.connect(flt); flt.connect(gain); gain.connect(ac.destination);
@@ -85,11 +85,11 @@ function useSounds() {
     const now = ac.currentTime;
 
     const presets: Record<string, { freqs: number[]; gap: number; vol: number }> = {
-      common:    { freqs: [523, 659],                        gap: 0.13, vol: 0.09 },
-      rare:      { freqs: [523, 659, 784],                   gap: 0.11, vol: 0.10 },
-      epic:      { freqs: [523, 659, 784, 1047],             gap: 0.09, vol: 0.11 },
-      legendary: { freqs: [523, 659, 784, 988, 1047, 1319],  gap: 0.08, vol: 0.12 },
-      jackpot:   { freqs: [523, 659, 784, 988, 1047, 1319, 1568, 2093], gap: 0.07, vol: 0.13 },
+      common:    { freqs: [523, 659],                        gap: 0.13, vol: 0.045 },
+      rare:      { freqs: [523, 659, 784],                   gap: 0.11, vol: 0.05  },
+      epic:      { freqs: [523, 659, 784, 1047],             gap: 0.09, vol: 0.055 },
+      legendary: { freqs: [523, 659, 784, 988, 1047, 1319],  gap: 0.08, vol: 0.06  },
+      jackpot:   { freqs: [523, 659, 784, 988, 1047, 1319, 1568, 2093], gap: 0.07, vol: 0.065 },
     };
     const p = presets[tier] ?? presets.common;
     const noteDur = 0.45;
