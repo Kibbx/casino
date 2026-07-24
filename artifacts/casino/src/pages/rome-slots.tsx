@@ -668,48 +668,27 @@ export default function RomeSlots() {
 
 
 
-  // Free spins auto-play loop — runs whenever freeSpinsLeft > 0
+  // Bonus-end summary effect — fires once when freeSpinsLeft transitions >0 → 0
   useEffect(() => {
-    if (freeSpinsLeft <= 0) return;
-    let alive = true;
-    const loop = async () => {
-      await delay(500); // brief visual gap before first free spin
-
-      let retries = 0;
-      while (alive && freeSpinsRef.current > 0) {
-        const ok = await spinOnce(bet, true);
-        if (!ok) {
-          retries++;
-          if (retries >= 5) {
-            // Too many consecutive failures — abort gracefully so the player
-            // is never left frozen with freeSpinsLeft > 0 and no running loop.
-            freeSpinsRef.current = 0;
-            setFreeSpinsLeft(0);
-            break;
-          }
-          await delay(1200);
-          continue;
-        }
-        retries = 0;
-        if (freeSpinsRef.current > 0) await delay(600);
-      }
-      // Bonus round complete — show summary screen
-      if (alive && freeSpinsRef.current === 0) {
-        await delay(700);
-        setShowBonusEnd(true);
-        await delay(3500);
-        setShowBonusEnd(false);
-        bonusWinRef.current = 0;
-        setBonusWinTotal(0);
-      }
-    };
-    loop();
-    return () => { alive = false; };
-  }, [freeSpinsLeft > 0]); // only re-trigger when transitioning from 0 → >0
+    if (freeSpinsLeft > 0) return;
+    let cancelled = false;
+    (async () => {
+      await delay(700);
+      if (cancelled) return;
+      setShowBonusEnd(true);
+      await delay(3500);
+      if (cancelled) return;
+      setShowBonusEnd(false);
+      bonusWinRef.current = 0;
+      setBonusWinTotal(0);
+    })();
+    return () => { cancelled = true; };
+  }, [freeSpinsLeft === 0 ? 1 : 0]); // fires once when counter hits 0
 
   const handleSpin = () => {
-    if (spinning || autoSpin || freeSpinsLeft > 0) return;
-    spinOnce(bet);
+    if (spinning || autoSpin) return;
+    // Free spins are played manually — no auto-play during bonus round
+    spinOnce(bet, freeSpinsLeft > 0);
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
