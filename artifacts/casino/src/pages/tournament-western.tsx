@@ -147,8 +147,8 @@ function useWesternSounds() {
   }
   function playReelStop(reelIndex: number) {
     const ctx = ac(); const now = ctx.currentTime;
-    noiseBurst(ctx, now, 0.11, 40, 0.38 - reelIndex * 0.02, 95 + reelIndex * 8);
-    tone(ctx, now + 0.03, 1400 + reelIndex * 120, 0.18, 0.08, "sine");
+    noiseBurst(ctx, now, 0.11, 40, 0.62 - reelIndex * 0.03, 95 + reelIndex * 8);
+    tone(ctx, now + 0.03, 1400 + reelIndex * 120, 0.18, 0.16, "sine");
   }
   function playWin(amount: number, bet: number) {
     if (amount <= 0) return;

@@ -274,13 +274,13 @@ function useWesternSounds() {
     const ctx = ac();
     const now = ctx.currentTime;
     // Mechanical clack: low-mid noise
-    noiseBurst(ctx, now,         0.070, 32, 0.22, 175);
+    noiseBurst(ctx, now,         0.070, 32, 0.45, 175);
     // Body: low square sweep
-    tone(ctx, now,         100,  0.10, 0.11, "square",    60);
+    tone(ctx, now,         100,  0.10, 0.22, "square",    60);
     // Bronze chink: warm fundamental
-    tone(ctx, now + 0.032, 660,  0.20, 0.10, "sine",     480);
+    tone(ctx, now + 0.032, 660,  0.20, 0.20, "sine",     480);
     // Chink shimmer: soft overtone
-    tone(ctx, now + 0.040, 1320, 0.12, 0.04, "triangle", 960);
+    tone(ctx, now + 0.040, 1320, 0.12, 0.08, "triangle", 960);
   }
 
   // Win: coin tinks (more for bigger wins)
