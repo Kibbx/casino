@@ -109,10 +109,10 @@ function catmullRomPath(pts: { x: number; y: number }[]): string {
   let d = `M ${p[1].x},${p[1].y}`;
   for (let i = 1; i < p.length - 2; i++) {
     const p0 = p[i - 1], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2];
-    const cp1x = +(p1.x + (p2.x - p0.x) / 6).toFixed(2);
-    const cp1y = +(p1.y + (p2.y - p0.y) / 6).toFixed(2);
-    const cp2x = +(p2.x - (p3.x - p1.x) / 6).toFixed(2);
-    const cp2y = +(p2.y - (p3.y - p1.y) / 6).toFixed(2);
+    const cp1x = +(p1.x + (p2.x - p0.x) / 20).toFixed(2);
+    const cp1y = +(p1.y + (p2.y - p0.y) / 20).toFixed(2);
+    const cp2x = +(p2.x - (p3.x - p1.x) / 20).toFixed(2);
+    const cp2y = +(p2.y - (p3.y - p1.y) / 20).toFixed(2);
     d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
   }
   return d;
