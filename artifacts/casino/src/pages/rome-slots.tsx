@@ -22,6 +22,7 @@ import {
   getRomeSfxMuted,
 } from "./rome-sounds";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
+import { PaylineOverlay, type PaylineWin } from "./payline-overlay";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLOTS_MAINTENANCE = false;
@@ -222,6 +223,8 @@ export default function RomeSlots() {
   const bonusEverActiveRef = useRef(false);  // guard: prevents bonus-end firing on mount
   // True once reels have settled
   const [reelsStopped, setReelsStopped] = useState(false);
+  // Winning paylines to display in the overlay (cleared on each new spin)
+  const [overlayWins, setOverlayWins] = useState<PaylineWin[]>([]);
   const animRef        = useRef<number | null>(null);
 
   // ── Animated win counter ─────────────────────────────────────────────────
@@ -402,6 +405,7 @@ export default function RomeSlots() {
     setWinPopup(null);
     setErrMsg(null);
     setReelsStopped(false);
+    setOverlayWins([]);
     stopSymbolAnims();
 
     // ── 1. Fetch result from server ──────────────────────────────────────────
@@ -642,6 +646,7 @@ export default function RomeSlots() {
       }
     }
     setReelsStopped(true);
+    setOverlayWins(Array.isArray(data.lineWins) ? data.lineWins : []);
     // Small delay so React renders the overlay imgs before the RAF loop touches them
     setTimeout(() => startSymbolAnims(winIndices), 16);
 
@@ -939,6 +944,9 @@ export default function RomeSlots() {
             );
           })
         )}
+
+        {/* ── Payline glow overlay — pointer-events:none, z-index:20 ── */}
+        <PaylineOverlay wins={overlayWins} />
 
         {/* ── Bottom GUI panel ── */}
         <img

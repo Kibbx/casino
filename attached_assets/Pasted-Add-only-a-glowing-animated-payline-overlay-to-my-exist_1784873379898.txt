@@ -1,0 +1,67 @@
+Add only a glowing animated payline overlay to my existing slot game.
+
+CRITICAL: Do not change, refactor, redesign, replace, or otherwise modify the game itself. The slot game must look and behave exactly as it does now, except for the new glowing lines that appear over winning paylines.
+
+Strict restrictions:
+
+- Do not change the reel or symbol layout.
+- Do not change symbol sizes or positions.
+- Do not change spin behavior, timing, results, RNG, payouts, paylines, or win calculations.
+- Do not change buttons, controls, sounds, backgrounds, images, fonts, colors, or existing animations.
+- Do not replace existing components.
+- Do not rename existing functions, variables, classes, files, IDs, or data structures.
+- Do not reorganize or refactor unrelated code.
+- Do not add new gameplay mechanics.
+- Do not alter responsive behavior.
+- Do not modify the existing payline definitions.
+- Do not use random or simulated winning paylines.
+- Make the smallest possible additive code change.
+- Reuse the game’s existing winning-payline result.
+- If the existing win data cannot be identified safely, stop and explain what information is needed instead of changing the game logic.
+
+Required feature:
+
+1. Add a transparent SVG or canvas overlay directly above the existing reel area.
+2. The overlay must not affect the dimensions or positioning of the reels.
+3. Set `pointer-events: none` so the overlay cannot block any controls.
+4. The overlay must connect the visual center of the winning symbol on each of the 5 reels.
+5. Calculate the symbol-center coordinates from the existing rendered DOM elements or grid dimensions. Do not reposition symbols to fit the lines.
+6. Display lines only for paylines already reported as winning by the existing game logic.
+7. Start the line animation only after the existing reel-stop animation has completed.
+8. Animate each winning line from left to right using SVG `stroke-dasharray` and `stroke-dashoffset`.
+9. Style the line with:
+   - Bright gold/yellow stroke
+   - Soft gold outer glow
+   - Rounded line caps
+   - Rounded line joins
+   - Approximately 4–6 px line thickness
+10. When multiple paylines win, show them one at a time using the existing winning-payline order, then briefly display all winning lines together.
+11. Remove the lines when the next spin starts.
+12. Ensure lines remain aligned after resizing or orientation changes.
+13. Clean up all timers, animation frames, observers, and event listeners.
+14. Respect `prefers-reduced-motion` by showing the winning line without the drawing animation.
+15. Keep all new functionality isolated in a small payline-overlay module or component.
+
+Suggested isolated functions:
+
+- `initializePaylineOverlay()`
+- `getSymbolCenter(reelIndex, rowIndex)`
+- `drawWinningPayline(payline)`
+- `showWinningPaylines(winningPaylines)`
+- `clearPaylineOverlay()`
+- `resizePaylineOverlay()`
+
+Implementation rule:
+
+The overlay must be absolutely positioned inside the existing reel container:
+
+```css
+.payline-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+  overflow: visible;
+}
