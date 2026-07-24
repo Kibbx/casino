@@ -79,6 +79,9 @@ export const PAYLINES: number[][] = [
 
 type Grid = string[][];
 
+// DEV: set to true to force a 5-scatter result on the next spin (self-disables after one spin)
+let _forceScatter5 = true;
+
 function buildPool(): string[] {
   const pool: string[] = [];
   for (const s of SYMBOLS) for (let i = 0; i < s.weight; i++) pool.push(s.id);
@@ -185,7 +188,18 @@ router.post("/spin", requirePlayer, async (req, res) => {
   }
 
   const betPerLine = Math.floor(totalBet / PAYLINES.length);
-  const grid = spinGrid();
+  // DEV: force 5-scatter grid on the very next spin, then self-disables
+  let grid: Grid;
+  if (_forceScatter5) {
+    _forceScatter5 = false;
+    grid = [
+      ["BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin"],
+      ["Scatter",    "Scatter",    "Scatter",    "Scatter",    "Scatter"   ],
+      ["BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin"],
+    ];
+  } else {
+    grid = spinGrid();
+  }
   const lineWins = evaluateGrid(grid, betPerLine);
   const scatters = countScatters(grid);
 
