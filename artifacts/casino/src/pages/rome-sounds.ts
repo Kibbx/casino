@@ -116,8 +116,11 @@ export function playBonusMusic() {
 
 export function stopBonusMusic() {
   if (!bonusSource) return;
+  // Zero gain immediately — guaranteed silence even if stop()/disconnect() throw in CEF
+  try { if (bonusGain) bonusGain.gain.setValueAtTime(0, bonusGain.context.currentTime); } catch {}
   try { bonusSource.stop(); } catch {}
-  try { bonusSource.disconnect(); bonusGain?.disconnect(); } catch {}
+  try { bonusSource.disconnect(); } catch {}
+  try { bonusGain?.disconnect(); } catch {}
   bonusSource = null;
   bonusGain = null;
 }

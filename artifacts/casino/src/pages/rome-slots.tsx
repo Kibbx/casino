@@ -677,6 +677,8 @@ export default function RomeSlots() {
         bonusWinRef.current += data.totalWin;
         setBonusWinTotal(bonusWinRef.current);
       }
+      // Stop music immediately when the last free spin completes — don't rely on the effect alone
+      if (remaining <= 0) stopBonusMusic();
     }
 
     const tier = winTier(data.totalWin, currentBet);
