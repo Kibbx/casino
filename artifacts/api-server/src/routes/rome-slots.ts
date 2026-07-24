@@ -195,7 +195,7 @@ router.post("/spin", requirePlayer, async (req, res) => {
     // Pick 3 unique random columns (0–4), then 3 random rows — the rest is BronzeCoin
     const cols: number[] = [];
     while (cols.length < 3) {
-      const c = Math.floor(Math.random() * REELS);
+      const c = Math.floor(Math.random() * 5);
       if (!cols.includes(c)) cols.push(c);
     }
     const fgs = ["Scatter", "Wild", "Gladiator", "Sword", "Helmet"];
