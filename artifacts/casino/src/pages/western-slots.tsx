@@ -257,13 +257,32 @@ function useWesternSounds() {
     // If neither ready: silent click (no synth fallback — avoids double-sound)
   }
 
-  // Reel stop: thud + metallic ping (staggered by reel index)
+  // Reel stop: three Roman-themed variants cycle by reel index so stops never sound identical.
+  // Light (reelIndex 0,3) → soft clack + warm bronze ting   (~210 ms)
+  // Standard (reelIndex 1,4) → firm clack + bronze chink    (~250 ms)
+  // Heavy (reelIndex 2)   → rounded thunk + shield clang    (~300 ms)
   function playReelStop(reelIndex: number) {
     const ctx = ac();
     const now = ctx.currentTime;
-    noiseBurst(ctx, now, 0.11, 40, 0.38 - reelIndex * 0.02, 95 + reelIndex * 8);
-    // Tiny metallic ping
-    tone(ctx, now + 0.03, 1400 + reelIndex * 120, 0.18, 0.08, "sine");
+    const variant = reelIndex % 3;
+    if (variant === 0) {
+      // Light — soft clack + warm bronze ting
+      noiseBurst(ctx, now,        0.055, 35, 0.20, 160);
+      tone(ctx, now,        120,  0.09, 0.10, "sine",     68);
+      tone(ctx, now + 0.03, 800,  0.18, 0.09, "sine",    580);
+    } else if (variant === 1) {
+      // Standard — firm clack + bronze chink
+      noiseBurst(ctx, now,        0.070, 32, 0.22, 175);
+      tone(ctx, now,        100,  0.10, 0.11, "square",   60);
+      tone(ctx, now + 0.032, 660, 0.20, 0.10, "sine",   480);
+      tone(ctx, now + 0.040, 1320,0.12, 0.04, "triangle",960);
+    } else {
+      // Heavy — rounded thunk + shield clang
+      noiseBurst(ctx, now,        0.090, 28, 0.24, 140);
+      tone(ctx, now,         80,  0.12, 0.13, "sine",     48);
+      tone(ctx, now + 0.042, 530, 0.26, 0.11, "sine",   390);
+      tone(ctx, now + 0.048, 1060,0.16, 0.04, "triangle",780);
+    }
   }
 
   // Win: coin tinks (more for bigger wins)

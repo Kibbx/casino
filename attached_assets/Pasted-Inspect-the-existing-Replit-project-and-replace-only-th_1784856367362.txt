@@ -1,0 +1,50 @@
+Inspect the existing Replit project and replace only the current reel-stop sound assets. Do not rebuild or change the existing audio system.
+
+Create three original Roman-themed reel-stop variations that feel satisfying, polished, and restrained:
+
+1. Light: soft “clack—ting”
+2. Standard: firm “clack—chink”
+3. Heavy: rounded “thunk—clang”
+
+Sound-design requirements:
+
+* The initial stop should feel tactile and mechanically precise, like a reel locking firmly into place.
+* Use a short, rounded low-mid impact rather than a sharp or explosive click.
+* Follow it with a subtle bronze coin, shield, or medallion accent.
+* Keep the metallic layer smooth, warm, and brief.
+* Avoid piercing treble, harsh transients, brittle clicks, bass booms, distortion, and excessive reverb.
+* The sound should be satisfying through phone speakers, laptop speakers, and headphones.
+* Total duration should be approximately 180–320 milliseconds.
+* Use a fast attack with a controlled, natural decay.
+* Make each variation slightly different so repeated reel stops do not sound identical.
+* The sound must remain comfortable when three or more reels stop close together.
+
+Loudness requirements:
+
+* Match the perceived volume of the existing interface sound effects.
+* Do not make the reel-stop sound louder than the win, bonus, or jackpot sounds.
+* Leave at least 3 dB of peak headroom.
+* Prevent clipping when multiple reel-stop sounds overlap.
+* Reduce harsh frequencies around the upper midrange and treble if the sound becomes tiring.
+* Prioritize clarity and tactile impact over raw volume.
+
+Technical requirements:
+
+* Match the existing file format, sample rate, channel configuration, filenames, naming conventions, and folder structure.
+* Preserve the current playback timing, mute control, volume control, and gameplay logic.
+* Replace the existing assets directly whenever possible.
+* Change code references only when absolutely necessary.
+* Do not modify unrelated sounds, visuals, dependencies, or game logic.
+
+Test the new sounds at low, medium, and high device volume. Verify that they remain satisfying without sounding aggressive or overly loud.
+
+Before finishing, confirm:
+
+* All reel-stop files load correctly.
+* Repeated playback has no noticeable delay.
+* Overlapping reel stops do not clip or become excessively loud.
+* The three variations have consistent perceived loudness.
+* Existing mute and volume controls still work.
+* There are no missing-file or console errors.
+
+List every audio file created or replaced and note any code references that were changed.
