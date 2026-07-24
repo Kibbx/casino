@@ -125,16 +125,16 @@ export function playReelTick() {
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
-// Heavy marble lock + bronze gong resonance — ~280 ms, Roman character
+// Heavy wooden block drop — dense low-mid thump with wood crack transient
 export function playReelStop() {
-  // Stone/marble thud: dense low-mid noise + deep sine descent
-  playNoise(0,     0.080, 0.26, 120, 1.4);
-  playOsc(85,  0,     0.13, 0.14, "sine", 45);
-  // Bronze gong resonance: fundamental + inharmonic partials
-  // (struck Roman bronze — shield, coin, helm — rings with these intervals)
-  playOsc(480, 0.025, 0.24, 0.13, "sine",     340);   // warm fundamental
-  playOsc(720, 0.030, 0.18, 0.07, "sine",     510);   // perfect-fifth partial
-  playOsc(1344,0.035, 0.14, 0.04, "triangle", 950);   // upper bronze partial
+  // Main wood thump: low-mid bandpass noise (body of the block)
+  playNoise(0,     0.070, 0.30, 220, 2.0);
+  // Wood resonance layer: tighter mid-frequency crack
+  playNoise(0,     0.038, 0.18, 450, 3.5);
+  // Weight/depth: deep sine descent
+  playOsc(92,  0,     0.12, 0.16, "sine",   40);
+  // Wood attack transient: brief square crack on impact
+  playOsc(380, 0,     0.036, 0.09, "square", 195);
 }
 
 // ── Win sounds ───────────────────────────────────────────────────────────────
