@@ -1,6 +1,5 @@
 // Rome Slots — Web Audio API sound engine
 import buttonClickUrl    from "@assets/buttonclick_1777322204907.mp3";
-import scatterImpactUrl  from "@assets/alban_gogh-quot-impact-quot-sound-effect-308750_1784859986134.mp3";
 
 let ac: AudioContext | null = null;
 
@@ -9,19 +8,10 @@ let clickBuffer: AudioBuffer | null = null;
 // Raw bytes fetched eagerly at module load (no AudioContext required)
 let rawClickBytes: ArrayBuffer | null = null;
 
-// Scatter impact — same eager-fetch pattern
-let scatterBuffer: AudioBuffer | null = null;
-let rawScatterBytes: ArrayBuffer | null = null;
-
 // Start fetching immediately when this module is imported
 fetch(buttonClickUrl)
   .then(r => r.arrayBuffer())
   .then(arr => { rawClickBytes = arr; })
-  .catch(() => {});
-
-fetch(scatterImpactUrl)
-  .then(r => r.arrayBuffer())
-  .then(arr => { rawScatterBytes = arr; })
   .catch(() => {});
 
 let masterVolume = parseFloat(localStorage.getItem("fortuna-sfx-volume") ?? "1");
@@ -45,11 +35,6 @@ function getCtx(): AudioContext {
     if (rawClickBytes && !clickBuffer) {
       ac.decodeAudioData(rawClickBytes.slice(0))
         .then(buf => { clickBuffer = buf; })
-        .catch(() => {});
-    }
-    if (rawScatterBytes && !scatterBuffer) {
-      ac.decodeAudioData(rawScatterBytes.slice(0))
-        .then(buf => { scatterBuffer = buf; })
         .catch(() => {});
     }
   }
@@ -133,27 +118,22 @@ export function playSpinClick() {
   // If neither is ready yet: silent click (better than a double/delayed sound)
 }
 
-// ── Scatter symbol lands on a reel ───────────────────────────────────────────
+// ── Scatter symbol lands (columns 0-2) ───────────────────────────────────────
+// Layered impact: sub punch + stone thud body + mid crack + metallic shimmer ring
 export function playScatterLand() {
-  if (masterMuted || masterVolume === 0) return;
-  const ctx = getCtx();
-
-  const doPlay = (buf: AudioBuffer) => {
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    const gain = ctx.createGain();
-    gain.gain.value = 0.85 * masterVolume;
-    src.connect(gain).connect(ctx.destination);
-    src.start(ctx.currentTime);
-  };
-
-  if (scatterBuffer) {
-    doPlay(scatterBuffer);
-  } else if (rawScatterBytes) {
-    ctx.decodeAudioData(rawScatterBytes.slice(0))
-      .then(buf => { scatterBuffer = buf; doPlay(buf); })
-      .catch(() => {});
-  }
+  // Sub punch: deep sine plunge — the weight of something heavy hitting stone
+  playOsc(95,   0,      0.18,  0.38, "sine",     28);
+  // Stone thud body: low-mid noise burst — dense impact mass
+  playNoise(0,  0.07,   0.42,  120,  1.2);
+  // Mid crack transient: tight bandpass snap on contact
+  playNoise(0,  0.030,  0.32,  520,  3.0);
+  // Upper crack: adds definition and sharpness to the hit
+  playNoise(0,  0.018,  0.18, 1400,  4.5);
+  // Metallic shimmer: sustained ring that makes it feel special / coin-like
+  playOsc(1760, 0.004,  0.55,  0.09, "sine");
+  playOsc(2640, 0.006,  0.40,  0.05, "sine");
+  // Bright top shimmer: airy sparkle tail
+  playOsc(4200, 0.008,  0.28,  0.04, "triangle");
 }
 
 // ── Single reel row-crossing tick (call once per symbol boundary crossed) ────
