@@ -192,6 +192,7 @@ router.post("/spin", requirePlayer, async (req, res) => {
   let grid: Grid;
   if (_forceScatter3) {
     _forceScatter3 = false;
+    console.log("[rome-slots] DEV: forced 3-scatter grid (cols 1,2,5)");
     // Force scatters in columns 1, 2, 5 (0-indexed: 0, 1, 4)
     const cols: number[] = [0, 1, 4];
     const fgs = ["Scatter", "Wild", "Gladiator", "Sword", "Helmet"];
