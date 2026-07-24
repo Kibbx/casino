@@ -51,14 +51,14 @@ const COLOR_GLOW  = "#FFC928";   // deeper gold — glow layer stroke
 const COLOR_DOT   = "#FFE782";   // dot center fill
 
 // ── Timing (ms) ───────────────────────────────────────────────────────────────
-const DRAW_MS      = 580;   // left-to-right draw animation
-const HIGHLIGHT_MS = 380;   // traveling highlight sweep after draw
-const HOLD_MS      = 800;   // hold / pulse duration per line
-const FADE_MS      = 300;   // fade-out before moving to next line
+const DRAW_MS      = 220;   // left-to-right draw animation
+const HIGHLIGHT_MS = 160;   // traveling highlight sweep after draw
+const HOLD_MS      = 280;   // hold / pulse duration per line
+const FADE_MS      = 120;   // fade-out before moving to next line
 const ALL_OPACITY  = 0.58;  // each line's opacity in the "all lines" phase
 
 // Gap added after each line's full sequence before the next starts
-const SEQ_STEP_MS = DRAW_MS + HIGHLIGHT_MS + HOLD_MS + FADE_MS + 60;
+const SEQ_STEP_MS = DRAW_MS + HIGHLIGHT_MS + HOLD_MS + FADE_MS + 30;
 
 // ── Per-instance unique IDs (prevents filter/clip conflicts between mounts) ───
 let _instanceCounter = 0;
