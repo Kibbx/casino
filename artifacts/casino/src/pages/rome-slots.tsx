@@ -10,6 +10,7 @@ import { useGetSlotsStatus } from "@workspace/api-client-react";
 import {
   playSpinClick,
   playReelTick,
+  playScatterLand,
   playSmallWin,
   playHugeWin,
   playMegaWin,
@@ -494,6 +495,9 @@ export default function RomeSlots() {
 
               // End tease if this was the focused reel
               if (i === teaseReelIdx) { clearTeaseEffects(); teaseReelIdx = -1; }
+
+              // Play impact sound when a scatter lands
+              if (scatterInCol[i]) playScatterLand();
 
               // Start new tease if this reel had a scatter and we now have ≥2 landed
               if (scatterInCol[i]) {

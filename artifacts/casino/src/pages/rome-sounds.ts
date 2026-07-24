@@ -1,5 +1,6 @@
 // Rome Slots — Web Audio API sound engine
-import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
+import buttonClickUrl    from "@assets/buttonclick_1777322204907.mp3";
+import scatterImpactUrl  from "@assets/alban_gogh-quot-impact-quot-sound-effect-308750_1784859986134.mp3";
 
 let ac: AudioContext | null = null;
 
@@ -8,10 +9,19 @@ let clickBuffer: AudioBuffer | null = null;
 // Raw bytes fetched eagerly at module load (no AudioContext required)
 let rawClickBytes: ArrayBuffer | null = null;
 
+// Scatter impact — same eager-fetch pattern
+let scatterBuffer: AudioBuffer | null = null;
+let rawScatterBytes: ArrayBuffer | null = null;
+
 // Start fetching immediately when this module is imported
 fetch(buttonClickUrl)
   .then(r => r.arrayBuffer())
   .then(arr => { rawClickBytes = arr; })
+  .catch(() => {});
+
+fetch(scatterImpactUrl)
+  .then(r => r.arrayBuffer())
+  .then(arr => { rawScatterBytes = arr; })
   .catch(() => {});
 
 let masterVolume = parseFloat(localStorage.getItem("fortuna-sfx-volume") ?? "1");
@@ -35,6 +45,11 @@ function getCtx(): AudioContext {
     if (rawClickBytes && !clickBuffer) {
       ac.decodeAudioData(rawClickBytes.slice(0))
         .then(buf => { clickBuffer = buf; })
+        .catch(() => {});
+    }
+    if (rawScatterBytes && !scatterBuffer) {
+      ac.decodeAudioData(rawScatterBytes.slice(0))
+        .then(buf => { scatterBuffer = buf; })
         .catch(() => {});
     }
   }
@@ -116,6 +131,29 @@ export function playSpinClick() {
       .catch(() => {});
   }
   // If neither is ready yet: silent click (better than a double/delayed sound)
+}
+
+// ── Scatter symbol lands on a reel ───────────────────────────────────────────
+export function playScatterLand() {
+  if (masterMuted || masterVolume === 0) return;
+  const ctx = getCtx();
+
+  const doPlay = (buf: AudioBuffer) => {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.85 * masterVolume;
+    src.connect(gain).connect(ctx.destination);
+    src.start(ctx.currentTime);
+  };
+
+  if (scatterBuffer) {
+    doPlay(scatterBuffer);
+  } else if (rawScatterBytes) {
+    ctx.decodeAudioData(rawScatterBytes.slice(0))
+      .then(buf => { scatterBuffer = buf; doPlay(buf); })
+      .catch(() => {});
+  }
 }
 
 // ── Single reel row-crossing tick (call once per symbol boundary crossed) ────
