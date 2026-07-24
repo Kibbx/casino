@@ -546,16 +546,33 @@ export default function RomeSlots() {
               stopped[i] = true;
               if (el) { el.style.transition = "none"; el.style.transform = `translateY(${targets[i]}px)`; }
 
-              // End tease if this was the focused reel
-              if (i === teaseReelIdx) { clearTeaseEffects(); teaseReelIdx = -1; }
+              // When the focused tease reel stops — either pass focus forward or resolve
+              if (i === teaseReelIdx) {
+                teaseReelIdx = -1;
+                if (!scatterInCol[i] && teaseScatterCount < 3) {
+                  // No scatter here — keep suspense alive on the next reel
+                  let nextReel = -1;
+                  for (let j = i + 1; j < REELS; j++) { if (!stopped[j]) { nextReel = j; break; } }
+                  if (nextReel >= 0) {
+                    teaseReelIdx = nextReel;
+                    pulsePhase   = 0;
+                    // Keep dims on stopped reels — glow shifts to new target reel
+                    applyTeaseDim(i);
+                  } else {
+                    clearTeaseEffects(); // ran out of reels — clean up
+                  }
+                } else {
+                  clearTeaseEffects(); // scatter landed (resolve) or already 3 scatters
+                }
+              }
 
-              // Play impact sound when a scatter lands in columns 0-2 only
-              if (scatterInCol[i] && i < 3) playScatterLand();
+              // Play impact sound whenever a scatter lands (any column)
+              if (scatterInCol[i]) playScatterLand();
 
-              // Start new tease if this reel had a scatter and we now have ≥2 landed
+              // Start tease exactly when the 2nd scatter lands (not on 3rd+)
               if (scatterInCol[i]) {
                 teaseScatterCount++;
-                if (teaseScatterCount >= 2) {
+                if (teaseScatterCount === 2) {
                   let nextReel = -1;
                   for (let j = i + 1; j < REELS; j++) { if (!stopped[j]) { nextReel = j; break; } }
                   if (nextReel >= 0) {
