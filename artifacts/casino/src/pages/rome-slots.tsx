@@ -640,7 +640,8 @@ export default function RomeSlots() {
     let alive = true;
     const loop = async () => {
       while (alive && autoSpinRef.current) {
-        const ok = await spinOnce(bet);
+        // Use a free spin if one is available, otherwise consume a paid spin
+        const ok = await spinOnce(bet, freeSpinsRef.current > 0);
         if (!ok) { setAutoSpin(false); break; }
         await delay(400);
       }
