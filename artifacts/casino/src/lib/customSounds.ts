@@ -33,7 +33,7 @@ const CUSTOM_SOUNDS: Record<string, string> = {
 ───────────────────────────────────────────────────────────────── */
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-const MASTER_VOLUME = 0.13;
+const MASTER_VOLUME = 0.065;
 
 let audioCtx: AudioContext | null = null;
 const bufferCache = new Map<string, AudioBuffer>();

@@ -128,7 +128,7 @@ function useWesternSounds() {
     const ctx = ac();
     const doPlay = (buf: AudioBuffer) => {
       const src = ctx.createBufferSource(); src.buffer = buf;
-      const gain = ctx.createGain(); gain.gain.value = 0.55 * volRef.current;
+      const gain = ctx.createGain(); gain.gain.value = 0.275 * volRef.current;
       src.connect(gain).connect(ctx.destination); src.start(ctx.currentTime);
     };
     if (clickBufRef.current) doPlay(clickBufRef.current);

@@ -1,3 +1,6 @@
+// Global sound attenuation — every sound effect on the website is scaled by this
+const GLOBAL_SOUND_SCALE = 0.5;
+
 let ctx: AudioContext | null = null;
 let masterGain: GainNode | null = null;
 
@@ -11,18 +14,18 @@ function getMaster(): GainNode {
   const ac = getCtx();
   if (!masterGain) {
     masterGain = ac.createGain();
-    masterGain.gain.value = 1.0;
+    masterGain.gain.value = GLOBAL_SOUND_SCALE;
     masterGain.connect(ac.destination);
   }
   return masterGain;
 }
 
 export function setMasterVolume(v: number) {
-  getMaster().gain.value = Math.max(0, Math.min(1, v));
+  getMaster().gain.value = Math.max(0, Math.min(1, v)) * GLOBAL_SOUND_SCALE;
 }
 
 export function getMasterVolume(): number {
-  return masterGain?.gain.value ?? 1.0;
+  return masterGain?.gain.value ?? GLOBAL_SOUND_SCALE;
 }
 
 const base = () => (import.meta.env.BASE_URL as string).replace(/\/$/, "");
@@ -48,7 +51,7 @@ function makeSound(path: string, gain: number) {
       const src = ac.createBufferSource();
       src.buffer = buf;
       const g = ac.createGain();
-      g.gain.value = gain;
+      g.gain.value = gain * GLOBAL_SOUND_SCALE;
       src.connect(g).connect(getMaster());
       src.start();
     }).catch(() => {});
