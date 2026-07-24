@@ -218,7 +218,8 @@ export default function RomeSlots() {
   const bonusWinRef = useRef(0);
   const [showBonusEnd, setShowBonusEnd] = useState(false);
   const [showFreeSpinsEntry, setShowFreeSpinsEntry] = useState(false);
-  const bonusEverActiveRef = useRef(false); // guard: prevents bonus-end firing on mount
+  const freeSpinsEntryRef  = useRef(false);  // ref mirror — readable inside spinOnce callback
+  const bonusEverActiveRef = useRef(false);  // guard: prevents bonus-end firing on mount
   // True once reels have settled
   const [reelsStopped, setReelsStopped] = useState(false);
   const animRef        = useRef<number | null>(null);
@@ -391,6 +392,7 @@ export default function RomeSlots() {
   const spinOnce = useCallback(async (currentBet: number, isFree = false): Promise<boolean> => {
     if (!sessionToken) return false;
     if (spinningRef.current) return false;
+    if (freeSpinsEntryRef.current) return false; // block while bonus entry panel is open
     spinningRef.current = true;
     setSpinning(true);
     setLastWin(0);
@@ -658,6 +660,7 @@ export default function RomeSlots() {
       setFreeSpinsLeft(total);
       // Show full-screen bonus entry panel — dismisses only on tap/click
       bonusEverActiveRef.current = true;
+      freeSpinsEntryRef.current = true;
       setShowFreeSpinsEntry(true);
       playBonusMusic();
       return true;
@@ -1079,7 +1082,7 @@ export default function RomeSlots() {
       {/* ── Bonus entry panel — full-screen overlay when bonus triggers ── */}
       {showFreeSpinsEntry && (
         <div
-          onClick={() => setShowFreeSpinsEntry(false)}
+          onClick={() => { freeSpinsEntryRef.current = false; setShowFreeSpinsEntry(false); }}
           style={{
             position: "fixed", inset: 0, zIndex: 10000, cursor: "pointer",
             background: "radial-gradient(ellipse at 50% 48%, rgba(70,24,0,0.97) 0%, rgba(6,2,0,0.99) 72%)",
