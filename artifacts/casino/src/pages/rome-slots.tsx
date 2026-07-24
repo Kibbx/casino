@@ -655,9 +655,8 @@ export default function RomeSlots() {
       spinningRef.current = false;
       setSpinning(false);
       setFreeSpinsLeft(total);
-      // Show full-screen bonus entry panel — auto-dismisses after 3.5 s or on tap
+      // Show full-screen bonus entry panel — dismisses only on tap/click
       setShowFreeSpinsEntry(true);
-      setTimeout(() => setShowFreeSpinsEntry(false), 3500);
       playBonusMusic();
       return true;
     }
