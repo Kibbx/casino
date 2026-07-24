@@ -391,7 +391,7 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
       (g.children[2] as SVGGElement).style.opacity = "1";
     }
 
-    // "All lines" phase — show every line at reduced opacity
+    // "All lines" phase — show every line at reduced opacity, then loop
     function showAll() {
       if (cancelledRef.current) return;
       groups.forEach((g, j) => {
@@ -402,42 +402,51 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
         }, j * 60);
         timersRef.current.push(t);
       });
+      // After a brief pause showing all lines, restart the sequence
+      const ALL_HOLD_MS = 500;
+      const loopT = setTimeout(() => {
+        if (cancelledRef.current) return;
+        runSequence();
+      }, groups.length * 60 + ALL_HOLD_MS);
+      timersRef.current.push(loopT);
     }
 
-    // Sequential phase — draw each line one at a time
-    let cursor = 0;
-
-    wins.forEach(({ lineIndex, count }, i) => {
-      const startT = setTimeout(() => {
-        if (cancelledRef.current) return;
-
-        // Hide all other lines
-        groups.forEach((g, j) => {
-          if (j !== i) {
-            g.style.opacity = "0";
-          }
-        });
-
-        animateDraw(groups[i], cancelsRef.current, reducedMotion, () => {
+    // Sequential phase — draw each line one at a time, then loop via showAll
+    function runSequence() {
+      if (cancelledRef.current) return;
+      let cursor = 0;
+      wins.forEach(({ lineIndex, count }, i) => {
+        const startT = setTimeout(() => {
           if (cancelledRef.current) return;
 
-          animatePulse(groups[i], cancelsRef.current, () => {
+          // Hide all other lines
+          groups.forEach((g, j) => {
+            if (j !== i) g.style.opacity = "0";
+          });
+
+          animateDraw(groups[i], cancelsRef.current, reducedMotion, () => {
             if (cancelledRef.current) return;
 
-            if (i === wins.length - 1) {
-              // Last line — transition to "all" phase
-              showAll();
-            } else {
-              // Fade out this line; next is already scheduled via cursor
-              animateFadeOut(groups[i], cancelsRef.current, () => { /* cursor handles next */ });
-            }
-          });
-        });
-      }, cursor);
+            animatePulse(groups[i], cancelsRef.current, () => {
+              if (cancelledRef.current) return;
 
-      timersRef.current.push(startT);
-      cursor += SEQ_STEP_MS;
-    });
+              if (i === wins.length - 1) {
+                // Last line — transition to "all" phase, which loops back
+                showAll();
+              } else {
+                // Fade out; next line is already scheduled via cursor
+                animateFadeOut(groups[i], cancelsRef.current, () => { /* cursor handles next */ });
+              }
+            });
+          });
+        }, cursor);
+
+        timersRef.current.push(startT);
+        cursor += SEQ_STEP_MS;
+      });
+    }
+
+    runSequence();
 
     return () => {
       cancelledRef.current = true;
