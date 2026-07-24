@@ -1,0 +1,84 @@
+Refine only the existing winning-payline animation so it looks cleaner, smoother, and more professional.
+
+CRITICAL: Do not change the slot game itself. Do not modify the game layout, symbols, reels, paylines, win logic, spin logic, timing, controls, assets, backgrounds, sounds, payouts, or responsive behavior. Only adjust the visual rendering of the existing payline overlay.
+
+The current yellow line is too thick, overly bright, and visually covers the symbols. Replace its styling with a polished two-layer SVG payline.
+
+Required visual improvements:
+
+1. Use two identical SVG paths:
+
+   Glow path:
+   - Transparent fill
+   - Gold/yellow stroke
+   - Stroke width: approximately 8px
+   - Opacity: approximately 0.25–0.4
+   - Gaussian blur: approximately 5–7px
+   - Rounded line caps and joins
+
+   Main path:
+   - Transparent fill
+   - Warm gold or pale-yellow stroke
+   - Stroke width: approximately 2.5–3.5px
+   - Opacity: approximately 0.9
+   - Rounded line caps and joins
+
+2. Avoid a harsh neon-yellow appearance. Use a warmer Roman gold, such as:
+
+   - Core: `#FFE782`
+   - Secondary gold: `#FFC928`
+   - Glow: `rgba(255, 190, 35, 0.45)`
+
+3. Keep the glow subtle. It should highlight the win without hiding symbol artwork.
+
+4. Render the payline behind the winning symbols when the existing DOM structure allows it:
+   - Reel background
+   - Payline overlay
+   - Symbols
+   - Game frame and controls
+
+   Do not restructure the game to achieve this. If placing it behind symbols would require changing the reel implementation, keep it above the symbols but reduce the line opacity.
+
+5. Make the path flow smoothly through all five symbol centers.
+
+6. Do not draw unnecessary sharp diagonal corners. Use a smooth SVG path with gentle curves between symbol centers.
+
+Use a path-generation method such as Catmull–Rom-to-Bezier or quadratic curves, but ensure the path still passes through the exact center of every winning symbol.
+
+7. Add a small polished marker at each winning symbol center:
+   - Approximately 4–6px radius
+   - Gold center
+   - Very soft glow
+   - Do not add large circles or borders around the symbols
+
+8. Animate the line cleanly:
+   - Draw from left to right using `stroke-dasharray` and `stroke-dashoffset`
+   - Duration: approximately 500–700ms
+   - Use an ease-out timing function
+   - Animate both the glow and core paths together
+   - After drawing, use a very subtle opacity pulse
+   - Do not continuously flash or rapidly blink
+
+9. Add a small traveling highlight after the line finishes drawing:
+   - A short brighter segment moves from left to right once
+   - Keep it subtle
+   - Do not loop it indefinitely
+
+10. The completed line should remain visible for the existing win-display duration, then fade out smoothly over approximately 250–350ms.
+
+11. When multiple paylines win:
+   - Display one line at a time
+   - Fade the previous line before displaying the next
+   - Do not stack several bright glowing lines at full opacity
+   - When all lines are shown together, reduce each line to approximately 50–65% opacity
+
+12. Ensure the path begins at the center of the first reel’s winning symbol and ends at the center of the fifth reel’s winning symbol. Do not extend the line outside the reel grid.
+
+13. Clip all glow effects to the reel viewport so the glow does not spill over the gold frame, columns, controls, or bottom interface.
+
+14. Use a unique SVG filter ID for each game instance to prevent filter conflicts.
+
+15. Keep:
+
+```css
+pointer-events: none;
