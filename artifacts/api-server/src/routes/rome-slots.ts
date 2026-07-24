@@ -79,8 +79,8 @@ export const PAYLINES: number[][] = [
 
 type Grid = string[][];
 
-// DEV: set to true to force a 5-scatter result on the next spin (self-disables after one spin)
-let _forceScatter5 = true;
+// DEV: set to true to force a 3-scatter result (random columns + rows) on the next spin (self-disables)
+let _forceScatter3 = true;
 
 function buildPool(): string[] {
   const pool: string[] = [];
@@ -188,14 +188,22 @@ router.post("/spin", requirePlayer, async (req, res) => {
   }
 
   const betPerLine = Math.floor(totalBet / PAYLINES.length);
-  // DEV: force 5-scatter grid on the very next spin, then self-disables
+  // DEV: force a 3-scatter grid on the very next spin, then self-disable
   let grid: Grid;
-  if (_forceScatter5) {
-    _forceScatter5 = false;
+  if (_forceScatter3) {
+    _forceScatter3 = false;
+    // Pick 3 unique random columns (0–4), then 3 random rows — the rest is BronzeCoin
+    const cols: number[] = [];
+    while (cols.length < 3) {
+      const c = Math.floor(Math.random() * REELS);
+      if (!cols.includes(c)) cols.push(c);
+    }
+    const fgs = ["Scatter", "Wild", "Gladiator", "Sword", "Helmet"];
+    const filler = (col: number, row: number) => cols.includes(col) ? "Scatter" : (fgs[Math.floor(Math.random() * fgs.length)]);
     grid = [
-      ["BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin"],
-      ["Scatter",    "Scatter",    "Scatter",    "Scatter",    "Scatter"   ],
-      ["BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin", "BronzeCoin"],
+      [filler(0,0), filler(1,0), filler(2,0), filler(3,0), filler(4,0)],
+      [filler(0,1), filler(1,1), filler(2,1), filler(3,1), filler(4,1)],
+      [filler(0,2), filler(1,2), filler(2,2), filler(3,2), filler(4,2)],
     ];
   } else {
     grid = spinGrid();
