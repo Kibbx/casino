@@ -125,16 +125,16 @@ export function playReelTick() {
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
-// Heavy wooden block drop — dense low-mid thump with wood crack transient
+// Massive wooden block drop — deep sub thump + heavy wood crack
 export function playReelStop() {
-  // Main wood thump: low-mid bandpass noise (body of the block)
-  playNoise(0,     0.070, 0.30, 220, 2.0);
-  // Wood resonance layer: tighter mid-frequency crack
-  playNoise(0,     0.038, 0.18, 450, 3.5);
-  // Weight/depth: deep sine descent
-  playOsc(92,  0,     0.12, 0.16, "sine",   40);
-  // Wood attack transient: brief square crack on impact
-  playOsc(380, 0,     0.036, 0.09, "square", 195);
+  // Deep low thump: heavy low noise for block mass
+  playNoise(0,    0.095, 0.40, 140, 1.4);
+  // Sub-bass body: deep sine plunge (the "weight" of the block)
+  playOsc(62,  0,    0.16, 0.24, "sine",   26);
+  // Mid wood body: secondary resonance layer
+  playNoise(0,    0.050, 0.22, 340, 2.8);
+  // Impact transient: heavy square crack on contact
+  playOsc(280, 0,    0.042, 0.14, "square", 130);
 }
 
 // ── Win sounds ───────────────────────────────────────────────────────────────
