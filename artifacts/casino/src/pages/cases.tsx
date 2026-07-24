@@ -18,6 +18,8 @@ function useSounds() {
   const ctxRef = useRef<AudioContext | null>(null);
   const tickTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  const masterRef = useRef<GainNode | null>(null);
+
   function ctx() {
     if (!ctxRef.current) {
       ctxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -27,8 +29,18 @@ function useSounds() {
     return ctxRef.current;
   }
 
-  function playTick(speedFactor: number) {
+  function master(): GainNode {
     const ac = ctx();
+    if (!masterRef.current || masterRef.current.context !== ac) {
+      masterRef.current = ac.createGain();
+      masterRef.current.gain.value = 0.3;
+      masterRef.current.connect(ac.destination);
+    }
+    return masterRef.current;
+  }
+
+  function playTick(speedFactor: number) {
+    const ac = ctx(); const m = master();
     const now = ac.currentTime;
     const dur = 0.035;
 
@@ -48,15 +60,15 @@ function useSounds() {
     flt.Q.value = 0.8;
 
     const gain = ac.createGain();
-    gain.gain.setValueAtTime(0.055, now);
+    gain.gain.setValueAtTime(0.11, now);
     gain.gain.linearRampToValueAtTime(0, now + dur);
 
-    src.connect(flt); flt.connect(gain); gain.connect(ac.destination);
+    src.connect(flt); flt.connect(gain); gain.connect(m);
     src.start(now); src.stop(now + dur);
   }
 
   function playWhoosh() {
-    const ac = ctx();
+    const ac = ctx(); const m = master();
     const now = ac.currentTime;
     const dur = 0.5;
 
@@ -73,23 +85,23 @@ function useSounds() {
 
     const gain = ac.createGain();
     gain.gain.setValueAtTime(0.0, now);
-    gain.gain.linearRampToValueAtTime(0.03, now + 0.05);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
     gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
 
-    osc.connect(flt); flt.connect(gain); gain.connect(ac.destination);
+    osc.connect(flt); flt.connect(gain); gain.connect(m);
     osc.start(now); osc.stop(now + dur);
   }
 
   function playResult(tier: string) {
-    const ac = ctx();
+    const ac = ctx(); const m = master();
     const now = ac.currentTime;
 
     const presets: Record<string, { freqs: number[]; gap: number; vol: number }> = {
-      common:    { freqs: [523, 659],                        gap: 0.13, vol: 0.045 },
-      rare:      { freqs: [523, 659, 784],                   gap: 0.11, vol: 0.05  },
-      epic:      { freqs: [523, 659, 784, 1047],             gap: 0.09, vol: 0.055 },
-      legendary: { freqs: [523, 659, 784, 988, 1047, 1319],  gap: 0.08, vol: 0.06  },
-      jackpot:   { freqs: [523, 659, 784, 988, 1047, 1319, 1568, 2093], gap: 0.07, vol: 0.065 },
+      common:    { freqs: [523, 659],                        gap: 0.13, vol: 0.09 },
+      rare:      { freqs: [523, 659, 784],                   gap: 0.11, vol: 0.10 },
+      epic:      { freqs: [523, 659, 784, 1047],             gap: 0.09, vol: 0.11 },
+      legendary: { freqs: [523, 659, 784, 988, 1047, 1319],  gap: 0.08, vol: 0.12 },
+      jackpot:   { freqs: [523, 659, 784, 988, 1047, 1319, 1568, 2093], gap: 0.07, vol: 0.13 },
     };
     const p = presets[tier] ?? presets.common;
     const noteDur = 0.45;
@@ -105,7 +117,7 @@ function useSounds() {
       gain.gain.linearRampToValueAtTime(p.vol, t + 0.012);
       gain.gain.exponentialRampToValueAtTime(0.001, t + noteDur);
 
-      osc.connect(gain); gain.connect(ac.destination);
+      osc.connect(gain); gain.connect(m);
       osc.start(t); osc.stop(t + noteDur);
 
       // Harmonic overtone for richness on rare+
@@ -117,7 +129,7 @@ function useSounds() {
         g2.gain.setValueAtTime(0, t);
         g2.gain.linearRampToValueAtTime(p.vol * 0.35, t + 0.012);
         g2.gain.exponentialRampToValueAtTime(0.001, t + noteDur * 0.7);
-        osc2.connect(g2); g2.connect(ac.destination);
+        osc2.connect(g2); g2.connect(m);
         osc2.start(t); osc2.stop(t + noteDur);
       }
     });

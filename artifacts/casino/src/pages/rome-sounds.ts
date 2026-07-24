@@ -29,8 +29,8 @@ fetch(bonusMusicUrl)
 // Bonus music sits at 10% of the master volume so it's ambient, not overpowering
 const BONUS_BASE_VOL = 0.10;
 
-// Master attenuation — every slot sound is scaled by this so the mix stays balanced.
-const SLOTS_GAIN_SCALE = 0.25;
+// Master attenuation applied once here — all playback helpers read masterVolume directly.
+const SLOTS_GAIN_SCALE = 0.3;
 
 let masterVolume = parseFloat(localStorage.getItem("fortuna-sfx-volume") ?? "1") * SLOTS_GAIN_SCALE;
 let masterMuted  = localStorage.getItem("fortuna-sfx-muted") === "true";
@@ -40,8 +40,8 @@ function bonusTargetGain() {
 }
 
 export function setRomeSfxVolume(v: number) {
-  masterVolume = Math.max(0, Math.min(1, v));
-  localStorage.setItem("fortuna-sfx-volume", String(masterVolume));
+  masterVolume = Math.max(0, Math.min(1, v)) * SLOTS_GAIN_SCALE;
+  localStorage.setItem("fortuna-sfx-volume", String(Math.max(0, Math.min(1, v))));
   // Live-update bonus music gain — bonusGain stays alive while music plays
   if (bonusGain) bonusGain.gain.setTargetAtTime(bonusTargetGain(), bonusGain.context.currentTime, 0.05);
 }

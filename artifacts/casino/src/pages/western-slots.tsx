@@ -160,6 +160,7 @@ const delay = (ms:number) => new Promise(r=>setTimeout(r,ms));
 // ── Web Audio sound system ─────────────────────────────────────────────────────
 function useWesternSounds() {
   const acRef = useRef<AudioContext|null>(null);
+  const mgRef = useRef<GainNode|null>(null); // master GainNode — 0.3 of full scale
   const volRef   = useRef<number>(parseFloat(localStorage.getItem("deadwood-sfx-volume") ?? "1"));
   const mutedRef = useRef<boolean>(localStorage.getItem("deadwood-sfx-muted") === "true");
   const clickBufRef = useRef<AudioBuffer|null>(null);
@@ -177,6 +178,7 @@ function useWesternSounds() {
   function ac(): AudioContext {
     if (!acRef.current || acRef.current.state === "closed") {
       acRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      mgRef.current = null; // reset master when context is recreated
       // Bytes already fetched — decoding is ~1ms, so buffer is ready by next spin
       if (rawBytesRef.current && !clickBufRef.current) {
         acRef.current.decodeAudioData(rawBytesRef.current.slice(0))
@@ -186,6 +188,16 @@ function useWesternSounds() {
     }
     if (acRef.current.state === "suspended") acRef.current.resume();
     return acRef.current;
+  }
+
+  function mg(): GainNode {
+    const a = ac();
+    if (!mgRef.current || mgRef.current.context !== a) {
+      mgRef.current = a.createGain();
+      mgRef.current.gain.value = 0.3;
+      mgRef.current.connect(a.destination);
+    }
+    return mgRef.current;
   }
 
   function setVolume(v: number) {
@@ -212,7 +224,7 @@ function useWesternSounds() {
     src.buffer = buf;
     const g = ctx.createGain();
     g.gain.setValueAtTime(vol * volRef.current, startAt);
-    src.connect(g).connect(ctx.destination);
+    src.connect(g).connect(mg());
     src.start(startAt);
     src.stop(startAt + dur);
   }
@@ -227,7 +239,7 @@ function useWesternSounds() {
     const g = ctx.createGain();
     g.gain.setValueAtTime(vol * volRef.current, startAt);
     g.gain.exponentialRampToValueAtTime(0.0001, startAt + dur);
-    osc.connect(g).connect(ctx.destination);
+    osc.connect(g).connect(mg());
     osc.start(startAt);
     osc.stop(startAt + dur + 0.01);
   }
@@ -241,8 +253,8 @@ function useWesternSounds() {
       const src = ctx.createBufferSource();
       src.buffer = buf;
       const gain = ctx.createGain();
-      gain.gain.value = 0.1375 * volRef.current;
-      src.connect(gain).connect(ctx.destination);
+      gain.gain.value = 0.55 * volRef.current;
+      src.connect(gain).connect(mg());
       src.start(ctx.currentTime);
     };
 

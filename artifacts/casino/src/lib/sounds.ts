@@ -8,7 +8,7 @@ function getCtx(): AudioContext {
 
 function master(ac: AudioContext) {
   const g = ac.createGain();
-  g.gain.value = 0.0325;
+  g.gain.value = 0.039; // 0.13 original × 0.3
   g.connect(ac.destination);
   return g;
 }

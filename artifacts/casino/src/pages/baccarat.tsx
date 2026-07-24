@@ -11,15 +11,27 @@ import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 // ── Audio (Web Audio API, zero external files) ────────────────────────────────
 
 let _ac: AudioContext | null = null;
+let _mg: GainNode | null = null; // single master GainNode — 0.3 of full scale
+
 function getAC() {
   if (!_ac) _ac = new AudioContext();
   if (_ac.state === "suspended") _ac.resume();
   return _ac;
 }
 
+function getMG(): GainNode {
+  const ac = getAC();
+  if (!_mg || _mg.context !== ac) {
+    _mg = ac.createGain();
+    _mg.gain.value = 0.3;
+    _mg.connect(ac.destination);
+  }
+  return _mg;
+}
+
 function playCardSound(delayS = 0) {
   try {
-    const ac = getAC();
+    const ac = getAC(); const m = getMG();
     const t = ac.currentTime + delayS;
     const bufLen = Math.floor(ac.sampleRate * 0.08);
     const buf = ac.createBuffer(1, bufLen, ac.sampleRate);
@@ -27,36 +39,36 @@ function playCardSound(delayS = 0) {
     for (let i = 0; i < bufLen; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / bufLen);
     const src = ac.createBufferSource(); src.buffer = buf;
     const bpf = ac.createBiquadFilter(); bpf.type = "bandpass"; bpf.frequency.value = 2600; bpf.Q.value = 0.7;
-    const g = ac.createGain(); g.gain.setValueAtTime(0.19, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
-    src.connect(bpf); bpf.connect(g); g.connect(ac.destination); src.start(t);
+    const g = ac.createGain(); g.gain.setValueAtTime(0.38, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+    src.connect(bpf); bpf.connect(g); g.connect(m); src.start(t);
     const osc = ac.createOscillator(); const g2 = ac.createGain();
     osc.type = "sine"; osc.frequency.setValueAtTime(130, t); osc.frequency.exponentialRampToValueAtTime(42, t + 0.09);
-    g2.gain.setValueAtTime(0.225, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
-    osc.connect(g2); g2.connect(ac.destination); osc.start(t); osc.stop(t + 0.13);
+    g2.gain.setValueAtTime(0.45, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+    osc.connect(g2); g2.connect(m); osc.start(t); osc.stop(t + 0.13);
   } catch {}
 }
 
 function _tone(freq: number, t: number, dur: number, vol: number, type: OscillatorType = "sine") {
   try {
-    const ac = getAC();
+    const ac = getAC(); const m = getMG();
     const osc = ac.createOscillator(); const g = ac.createGain();
     osc.type = type; osc.frequency.value = freq;
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.018); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    osc.connect(g); g.connect(ac.destination); osc.start(t); osc.stop(t + dur);
+    osc.connect(g); g.connect(m); osc.start(t); osc.stop(t + dur);
   } catch {}
 }
 
 function playWin() {
   const t = getAC().currentTime;
-  [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => _tone(f, t + i * 0.11, 0.5, 0.065));
+  [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => _tone(f, t + i * 0.11, 0.5, 0.13));
 }
 
 function playLose() {
   const t = getAC().currentTime;
-  [392, 329.63, 261.63].forEach((f, i) => _tone(f, t + i * 0.17, 0.55, 0.05));
+  [392, 329.63, 261.63].forEach((f, i) => _tone(f, t + i * 0.17, 0.55, 0.1));
 }
 
-function playPush() { _tone(415.3, getAC().currentTime, 0.38, 0.045); }
+function playPush() { _tone(415.3, getAC().currentTime, 0.38, 0.09); }
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 

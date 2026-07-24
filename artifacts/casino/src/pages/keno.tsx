@@ -14,7 +14,7 @@ import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 function playBtnClick() {
-  try { const a = new Audio(buttonClickUrl); a.play().catch(() => {}); } catch {}
+  try { const a = new Audio(buttonClickUrl); a.volume = 0.3; a.play().catch(() => {}); } catch {}
 }
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
