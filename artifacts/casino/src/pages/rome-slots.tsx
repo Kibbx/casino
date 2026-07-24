@@ -10,7 +10,6 @@ import { useGetSlotsStatus } from "@workspace/api-client-react";
 import {
   playSpinClick,
   playReelTick,
-  playReelStop,
   playSmallWin,
   playHugeWin,
   playMegaWin,
@@ -491,7 +490,6 @@ export default function RomeSlots() {
             if (yPos[i] <= targets[i] || remaining < ROW_H * 0.15) {
               yPos[i] = targets[i]; // clamp — zero overshoot
               stopped[i] = true;
-              playReelStop();
               if (el) { el.style.transition = "none"; el.style.transform = `translateY(${targets[i]}px)`; }
 
               // End tease if this was the focused reel
