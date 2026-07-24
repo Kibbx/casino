@@ -570,8 +570,8 @@ export default function RomeSlots() {
                 }
               }
 
-              // Play impact sound whenever a scatter lands (any column)
-              if (scatterInCol[i]) playScatterLand();
+              // Play impact sound only for scatters in the first 3 columns
+              if (scatterInCol[i] && i < 3) playScatterLand();
 
               // Start tease exactly when the 2nd scatter lands (not on 3rd+)
               if (scatterInCol[i]) {
