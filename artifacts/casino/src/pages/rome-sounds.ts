@@ -121,7 +121,7 @@ export function playSpinClick() {
 // ── Single reel row-crossing tick (call once per symbol boundary crossed) ────
 // Rate is driven by the reel animation loop — naturally decelerates with reels.
 export function playReelTick() {
-  playNoise(0, 0.016, 0.10, 450, 3);
+  playNoise(0, 0.016, 0.20, 450, 3);
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
