@@ -2,24 +2,6 @@
 import buttonClickUrl    from "@assets/buttonclick_1777322204907.mp3";
 import bonusMusicUrl     from "@assets/onecinematicstudio-the-great-arena-_-epic-roman-gladiator-batt_1784861486450.mp3";
 
-// ── Bonus round background music (HTML Audio — native loop, no Web Audio needed)
-let bonusAudio: HTMLAudioElement | null = null;
-
-export function playBonusMusic() {
-  if (bonusAudio) { bonusAudio.pause(); bonusAudio = null; }
-  bonusAudio = new Audio(bonusMusicUrl);
-  bonusAudio.loop   = true;
-  bonusAudio.volume = 0.10;
-  bonusAudio.play().catch(() => {});
-}
-
-export function stopBonusMusic() {
-  if (!bonusAudio) return;
-  bonusAudio.pause();
-  bonusAudio.currentTime = 0;
-  bonusAudio = null;
-}
-
 let ac: AudioContext | null = null;
 
 // Decoded AudioBuffer — ready to play
@@ -27,11 +9,22 @@ let clickBuffer: AudioBuffer | null = null;
 // Raw bytes fetched eagerly at module load (no AudioContext required)
 let rawClickBytes: ArrayBuffer | null = null;
 
+// Bonus round background music (decoded + open AudioBufferSource so we can loop)
+let bonusBuffer: AudioBuffer | null = null;
+let rawBonusBytes: ArrayBuffer | null = null;
+let bonusSource: AudioBufferSourceNode | null = null;
+let bonusGain: GainNode | null = null;
+
 // Start fetching immediately when this module is imported
 fetch(buttonClickUrl)
   .then(r => r.arrayBuffer())
   .then(arr => { rawClickBytes = arr; })
   .catch(() => {});
+
+fetch(bonusMusicUrl)
+  .then(r => r.arrayBuffer())
+  .then(arr => { rawBonusBytes = arr; })
+  .catch(e => console.warn("[rome-sounds] bonus music fetch failed:", e));
 
 let masterVolume = parseFloat(localStorage.getItem("fortuna-sfx-volume") ?? "1");
 let masterMuted  = localStorage.getItem("fortuna-sfx-muted") === "true";
@@ -56,9 +49,63 @@ function getCtx(): AudioContext {
         .then(buf => { clickBuffer = buf; })
         .catch(() => {});
     }
+    if (rawBonusBytes && !bonusBuffer) {
+      ac.decodeAudioData(rawBonusBytes.slice(0))
+        .then(buf => { bonusBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] bonus decode failed:", e));
+    }
   }
   if (ac.state === "suspended") ac.resume().catch(() => {});
   return ac;
+}
+
+// ── Bonus round background music (Web Audio, loops natively) ─────────────────
+export function playBonusMusic() {
+  if (masterMuted || masterVolume === 0) return;
+  // Already playing — no-op so we don't restart from frame zero mid-round
+  if (bonusSource && bonusGain) {
+    if (bonusSource.context.state === "suspended") bonusSource.context.resume().catch(() => {});
+    console.log("[rome-sounds] bonus music already playing");
+    return;
+  }
+  const ctx = getCtx();
+  console.log("[rome-sounds] playBonusMusic ctx.state=", ctx.state, "muted=", masterMuted, "vol=", masterVolume);
+  const play = (buf: AudioBuffer) => {
+    try {
+      // Force resume on each play in case context was paused by the browser
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const src  = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop   = true;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.10;
+      src.connect(gain).connect(ctx.destination);
+      src.start(0);
+      bonusSource = src;
+      bonusGain   = gain;
+      console.log("[rome-sounds] bonus music started, dur=", buf.duration.toFixed(2), "s");
+    } catch (e) { console.warn("[rome-sounds] playBonusMusic error:", e); }
+  };
+  if (bonusBuffer) { play(bonusBuffer); return; }
+  if (rawBonusBytes) {
+    ctx.decodeAudioData(rawBonusBytes.slice(0))
+      .then(buf => { bonusBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] bonus decode-on-play failed:", e));
+  } else {
+    // Bytes not loaded yet — fetch + decode inline
+    fetch(bonusMusicUrl).then(r => r.arrayBuffer()).then(arr => {
+      rawBonusBytes = arr;
+      decodeAudioData(arr.slice(0)).then(buf => { bonusBuffer = buf; play(buf); }).catch(e => console.warn("[rome-sounds] bonus inline decode failed:", e));
+    }).catch(e => console.warn("[rome-sounds] bonus inline fetch failed:", e));
+  }
+}
+
+export function stopBonusMusic() {
+  if (!bonusSource) return;
+  try { bonusSource.stop(); } catch {}
+  try { bonusSource.disconnect(); bonusGain?.disconnect(); } catch {}
+  bonusSource = null;
+  bonusGain = null;
 }
 
 function playOsc(
