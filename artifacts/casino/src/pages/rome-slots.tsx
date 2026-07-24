@@ -496,8 +496,8 @@ export default function RomeSlots() {
               // End tease if this was the focused reel
               if (i === teaseReelIdx) { clearTeaseEffects(); teaseReelIdx = -1; }
 
-              // Play impact sound when a scatter lands
-              if (scatterInCol[i]) playScatterLand();
+              // Play impact sound when a scatter lands in columns 0-2 only
+              if (scatterInCol[i] && i < 3) playScatterLand();
 
               // Start new tease if this reel had a scatter and we now have ≥2 landed
               if (scatterInCol[i]) {
