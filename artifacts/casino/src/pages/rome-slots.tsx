@@ -217,6 +217,7 @@ export default function RomeSlots() {
   const [bonusWinTotal, setBonusWinTotal] = useState(0);
   const bonusWinRef = useRef(0);
   const [showBonusEnd, setShowBonusEnd] = useState(false);
+  const [showFreeSpinsEntry, setShowFreeSpinsEntry] = useState(false);
   // True once reels have settled
   const [reelsStopped, setReelsStopped] = useState(false);
   const animRef        = useRef<number | null>(null);
@@ -654,9 +655,9 @@ export default function RomeSlots() {
       spinningRef.current = false;
       setSpinning(false);
       setFreeSpinsLeft(total);
-      // Show a brief non-blocking toast, then dismiss — no await, no freeze.
-      setShowFreeSpinsBanner(true);
-      setTimeout(() => setShowFreeSpinsBanner(false), 2200);
+      // Show full-screen bonus entry panel — auto-dismisses after 3.5 s or on tap
+      setShowFreeSpinsEntry(true);
+      setTimeout(() => setShowFreeSpinsEntry(false), 3500);
       playBonusMusic();
       return true;
     }
@@ -1073,33 +1074,91 @@ export default function RomeSlots() {
         </div>
       )}
 
-      {/* ── Bonus triggered toast — brief, non-blocking ── */}
-      {showFreeSpinsBanner && (
-        <div style={{
-          position: "fixed", bottom: "12%", left: "50%", transform: "translateX(-50%)",
-          zIndex: 9999, pointerEvents: "none",
-          animation: "bonusToastIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
-        }}>
+      {/* ── Bonus entry panel — full-screen overlay when bonus triggers ── */}
+      {showFreeSpinsEntry && (
+        <div
+          onClick={() => setShowFreeSpinsEntry(false)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 10000, cursor: "pointer",
+            background: "radial-gradient(ellipse at 50% 48%, rgba(70,24,0,0.97) 0%, rgba(6,2,0,0.99) 72%)",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          {/* Rotating conic rays */}
           <div style={{
-            display: "flex", alignItems: "center", gap: 16,
-            background: "linear-gradient(135deg, rgba(20,8,0,0.98) 0%, rgba(50,18,0,0.98) 100%)",
-            border: "2px solid rgba(245,158,11,0.8)",
-            borderRadius: 16, padding: "14px 32px",
-            boxShadow: "0 0 40px rgba(245,158,11,0.35), 0 8px 32px rgba(0,0,0,0.9)",
-          }}>
-            <span style={{ fontSize: 28 }}>🏛️</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{
-                fontFamily: "Cinzel,serif", fontWeight: 900, fontSize: 11,
-                color: "rgba(252,211,77,0.65)", letterSpacing: "0.35em", textTransform: "uppercase",
-              }}>Bonus Round Triggered</span>
-              <span style={{
-                fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 26,
-                color: "#fcd34d", letterSpacing: "0.04em",
-                textShadow: "0 0 20px rgba(245,158,11,0.7)",
-              }}>{freeSpinsTotal} Free Spins!</span>
-            </div>
-          </div>
+            position: "absolute", inset: "-50%",
+            backgroundImage: [
+              "conic-gradient(from 0deg at 50% 50%,",
+              "transparent 0deg, rgba(255,180,0,0.07) 8deg, transparent 16deg,",
+              "transparent 30deg, rgba(255,160,0,0.05) 36deg, transparent 42deg,",
+              "transparent 60deg, rgba(255,180,0,0.07) 66deg, transparent 72deg,",
+              "transparent 90deg, rgba(255,160,0,0.05) 96deg, transparent 102deg,",
+              "transparent 120deg, rgba(255,180,0,0.07) 126deg, transparent 132deg,",
+              "transparent 150deg, rgba(255,160,0,0.05) 156deg, transparent 162deg,",
+              "transparent 180deg, rgba(255,180,0,0.07) 186deg, transparent 192deg,",
+              "transparent 210deg, rgba(255,160,0,0.05) 216deg, transparent 222deg,",
+              "transparent 240deg, rgba(255,180,0,0.07) 246deg, transparent 252deg,",
+              "transparent 270deg, rgba(255,160,0,0.05) 276deg, transparent 282deg,",
+              "transparent 300deg, rgba(255,180,0,0.07) 306deg, transparent 312deg,",
+              "transparent 330deg, rgba(255,160,0,0.05) 336deg, transparent 342deg)",
+            ].join(" "),
+            animation: "bonusRayRotate 12s linear infinite",
+            pointerEvents: "none",
+          }} />
+
+          {/* Expanding rings */}
+          {[0, 0.9, 1.8].map((delayS, i) => (
+            <div key={i} style={{
+              position: "absolute",
+              width: 320, height: 320, borderRadius: "50%",
+              border: `${i === 0 ? 2 : 1}px solid rgba(255,190,0,0.35)`,
+              animation: `bonusRingExpand 2.4s ease-out ${delayS}s infinite`,
+              pointerEvents: "none",
+            }} />
+          ))}
+
+          {/* BONUS ROUND title */}
+          <div style={{
+            fontFamily: "'Cinzel',serif", fontWeight: 900, fontSize: 52,
+            color: "#fcd34d", letterSpacing: "0.12em",
+            textShadow: "0 0 40px rgba(255,200,0,0.9), 0 0 80px rgba(255,140,0,0.4), 0 4px 10px rgba(0,0,0,0.9)",
+            animation: "bonusTitleCrash 0.65s cubic-bezier(0.34,1.56,0.64,1) both, bonusShimmer 2.2s ease-in-out 0.65s infinite",
+          }}>⚡ BONUS ROUND ⚡</div>
+
+          {/* Subtitle */}
+          <div style={{
+            fontFamily: "'Cinzel',serif", fontWeight: 400, fontSize: 15,
+            color: "rgba(252,211,77,0.55)", letterSpacing: "0.45em",
+            textTransform: "uppercase", marginTop: 10, marginBottom: 28,
+            animation: "bonusSubtitleSlide 0.45s ease-out 0.5s both",
+          }}>Free Spins Awarded</div>
+
+          {/* Count */}
+          <div style={{
+            fontFamily: "'Oswald',sans-serif", fontWeight: 900, fontSize: 130,
+            color: "#fff", lineHeight: 1,
+            textShadow: "0 0 60px rgba(255,180,0,1), 0 0 120px rgba(255,120,0,0.5), 0 4px 12px rgba(0,0,0,0.9)",
+            animation: "bonusCountPop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.85s both",
+          }}>{freeSpinsTotal}</div>
+
+          {/* "FREE SPINS" label */}
+          <div style={{
+            fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 24,
+            color: "rgba(252,211,77,0.85)", letterSpacing: "0.28em",
+            textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+            animation: "bonusSubtitleSlide 0.45s ease-out 1.1s both",
+            marginTop: 6,
+          }}>FREE SPINS</div>
+
+          {/* Tap hint */}
+          <div style={{
+            position: "absolute", bottom: "7%",
+            fontFamily: "'Cinzel',serif", fontSize: 12,
+            color: "rgba(255,210,80,0.35)", letterSpacing: "0.32em",
+            textTransform: "uppercase",
+            animation: "bonusSubtitleSlide 0.4s ease-out 1.6s both",
+          }}>Tap anywhere to continue</div>
         </div>
       )}
 
