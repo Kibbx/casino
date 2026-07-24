@@ -79,8 +79,12 @@ export const PAYLINES: number[][] = [
 
 type Grid = string[][];
 
-// DEV: set to true to force a 3-scatter result (random columns + rows) on the next spin (self-disables)
+// DEV: set to true to force a 3-scatter result (random columns + rows) on the next spin.
+// Set to false to turn the force off and resume normal random outcomes.
 let _forceScatter3 = true;
+
+// Flip on demand via DEV endpoint
+export function devForceScatter3(on = true) { _forceScatter3 = on; }
 
 function buildPool(): string[] {
   const pool: string[] = [];
@@ -188,10 +192,9 @@ router.post("/spin", requirePlayer, async (req, res) => {
   }
 
   const betPerLine = Math.floor(totalBet / PAYLINES.length);
-  // DEV: force a 3-scatter grid on the very next spin, then self-disable
+  // DEV: force a 3-scatter grid whenever the flag is on
   let grid: Grid;
   if (_forceScatter3) {
-    _forceScatter3 = false;
     console.log("[rome-slots] DEV: forced 3-scatter grid (cols 1,2,5)");
     // Force scatters in columns 1, 2, 5 (0-indexed: 0, 1, 4) — one scatter per column at a random row
     const scatterCols: number[] = [0, 1, 4];
