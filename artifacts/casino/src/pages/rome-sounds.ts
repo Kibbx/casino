@@ -26,29 +26,30 @@ fetch(bonusMusicUrl)
   .then(arr => { rawBonusBytes = arr; })
   .catch(e => console.warn("[rome-sounds] bonus music fetch failed:", e));
 
+// Bonus music sits at 10% of the master volume so it's ambient, not overpowering
+const BONUS_BASE_VOL = 0.10;
+
 let masterVolume = parseFloat(localStorage.getItem("fortuna-sfx-volume") ?? "1");
 let masterMuted  = localStorage.getItem("fortuna-sfx-muted") === "true";
+
+function bonusTargetGain() {
+  return masterMuted ? 0 : BONUS_BASE_VOL * masterVolume;
+}
 
 export function setRomeSfxVolume(v: number) {
   masterVolume = Math.max(0, Math.min(1, v));
   localStorage.setItem("fortuna-sfx-volume", String(masterVolume));
-  // Live-update the bonus music gain so the slider takes effect mid-round
-  if (bonusGain) bonusGain.gain.value = BONUS_BASE_VOL * masterVolume;
+  // Live-update bonus music gain — bonusGain stays alive while music plays
+  if (bonusGain) bonusGain.gain.setTargetAtTime(bonusTargetGain(), bonusGain.context.currentTime, 0.05);
 }
 export function setRomeSfxMuted(m: boolean) {
   masterMuted = m;
   localStorage.setItem("fortuna-sfx-muted", String(m));
-  // If music is already playing when user toggles mute, stop/restart cleanly
-  if (bonusSource) {
-    if (m) stopBonusMusic();
-    else playBonusMusic();
-  }
+  // Mute/unmute by ramping gain to 0 or back — never stop the source so bonusGain stays valid
+  if (bonusGain) bonusGain.gain.setTargetAtTime(bonusTargetGain(), bonusGain.context.currentTime, 0.05);
 }
 export function getRomeSfxVolume() { return masterVolume; }
 export function getRomeSfxMuted()  { return masterMuted; }
-
-// Bonus music base volume — applied on top of masterVolume
-const BONUS_BASE_VOL = 0.10;
 
 function getCtx(): AudioContext {
   if (!ac || ac.state === "closed") {
@@ -88,7 +89,7 @@ export function playBonusMusic() {
       src.buffer = buf;
       src.loop   = true;
       const gain = ctx.createGain();
-      gain.gain.value = BONUS_BASE_VOL * masterVolume;
+      gain.gain.value = bonusTargetGain();
       src.connect(gain).connect(ctx.destination);
       src.start(0);
       bonusSource = src;
