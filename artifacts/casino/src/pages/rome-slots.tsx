@@ -675,11 +675,12 @@ export default function RomeSlots() {
   // Bonus-end summary effect — fires once when freeSpinsLeft transitions >0 → 0
   useEffect(() => {
     if (freeSpinsLeft > 0) return;
+    // Stop music immediately (sync) — don't let it outlive a cancelled async
+    stopBonusMusic();
     let cancelled = false;
     (async () => {
       await delay(700);
       if (cancelled) return;
-      stopBonusMusic();
       setShowBonusEnd(true);
       await delay(3500);
       if (cancelled) return;
