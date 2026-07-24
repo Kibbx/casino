@@ -113,9 +113,10 @@ const REEL_PREFIXES = [16, 20, 24, 28, 32]; // symbols before the result per ree
 const SPIN_SPEED    = 38;                    // px per requestAnimationFrame tick (~60fps)
 
 // ── Scatter tease config ───────────────────────────────────────────────────────
-// Extra symbols inserted before the result for the reel AFTER a 2nd/3rd/4th scatter lands.
-// These are on top of the "pass reel-4" padding so the teased reel always stops last.
-const TEASE_EXTRA: Record<number, number> = { 2: 8, 3: 10, 4: 12 };
+// Extra symbols added per tease step. At SPIN_SPEED=38px/frame, 216px/row, 60fps:
+// 30 symbols ≈ 2.8 s. Each reel in the chain gets 30 × step more, so they
+// stop ~2.8 s apart and each one is clearly still spinning when the previous lands.
+const TEASE_STEP = 30;
 
 function buildInitialStrips(): string[][] {
   return REEL_PREFIXES.map(prefixCount => [
@@ -382,16 +383,22 @@ export default function RomeSlots() {
     }
     // Extra symbols added before result for teased reels (ensures they stop last)
     const teaseExtraSyms: number[] = Array(REELS).fill(0);
+    // Find the column where the tease chain begins (the reel after the 2nd scatter)
     let scsSoFar = 0;
+    let firstTeaseCol = -1;
     for (let col = 0; col < REELS; col++) {
       if (scatterInCol[col]) {
         scsSoFar++;
-        if (scsSoFar >= 2 && col < REELS - 1) {
-          const nextCol = col + 1;
-          // Enough to clear reel-4's natural stop depth, plus the tease cushion
-          const passLast = Math.max(0, REEL_PREFIXES[REELS - 1] - REEL_PREFIXES[nextCol]);
-          teaseExtraSyms[nextCol] = passLast + (TEASE_EXTRA[scsSoFar] ?? 8);
-        }
+        if (scsSoFar === 2 && firstTeaseCol < 0) firstTeaseCol = col + 1;
+      }
+    }
+    // Cascade: every reel from firstTeaseCol onwards gets progressively more symbols
+    // so each one is still visibly spinning when the previous tease reel stops.
+    if (firstTeaseCol >= 0 && firstTeaseCol < REELS) {
+      for (let col = firstTeaseCol; col < REELS; col++) {
+        const step = col - firstTeaseCol + 1; // 1, 2, 3 …
+        const passLast = Math.max(0, REEL_PREFIXES[REELS - 1] - REEL_PREFIXES[col]);
+        teaseExtraSyms[col] = passLast + TEASE_STEP * step;
       }
     }
 
