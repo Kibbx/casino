@@ -1,5 +1,24 @@
 // Rome Slots — Web Audio API sound engine
 import buttonClickUrl    from "@assets/buttonclick_1777322204907.mp3";
+import bonusMusicUrl     from "@assets/onecinematicstudio-the-great-arena-_-epic-roman-gladiator-batt_1784861486450.mp3";
+
+// ── Bonus round background music (HTML Audio — native loop, no Web Audio needed)
+let bonusAudio: HTMLAudioElement | null = null;
+
+export function playBonusMusic() {
+  if (bonusAudio) { bonusAudio.pause(); bonusAudio = null; }
+  bonusAudio = new Audio(bonusMusicUrl);
+  bonusAudio.loop   = true;
+  bonusAudio.volume = 0.10;
+  bonusAudio.play().catch(() => {});
+}
+
+export function stopBonusMusic() {
+  if (!bonusAudio) return;
+  bonusAudio.pause();
+  bonusAudio.currentTime = 0;
+  bonusAudio = null;
+}
 
 let ac: AudioContext | null = null;
 

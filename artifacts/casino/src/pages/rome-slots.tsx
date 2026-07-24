@@ -11,6 +11,8 @@ import {
   playSpinClick,
   playReelTick,
   playScatterLand,
+  playBonusMusic,
+  stopBonusMusic,
   playSmallWin,
   playHugeWin,
   playMegaWin,
@@ -594,6 +596,7 @@ export default function RomeSlots() {
       // Show a brief non-blocking toast, then dismiss — no await, no freeze.
       setShowFreeSpinsBanner(true);
       setTimeout(() => setShowFreeSpinsBanner(false), 2200);
+      playBonusMusic();
       return true;
     }
     if (isFree) {
@@ -676,6 +679,7 @@ export default function RomeSlots() {
     (async () => {
       await delay(700);
       if (cancelled) return;
+      stopBonusMusic();
       setShowBonusEnd(true);
       await delay(3500);
       if (cancelled) return;
