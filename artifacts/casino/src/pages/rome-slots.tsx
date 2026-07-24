@@ -112,6 +112,11 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 const REEL_PREFIXES = [16, 20, 24, 28, 32]; // symbols before the result per reel
 const SPIN_SPEED    = 38;                    // px per requestAnimationFrame tick (~60fps)
 
+// ── Scatter tease config ───────────────────────────────────────────────────────
+// Extra symbols inserted before the result for the reel AFTER a 2nd/3rd/4th scatter lands.
+// These are on top of the "pass reel-4" padding so the teased reel always stops last.
+const TEASE_EXTRA: Record<number, number> = { 2: 8, 3: 10, 4: 12 };
+
 function buildInitialStrips(): string[][] {
   return REEL_PREFIXES.map(prefixCount => [
     ...Array.from({ length: prefixCount }, () =>
@@ -213,7 +218,9 @@ export default function RomeSlots() {
   const [reelsStopped, setReelsStopped] = useState(false);
   const animRef        = useRef<number | null>(null);
   // Direct DOM refs for each reel's inner strip
-  const stripRefs      = useRef<(HTMLDivElement | null)[]>(Array(REELS).fill(null));
+  const stripRefs          = useRef<(HTMLDivElement | null)[]>(Array(REELS).fill(null));
+  // Outer reel container refs — used for dim/glow tease effects (no React re-render)
+  const reelContainerRefs  = useRef<(HTMLDivElement | null)[]>(Array(REELS).fill(null));
   // Canvas refs for symbol animation overlays (15 cells: col*ROWS+row)
   const animCanvasRefs = useRef<(HTMLCanvasElement | null)[]>(Array(REELS * ROWS).fill(null));
   // Refs to the result-row static <img> elements in each reel strip (same 15-cell indexing)
@@ -365,8 +372,31 @@ export default function RomeSlots() {
       return false;
     }
 
-    // ── 2. Build strips: prev result at index 0-2 (so y=0 matches old visual, no snap)
-    //       then random padding, then actual result at the tail ────────────────
+    // ── 2. Compute scatter positions + tease extensions ──────────────────────
+    // Scatter column detection — uses predetermined result, does NOT change odds
+    const scatterInCol: boolean[] = Array(REELS).fill(false);
+    for (let col = 0; col < REELS; col++) {
+      for (let row = 0; row < ROWS; row++) {
+        if (data.grid[row]?.[col] === "Scatter") { scatterInCol[col] = true; break; }
+      }
+    }
+    // Extra symbols added before result for teased reels (ensures they stop last)
+    const teaseExtraSyms: number[] = Array(REELS).fill(0);
+    let scsSoFar = 0;
+    for (let col = 0; col < REELS; col++) {
+      if (scatterInCol[col]) {
+        scsSoFar++;
+        if (scsSoFar >= 2 && col < REELS - 1) {
+          const nextCol = col + 1;
+          // Enough to clear reel-4's natural stop depth, plus the tease cushion
+          const passLast = Math.max(0, REEL_PREFIXES[REELS - 1] - REEL_PREFIXES[nextCol]);
+          teaseExtraSyms[nextCol] = passLast + (TEASE_EXTRA[scsSoFar] ?? 8);
+        }
+      }
+    }
+
+    // ── 3. Build strips: prev result at index 0-2 (so y=0 matches old visual, no snap)
+    //       then random padding, then tease padding (if any), then actual result ─
     const newStrips = REEL_PREFIXES.map((prefixCount, reelIdx) => {
       const prev = [0, 1, 2].map(r =>
         visibleSymsRef.current[reelIdx * ROWS + r] || "BronzeCoin"
@@ -374,6 +404,9 @@ export default function RomeSlots() {
       return [
         ...prev,
         ...Array.from({ length: prefixCount }, () =>
+          SYMBOL_IDS[Math.floor(Math.random() * SYMBOL_IDS.length)]
+        ),
+        ...Array.from({ length: teaseExtraSyms[reelIdx] }, () =>
           SYMBOL_IDS[Math.floor(Math.random() * SYMBOL_IDS.length)]
         ),
         data.grid[0][reelIdx],
@@ -410,11 +443,41 @@ export default function RomeSlots() {
     // Track row index per reel for tick detection
     const lastRowIdx = Array(REELS).fill(0);
 
+    // ── Tease visual helpers — direct DOM writes, no React re-render ──────────
+    const applyTeaseDim = (idx: number) => {
+      const el = reelContainerRefs.current[idx];
+      if (el) { el.style.transition = "filter 0.25s"; el.style.filter = "brightness(0.42)"; el.style.boxShadow = ""; }
+    };
+    const clearTeaseEffects = () => {
+      for (let j = 0; j < REELS; j++) {
+        const el = reelContainerRefs.current[j];
+        if (el) { el.style.transition = "filter 0.3s, box-shadow 0.3s"; el.style.filter = ""; el.style.boxShadow = ""; }
+      }
+    };
+
+    // Tease state (closure-local — no useState needed, driven purely from loop)
+    let teaseScatterCount = 0;
+    let teaseReelIdx      = -1;
+    let pulsePhase        = 0;
+
     await Promise.race([
       new Promise<void>(resolve => {
         animRef.current = setInterval(() => {
           let anyMoving = false;
           let tickedThisFrame = false; // at most ONE tick sound per 16ms frame
+
+          // ── Pulse glow on the focused teased reel ──────────────────────────
+          if (teaseReelIdx >= 0 && !stopped[teaseReelIdx]) {
+            pulsePhase = (pulsePhase + 1) % 40;
+            const bright  = 1.08 + 0.10 * Math.sin(pulsePhase * Math.PI / 20);
+            const spread  = 18  + 8    * Math.sin(pulsePhase * Math.PI / 20);
+            const glowEl  = reelContainerRefs.current[teaseReelIdx];
+            if (glowEl) {
+              glowEl.style.transition = "";
+              glowEl.style.filter     = `brightness(${bright.toFixed(3)})`;
+              glowEl.style.boxShadow  = `0 0 ${spread.toFixed(0)}px 6px rgba(255,195,50,0.72)`;
+            }
+          }
 
           for (let i = 0; i < REELS; i++) {
             if (stopped[i]) continue;
@@ -429,20 +492,35 @@ export default function RomeSlots() {
               yPos[i] = targets[i]; // clamp — zero overshoot
               stopped[i] = true;
               playReelStop();
-              if (el) {
-                el.style.transition = "none";
-                el.style.transform  = `translateY(${targets[i]}px)`;
+              if (el) { el.style.transition = "none"; el.style.transform = `translateY(${targets[i]}px)`; }
+
+              // End tease if this was the focused reel
+              if (i === teaseReelIdx) { clearTeaseEffects(); teaseReelIdx = -1; }
+
+              // Start new tease if this reel had a scatter and we now have ≥2 landed
+              if (scatterInCol[i]) {
+                teaseScatterCount++;
+                if (teaseScatterCount >= 2) {
+                  let nextReel = -1;
+                  for (let j = i + 1; j < REELS; j++) { if (!stopped[j]) { nextReel = j; break; } }
+                  if (nextReel >= 0) {
+                    teaseReelIdx = nextReel;
+                    pulsePhase   = 0;
+                    for (let j = 0; j < REELS; j++) { if (stopped[j]) applyTeaseDim(j); }
+                  }
+                }
               }
+
+              // Dim any reel that stops while a tease is already in progress
+              if (teaseReelIdx >= 0 && i !== teaseReelIdx) applyTeaseDim(i);
+
             } else {
               anyMoving = true;
               // Tick on row-boundary crossing, but max one tick per frame
               const rowNow = Math.floor(Math.abs(yPos[i]) / ROW_H);
               if (rowNow !== lastRowIdx[i]) {
                 lastRowIdx[i] = rowNow;
-                if (!tickedThisFrame) {
-                  tickedThisFrame = true;
-                  playReelTick();
-                }
+                if (!tickedThisFrame) { tickedThisFrame = true; playReelTick(); }
               }
               if (el) el.style.transform = `translateY(${yPos[i]}px)`;
             }
@@ -456,7 +534,8 @@ export default function RomeSlots() {
       }),
       new Promise<void>(r => setTimeout(r, 10000)),
     ]);
-    // Force-snap all reels to their targets (safety — no-op if already snapped)
+    // Force-snap all reels + clear any lingering tease effects (safety)
+    clearTeaseEffects();
     if (animRef.current) { clearInterval(animRef.current as any); animRef.current = null; }
     for (let i = 0; i < REELS; i++) {
       const el = stripRefs.current[i];
@@ -713,6 +792,7 @@ export default function RomeSlots() {
         {Array.from({ length: REELS }, (_, reelIdx) => (
           <div
             key={reelIdx}
+            ref={el => { reelContainerRefs.current[reelIdx] = el; }}
             style={{
               position: "absolute",
               left: REEL_COLS[reelIdx].left,
