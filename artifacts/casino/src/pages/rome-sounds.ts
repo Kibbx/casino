@@ -125,16 +125,16 @@ export function playReelTick() {
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
-// Firm clack + warm bronze chink — ~250 ms, Roman-themed
+// Heavy marble lock + bronze gong resonance — ~280 ms, Roman character
 export function playReelStop() {
-  // Mechanical clack: low-mid noise
-  playNoise(0,     0.070, 0.22, 175, 2.0);
-  // Body: low square sweep
-  playOsc(100, 0, 0.10, 0.11, "square", 60);
-  // Bronze chink: warm fundamental
-  playOsc(660, 0.032, 0.20, 0.10, "sine",     480);
-  // Chink shimmer: soft overtone
-  playOsc(1320, 0.04,  0.12, 0.04, "triangle", 960);
+  // Stone/marble thud: dense low-mid noise + deep sine descent
+  playNoise(0,     0.080, 0.26, 120, 1.4);
+  playOsc(85,  0,     0.13, 0.14, "sine", 45);
+  // Bronze gong resonance: fundamental + inharmonic partials
+  // (struck Roman bronze — shield, coin, helm — rings with these intervals)
+  playOsc(480, 0.025, 0.24, 0.13, "sine",     340);   // warm fundamental
+  playOsc(720, 0.030, 0.18, 0.07, "sine",     510);   // perfect-fifth partial
+  playOsc(1344,0.035, 0.14, 0.04, "triangle", 950);   // upper bronze partial
 }
 
 // ── Win sounds ───────────────────────────────────────────────────────────────
