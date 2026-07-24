@@ -218,6 +218,7 @@ export default function RomeSlots() {
   const [bonusWinTotal, setBonusWinTotal] = useState(0);
   const bonusWinRef = useRef(0);
   const [showBonusEnd, setShowBonusEnd] = useState(false);
+  const bonusEndResolveRef = useRef<(()=>void)|null>(null);
   const [showFreeSpinsEntry, setShowFreeSpinsEntry] = useState(false);
   const freeSpinsEntryRef  = useRef(false);  // ref mirror — readable inside spinOnce callback
   const bonusEverActiveRef = useRef(false);  // guard: prevents bonus-end firing on mount
@@ -758,13 +759,13 @@ export default function RomeSlots() {
       await delay(700);
       if (cancelled) return;
       setShowBonusEnd(true);
-      await delay(3500);
+      await new Promise<void>(r => { bonusEndResolveRef.current = r; });
       if (cancelled) return;
       setShowBonusEnd(false);
       bonusWinRef.current = 0;
       setBonusWinTotal(0);
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; };
   }, [freeSpinsLeft === 0 ? 1 : 0]); // fires once when counter hits 0
 
   const handleSpin = () => {
@@ -1179,30 +1180,50 @@ export default function RomeSlots() {
 
       {/* ── Bonus round end — compact toast, no screen takeover ── */}
       {showBonusEnd && (
-        <div style={{
-          position: "fixed", bottom: "12%", left: "50%", transform: "translateX(-50%)",
-          zIndex: 9999, pointerEvents: "none",
-          animation: "bonusToastIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both",
-        }}>
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999, pointerEvents: "all",
+            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.88)",
+          }}
+          onClick={() => { bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
+        >
           <div style={{
-            display: "flex", alignItems: "center", gap: 20,
-            background: "linear-gradient(135deg, rgba(20,8,0,0.98) 0%, rgba(50,18,0,0.98) 100%)",
-            border: "2px solid rgba(245,158,11,0.8)",
-            borderRadius: 16, padding: "16px 36px",
-            boxShadow: "0 0 50px rgba(245,158,11,0.4), 0 8px 32px rgba(0,0,0,0.9)",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
+            animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
           }}>
-            <span style={{ fontSize: 32 }}>🏆</span>
-            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-              <span style={{
-                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 10,
-                color: "rgba(252,211,77,0.6)", letterSpacing: "0.35em", textTransform: "uppercase",
-              }}>Bonus Round Complete</span>
-              <span style={{
-                fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 36,
-                color: "#fcd34d", letterSpacing: "0.02em",
-                textShadow: "0 0 24px rgba(245,158,11,0.8)",
-              }}>+{bonusWinTotal.toLocaleString()} Coins</span>
-            </div>
+            <span style={{ fontSize: 52 }}>🏆</span>
+            <div style={{
+              fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 16,
+              color: "rgba(252,211,77,0.65)", letterSpacing: "0.45em", textTransform: "uppercase",
+            }}>Bonus Round Complete</div>
+            <div style={{
+              fontFamily: "Cinzel,serif", fontWeight: 900, fontSize: 48,
+              color: "#fcd34d", letterSpacing: "0.06em",
+              animation: "bonusShimmer 1.4s ease-in-out infinite",
+            }}>TOTAL WON</div>
+            <div style={{
+              fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 96,
+              color: "#fff", lineHeight: 1,
+              textShadow: "0 0 60px rgba(245,158,11,0.8), 0 4px 12px rgba(0,0,0,0.9)",
+            }}>+{bonusWinTotal.toLocaleString()}</div>
+            <div style={{
+              fontFamily: "Cinzel,serif", fontSize: 18,
+              color: "rgba(252,211,77,0.45)", letterSpacing: "0.2em",
+            }}>COINS</div>
+            <button
+              onClick={e => { e.stopPropagation(); bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
+              style={{
+                marginTop: 14,
+                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 20,
+                letterSpacing: "0.22em", textTransform: "uppercase",
+                color: "#1a0800",
+                background: "linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)",
+                border: "none", borderRadius: 8, padding: "14px 52px", cursor: "pointer",
+                boxShadow: "0 0 32px rgba(245,158,11,0.55), 0 4px 12px rgba(0,0,0,0.7)",
+              }}>
+              Collect
+            </button>
           </div>
         </div>
       )}

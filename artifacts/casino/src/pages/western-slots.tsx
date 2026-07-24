@@ -463,6 +463,7 @@ export default function WesternSlots() {
   const [bonusWinTotal,setBonusWinTotal] = useState(0);
   const bonusWinRef = useRef(0);
   const [showBonusEnd,setShowBonusEnd] = useState(false);
+  const bonusEndResolveRef = useRef<(()=>void)|null>(null);
   const lastWinRef = useRef(0);
   const [showInfo,setShowInfo]   = useState(false);
   const [errMsg,setErrMsg]       = useState<string|null>(null);
@@ -750,13 +751,13 @@ export default function WesternSlots() {
       setShowFreeSpinsBanner(false);
     }
 
-    // Bonus round complete — show end summary
+    // Bonus round complete — show end summary (dismissed by player tap)
     if (isFree && (data.freeSpinsRemaining ?? 0) === 0) {
       spinningRef.current = false;
       setSpinning(false);
       await new Promise(r => setTimeout(r, 700));
       setShowBonusEnd(true);
-      await new Promise(r => setTimeout(r, 3500));
+      await new Promise<void>(r => { bonusEndResolveRef.current = r; });
       setShowBonusEnd(false);
       bonusWinRef.current = 0;
       setBonusWinTotal(0);
@@ -1206,9 +1207,12 @@ export default function WesternSlots() {
 
         {/* ── Bonus round end screen ── */}
         {showBonusEnd&&(
-          <div style={{position:"fixed",inset:0,zIndex:9997,pointerEvents:"none",
-            display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-            background:"rgba(0,0,0,0.85)"}}>
+          <div
+            style={{position:"fixed",inset:0,zIndex:9997,pointerEvents:"all",
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+              background:"rgba(0,0,0,0.88)"}}
+            onClick={()=>{ bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
+          >
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,
               animation:"bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both"}}>
               <div style={{fontFamily:"Oswald,sans-serif",fontWeight:400,fontSize:18,
@@ -1229,6 +1233,18 @@ export default function WesternSlots() {
                 color:"rgba(255,210,100,0.45)",letterSpacing:"0.18em"}}>
                 BET COINS
               </div>
+              <button
+                onClick={e=>{ e.stopPropagation(); bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
+                style={{
+                  marginTop:12,
+                  fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:22,
+                  letterSpacing:"0.22em",textTransform:"uppercase",
+                  color:"#1a0a00",background:"linear-gradient(135deg,#FFD060 0%,#FFA020 100%)",
+                  border:"none",borderRadius:8,padding:"14px 52px",cursor:"pointer",
+                  boxShadow:"0 0 32px rgba(255,180,40,0.55),0 4px 12px rgba(0,0,0,0.7)",
+                }}>
+                Collect
+              </button>
             </div>
           </div>
         )}
