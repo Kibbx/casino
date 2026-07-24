@@ -192,12 +192,8 @@ router.post("/spin", requirePlayer, async (req, res) => {
   let grid: Grid;
   if (_forceScatter3) {
     _forceScatter3 = false;
-    // Pick 3 unique random columns (0–4), then 3 random rows — the rest is BronzeCoin
-    const cols: number[] = [];
-    while (cols.length < 3) {
-      const c = Math.floor(Math.random() * 5);
-      if (!cols.includes(c)) cols.push(c);
-    }
+    // Force scatters in columns 1, 2, 5 (0-indexed: 0, 1, 4)
+    const cols: number[] = [0, 1, 4];
     const fgs = ["Scatter", "Wild", "Gladiator", "Sword", "Helmet"];
     const filler = (col: number, row: number) => cols.includes(col) ? "Scatter" : (fgs[Math.floor(Math.random() * fgs.length)]);
     grid = [

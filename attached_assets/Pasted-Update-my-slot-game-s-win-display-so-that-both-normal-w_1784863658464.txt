@@ -1,0 +1,38 @@
+Update my slot game’s win display so that both normal wins and big wins use a smooth count-up animation instead of immediately showing the final static win amount.
+
+First, inspect the existing codebase and identify:
+
+* Where the final win amount is calculated.
+* Where the win amount is currently rendered.
+* How normal wins and big wins are detected.
+* Whether the game already uses a currency or number-formatting function.
+
+Requirements:
+
+1. When a winning spin finishes, animate the displayed win amount from 0 to the final win amount.
+2. The displayed value must update smoothly using `requestAnimationFrame`, not a basic interval.
+3. Use an ease-out animation so the count moves quickly at first and slows near the final amount.
+4. Use different durations:
+
+   * Normal win: approximately 1–1.5 seconds.
+   * Big win: approximately 2.5–4 seconds.
+   * Larger wins may use a slightly longer duration, but cap the animation so it does not become excessively long.
+5. Preserve the game’s existing number and currency formatting, including commas, decimal places, currency symbols, or credit labels.
+6. The animation must always finish on the exact final win amount without floating-point errors.
+7. Reset the displayed win amount appropriately when a new spin starts.
+8. Cancel any active count-up animation before starting another one so animations cannot overlap or update stale results.
+9. Do not change the slot game’s payout calculations, balance logic, reel behavior, win detection, or probability system. This change should only affect the visual presentation of the win amount.
+10. Keep any existing big-win effects, sounds, overlays, or celebrations working. Replace only the static win-number behavior with the animated count-up.
+11. Make the implementation reusable, such as a function named `animateWinCount(startValue, endValue, duration)`.
+12. Respect `prefers-reduced-motion`. When reduced motion is enabled, show the final amount immediately instead of animating it.
+13. Prevent memory leaks and ensure animation frames are cleaned up when the component unmounts or the display is removed.
+14. Match the project’s current framework, component structure, coding style, and state-management approach. Do not add unnecessary dependencies.
+
+After implementing the change:
+
+* Test a normal win.
+* Test a big win.
+* Test a zero-win spin.
+* Test consecutive wins triggered quickly.
+* Confirm the balance is credited only once and independently from the visual animation.
+* Briefly explain which files were changed and how the animation works.

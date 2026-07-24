@@ -220,6 +220,47 @@ export default function RomeSlots() {
   // True once reels have settled
   const [reelsStopped, setReelsStopped] = useState(false);
   const animRef        = useRef<number | null>(null);
+
+  // ── Animated win counter ─────────────────────────────────────────────────
+  const [displayedWin, setDisplayedWin] = useState(0);
+  const winRafRef = useRef<number | null>(null);
+
+  /**
+   * animateWinCount — counts displayed win from 0 → endValue using ease-out
+   * cubic RAF animation. Safe to call mid-animation; cancels any prior frame.
+   * Respects prefers-reduced-motion (shows final value immediately).
+   */
+  const animateWinCount = useCallback((endValue: number, tier: WinTier) => {
+    // Cancel any active animation first
+    if (winRafRef.current !== null) {
+      cancelAnimationFrame(winRafRef.current);
+      winRafRef.current = null;
+    }
+    if (endValue === 0) { setDisplayedWin(0); return; }
+    // Instant display when user prefers reduced motion
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayedWin(endValue);
+      return;
+    }
+    // Duration: small ≈1–1.5 s, huge ≈2.5 s, mega ≈3.5 s; scaled slightly by size
+    const base     = tier === "mega" ? 3200 : tier === "huge" ? 2400 : 1000;
+    const sizeBump = Math.log10(Math.max(endValue, 10)) * 50;
+    const cap      = tier === "mega" ? 3800 : tier === "huge" ? 3000 : 1500;
+    const duration = Math.min(base + sizeBump, cap);
+    const startTime = performance.now();
+    function tick(now: number) {
+      const t      = Math.min((now - startTime) / duration, 1);
+      const eased  = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setDisplayedWin(Math.round(eased * endValue));
+      if (t < 1) {
+        winRafRef.current = requestAnimationFrame(tick);
+      } else {
+        setDisplayedWin(endValue); // guarantee exact final value — no float drift
+        winRafRef.current = null;
+      }
+    }
+    winRafRef.current = requestAnimationFrame(tick);
+  }, []);
   // Direct DOM refs for each reel's inner strip
   const stripRefs          = useRef<(HTMLDivElement | null)[]>(Array(REELS).fill(null));
   // Outer reel container refs — used for dim/glow tease effects (no React re-render)
@@ -351,6 +392,9 @@ export default function RomeSlots() {
     spinningRef.current = true;
     setSpinning(true);
     setLastWin(0);
+    // Cancel any in-progress count-up and snap display to 0 immediately
+    if (winRafRef.current !== null) { cancelAnimationFrame(winRafRef.current); winRafRef.current = null; }
+    setDisplayedWin(0);
     setWinPopup(null);
     setErrMsg(null);
     setReelsStopped(false);
@@ -614,6 +658,8 @@ export default function RomeSlots() {
     }
 
     const tier = winTier(data.totalWin, currentBet);
+    // Start count-up animation — runs independently of popup/balance logic
+    animateWinCount(data.totalWin, tier ?? "small");
     if (tier) {
       setWinLineBreakdown(Array.isArray(data.lineWins) ? data.lineWins : []);
       setWinIsFree(isFree);
@@ -946,7 +992,7 @@ export default function RomeSlots() {
 
         {/* Win */}
         <PanelDisplay img={RS+"screen/PanelWin.webp"} w={246} h={88} x={1512} y={PANEL_Y+29}
-          label="Win" value={lastWin > 0 ? lastWin.toLocaleString() : "—"} highlight={lastWin > 0} />
+          label="Win" value={lastWin > 0 ? displayedWin.toLocaleString() : "—"} highlight={lastWin > 0} />
 
         {/* ── Error toast ── */}
         {errMsg && (
@@ -1102,7 +1148,7 @@ export default function RomeSlots() {
                   textShadow: "0 0 18px rgba(255,180,0,0.9), 0 2px 6px rgba(0,0,0,0.9)",
                   letterSpacing: "0.04em",
                 }}>
-                  +{lastWin.toLocaleString()}
+                  +{displayedWin.toLocaleString()}
                 </span>
                 {winLineBreakdown.length > 0 && (
                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,marginTop:2}}>
@@ -1158,7 +1204,7 @@ export default function RomeSlots() {
                   textShadow: "0 0 30px rgba(255,180,0,0.9), 0 0 60px rgba(255,120,0,0.5), 0 3px 8px rgba(0,0,0,0.9)",
                   letterSpacing: "0.04em", lineHeight: 1,
                 }}>
-                  +{lastWin.toLocaleString()}
+                  +{displayedWin.toLocaleString()}
                 </span>
                 <span style={{
                   fontFamily: "'Cinzel',serif", fontWeight: 600,
