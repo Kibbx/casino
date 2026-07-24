@@ -32,13 +32,23 @@ let masterMuted  = localStorage.getItem("fortuna-sfx-muted") === "true";
 export function setRomeSfxVolume(v: number) {
   masterVolume = Math.max(0, Math.min(1, v));
   localStorage.setItem("fortuna-sfx-volume", String(masterVolume));
+  // Live-update the bonus music gain so the slider takes effect mid-round
+  if (bonusGain) bonusGain.gain.value = BONUS_BASE_VOL * masterVolume;
 }
 export function setRomeSfxMuted(m: boolean) {
   masterMuted = m;
   localStorage.setItem("fortuna-sfx-muted", String(m));
+  // If music is already playing when user toggles mute, stop/restart cleanly
+  if (bonusSource) {
+    if (m) stopBonusMusic();
+    else playBonusMusic();
+  }
 }
 export function getRomeSfxVolume() { return masterVolume; }
 export function getRomeSfxMuted()  { return masterMuted; }
+
+// Bonus music base volume — applied on top of masterVolume
+const BONUS_BASE_VOL = 0.10;
 
 function getCtx(): AudioContext {
   if (!ac || ac.state === "closed") {
@@ -78,7 +88,7 @@ export function playBonusMusic() {
       src.buffer = buf;
       src.loop   = true;
       const gain = ctx.createGain();
-      gain.gain.value = 0.10;
+      gain.gain.value = BONUS_BASE_VOL * masterVolume;
       src.connect(gain).connect(ctx.destination);
       src.start(0);
       bonusSource = src;
