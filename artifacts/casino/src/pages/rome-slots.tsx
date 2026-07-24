@@ -218,6 +218,7 @@ export default function RomeSlots() {
   const bonusWinRef = useRef(0);
   const [showBonusEnd, setShowBonusEnd] = useState(false);
   const [showFreeSpinsEntry, setShowFreeSpinsEntry] = useState(false);
+  const bonusEverActiveRef = useRef(false); // guard: prevents bonus-end firing on mount
   // True once reels have settled
   const [reelsStopped, setReelsStopped] = useState(false);
   const animRef        = useRef<number | null>(null);
@@ -656,6 +657,7 @@ export default function RomeSlots() {
       setSpinning(false);
       setFreeSpinsLeft(total);
       // Show full-screen bonus entry panel — dismisses only on tap/click
+      bonusEverActiveRef.current = true;
       setShowFreeSpinsEntry(true);
       playBonusMusic();
       return true;
@@ -738,6 +740,7 @@ export default function RomeSlots() {
   // Bonus-end summary effect — fires once when freeSpinsLeft transitions >0 → 0
   useEffect(() => {
     if (freeSpinsLeft > 0) return;
+    if (!bonusEverActiveRef.current) return; // skip on initial mount (freeSpinsLeft starts at 0)
     // Stop music immediately (sync) — don't let it outlive a cancelled async
     stopBonusMusic();
     let cancelled = false;
