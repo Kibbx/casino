@@ -219,6 +219,9 @@ export default function RomeSlots() {
   const bonusWinRef = useRef(0);
   const [showBonusEnd, setShowBonusEnd] = useState(false);
   const bonusEndResolveRef = useRef<(()=>void)|null>(null);
+  // Animated value displayed in the bonus-end summary (count-up from 0 → bonusWinTotal)
+  const [bonusEndDisplayed, setBonusEndDisplayed] = useState(0);
+  const bonusEndRafRef = useRef<number | null>(null);
   const [showFreeSpinsEntry, setShowFreeSpinsEntry] = useState(false);
   const freeSpinsEntryRef  = useRef(false);  // ref mirror — readable inside spinOnce callback
   const bonusEverActiveRef = useRef(false);  // guard: prevents bonus-end firing on mount
@@ -267,6 +270,38 @@ export default function RomeSlots() {
       }
     }
     winRafRef.current = requestAnimationFrame(tick);
+  }, []);
+
+  /**
+   * animateBonusEndCount — counts displayed bonus total from 0 → endValue using
+   * ease-out cubic RAF. Safe to call mid-animation; respects prefers-reduced-motion.
+   * Used by the bonus-end "TOTAL WON" screen.
+   */
+  const animateBonusEndCount = useCallback((endValue: number) => {
+    if (bonusEndRafRef.current !== null) {
+      cancelAnimationFrame(bonusEndRafRef.current);
+      bonusEndRafRef.current = null;
+    }
+    if (endValue <= 0) { setBonusEndDisplayed(0); return; }
+    if (typeof window !== "undefined"
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setBonusEndDisplayed(endValue);
+      return;
+    }
+    const duration = 2400; // 2.4 s, matches the celebratory feel of the end screen
+    const startTime = performance.now();
+    const tick = (now: number) => {
+      const t     = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      setBonusEndDisplayed(Math.round(eased * endValue));
+      if (t < 1) {
+        bonusEndRafRef.current = requestAnimationFrame(tick);
+      } else {
+        setBonusEndDisplayed(endValue); // exact final value — no float drift
+        bonusEndRafRef.current = null;
+      }
+    };
+    bonusEndRafRef.current = requestAnimationFrame(tick);
   }, []);
   // Direct DOM refs for each reel's inner strip
   const stripRefs          = useRef<(HTMLDivElement | null)[]>(Array(REELS).fill(null));
@@ -758,14 +793,29 @@ export default function RomeSlots() {
     (async () => {
       await delay(700);
       if (cancelled) return;
+      setBonusEndDisplayed(0);
+      animateBonusEndCount(bonusWinRef.current);
       setShowBonusEnd(true);
       await new Promise<void>(r => { bonusEndResolveRef.current = r; });
       if (cancelled) return;
       setShowBonusEnd(false);
       bonusWinRef.current = 0;
       setBonusWinTotal(0);
+      setBonusEndDisplayed(0);
+      if (bonusEndRafRef.current !== null) {
+        cancelAnimationFrame(bonusEndRafRef.current);
+        bonusEndRafRef.current = null;
+      }
     })();
-    return () => { cancelled = true; bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; };
+    return () => {
+      cancelled = true;
+      bonusEndResolveRef.current?.();
+      bonusEndResolveRef.current = null;
+      if (bonusEndRafRef.current !== null) {
+        cancelAnimationFrame(bonusEndRafRef.current);
+        bonusEndRafRef.current = null;
+      }
+    };
   }, [freeSpinsLeft === 0 ? 1 : 0]); // fires once when counter hits 0
 
   const handleSpin = () => {
@@ -1206,7 +1256,7 @@ export default function RomeSlots() {
               fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 96,
               color: "#fff", lineHeight: 1,
               textShadow: "0 0 60px rgba(245,158,11,0.8), 0 4px 12px rgba(0,0,0,0.9)",
-            }}>+{bonusWinTotal.toLocaleString()}</div>
+            }}>+{bonusEndDisplayed.toLocaleString()}</div>
             <div style={{
               fontFamily: "Cinzel,serif", fontSize: 18,
               color: "rgba(252,211,77,0.45)", letterSpacing: "0.2em",

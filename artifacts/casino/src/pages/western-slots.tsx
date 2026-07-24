@@ -464,6 +464,10 @@ export default function WesternSlots() {
   const bonusWinRef = useRef(0);
   const [showBonusEnd,setShowBonusEnd] = useState(false);
   const bonusEndResolveRef = useRef<(()=>void)|null>(null);
+  // Animated value for bonus-end "TOTAL WON" — uses setInterval (not RAF) since
+  // FiveM CEF throttles requestAnimationFrame. See top-of-file note.
+  const [bonusEndDisplayed,setBonusEndDisplayed] = useState(0);
+  const bonusEndTimerRef = useRef<ReturnType<typeof setInterval>|null>(null);
   const lastWinRef = useRef(0);
   const [showInfo,setShowInfo]   = useState(false);
   const [errMsg,setErrMsg]       = useState<string|null>(null);
@@ -756,11 +760,41 @@ export default function WesternSlots() {
       spinningRef.current = false;
       setSpinning(false);
       await new Promise(r => setTimeout(r, 700));
+      // Count-up animation (setInterval — RAF is throttled in FiveM CEF)
+      const endValue = bonusWinRef.current;
+      if (bonusEndTimerRef.current !== null) { clearInterval(bonusEndTimerRef.current); bonusEndTimerRef.current = null; }
+      setBonusEndDisplayed(0);
+      if (endValue <= 0) {
+        // nothing to animate
+      } else if (typeof window !== "undefined"
+                 && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        setBonusEndDisplayed(endValue);
+      } else {
+        const duration = 2400;
+        const startTime = Date.now();
+        bonusEndTimerRef.current = setInterval(() => {
+          const t     = Math.min((Date.now() - startTime) / duration, 1);
+          const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+          setBonusEndDisplayed(Math.round(eased * endValue));
+          if (t >= 1) {
+            setBonusEndDisplayed(endValue); // exact final value
+            if (bonusEndTimerRef.current !== null) {
+              clearInterval(bonusEndTimerRef.current);
+              bonusEndTimerRef.current = null;
+            }
+          }
+        }, 16);
+      }
       setShowBonusEnd(true);
       await new Promise<void>(r => { bonusEndResolveRef.current = r; });
       setShowBonusEnd(false);
       bonusWinRef.current = 0;
       setBonusWinTotal(0);
+      setBonusEndDisplayed(0);
+      if (bonusEndTimerRef.current !== null) {
+        clearInterval(bonusEndTimerRef.current);
+        bonusEndTimerRef.current = null;
+      }
       return;
     }
 
@@ -1197,7 +1231,7 @@ export default function WesternSlots() {
                     color:"rgba(255,200,100,0.55)",letterSpacing:"0.15em"}}>WON</span>
                   <span style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:22,
                     color:"#FFD060",textShadow:"0 0 12px rgba(255,200,0,0.5)"}}>
-                    +{bonusWinTotal.toLocaleString()}
+                    +{bonusEndDisplayed.toLocaleString()}
                   </span>
                 </div>
               </>
@@ -1227,7 +1261,7 @@ export default function WesternSlots() {
               <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:96,
                 color:"#fff",lineHeight:1,
                 textShadow:"0 0 60px rgba(255,200,60,0.7),0 4px 12px rgba(0,0,0,0.9)"}}>
-                +{bonusWinTotal.toLocaleString()}
+                +{bonusEndDisplayed.toLocaleString()}
               </div>
               <div style={{fontFamily:"Oswald,sans-serif",fontSize:20,
                 color:"rgba(255,210,100,0.45)",letterSpacing:"0.18em"}}>
