@@ -57,6 +57,65 @@ export function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInp
   );
 }
 
+interface NumberInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "value" | "onChange"> {
+  /** Raw digit string (no commas, no decimals) — what onChange receives. */
+  value: string;
+  /** Called with the sanitized digit string. */
+  onChange: (digits: string) => void;
+  /** Optional upper bound — typing above this snaps the value down to maxValue. */
+  maxValue?: number;
+  /** Locale for the thousands separator. Defaults to "en-US" (1,234,567). */
+  locale?: string;
+}
+
+/**
+ * Text input that displays integer values with thousands separators (e.g. 200000 → "200,000")
+ * while keeping the underlying value as clean digits for downstream parseInt callers.
+ * Strips non-digit input; clamps to maxValue when provided.
+ */
+export function NumberInput({
+  value,
+  onChange,
+  maxValue,
+  className,
+  locale = "en-US",
+  ...props
+}: NumberInputProps) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Strip anything that isn't a digit (no commas, no negatives, no decimals).
+    const digits = e.target.value.replace(/[^\d]/g, "");
+    if (digits === "") {
+      onChange("");
+      return;
+    }
+    if (maxValue !== undefined) {
+      const n = parseInt(digits, 10);
+      if (n > maxValue) {
+        onChange(String(maxValue));
+        return;
+      }
+    }
+    onChange(digits);
+  };
+
+  // Display formatted with thousands separators (raw digits kept in state).
+  const display = value ? parseInt(value, 10).toLocaleString(locale) : "";
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      value={display}
+      onChange={handleChange}
+      className={cn(
+        "w-full px-4 py-3 bg-black/50 border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all font-sans",
+        className
+      )}
+      {...props}
+    />
+  );
+}
+
 export function Label({ className, children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label className={cn("block text-xs font-display font-semibold tracking-widest uppercase text-primary/80 mb-1.5", className)} {...props}>

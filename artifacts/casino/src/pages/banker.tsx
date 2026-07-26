@@ -26,7 +26,7 @@ import { VisualRegionEditor, type Region as VRERegion } from "../components/Visu
 import { useLobbySocket } from "../lib/useLobbySocket";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
-import { Button, Input } from "../components/ui-elements";
+import { Button, Input, NumberInput } from "../components/ui-elements";
 import {
   useListPlayers,
   useDeletePlayer,
@@ -750,13 +750,12 @@ function PlayersTab({ isOwner = false, canEdit = true, currentRole = "banker" }:
                     </p>
                   )}
                   <div className="flex flex-wrap gap-2">
-                    <Input
-                      type="number"
+                    <NumberInput
                       min={1}
-                      max={currentRole === "cage_clerk" ? 100000 : currentRole === "junior_banker" ? 250000 : undefined}
+                      maxValue={currentRole === "cage_clerk" ? 100000 : currentRole === "junior_banker" ? 250000 : undefined}
                       placeholder={currentRole === "cage_clerk" ? "Amount (max 100,000)" : currentRole === "junior_banker" ? "Amount (max 250,000)" : "Amount"}
                       value={adjustAmount}
-                      onChange={(e) => setAdjustAmount(e.target.value)}
+                      onChange={setAdjustAmount}
                       className="w-44"
                     />
                     <Input
