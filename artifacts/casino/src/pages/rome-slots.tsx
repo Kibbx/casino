@@ -39,6 +39,14 @@ const CH = 1080; // canvas height
 // Machine frame image (1720×946), centered on BKG (1920×1080)
 const M = { x: 100, y: 0, w: 1720, h: 946 };
 
+// ── Layout source of truth — shared with slots-western ───────────────────────────
+const REEL_COL  = [423, 638, 853, 1068, 1283]; // left-X of each column window
+const REEL_TOP  = 238;                          // top-Y of reel window (all 3 rows)
+const CELL_W    = 215;
+const CELL_H    = 215;
+const N_REELS   = 5;
+const N_ROWS    = 3;
+
 // Reel window: pixel-scanned separator peaks at y=500
 // Column separators at machine-x: 223, 484, 734, 984, 1234, 1484
 // Row area: y=217 (inner top border) to y=866 (bottom border), height=649
@@ -49,7 +57,8 @@ const REEL_COLS = [
   { left: M.x + 984, w: 250 }, // 1234-984
   { left: M.x + 1234, w: 250 },// 1484-1234
 ];
-const REEL_TOP = M.y + 217;   // inner top of reel window
+//   inner top of reel window (cover-frame anchored; Western's REEL_TOP above is raw px)
+const MACHINE_REEL_TOP = M.y + 217;
 const ROW_H    = 216;          // (866-217)/3 = 216
 const ROWS  = 3;
 const REELS = 5;
@@ -966,7 +975,7 @@ export default function RomeSlots() {
             style={{
               position: "absolute",
               left: REEL_COLS[reelIdx].left,
-              top: REEL_TOP,
+              top: MACHINE_REEL_TOP,
               width: REEL_COLS[reelIdx].w,
               height: ROW_H * ROWS,
               overflow: "hidden",
@@ -1020,7 +1029,7 @@ export default function RomeSlots() {
                 style={{
                   position: "absolute",
                   left: REEL_COLS[col].left,
-                  top: REEL_TOP + row * ROW_H,
+                  top: MACHINE_REEL_TOP + row * ROW_H,
                   width: REEL_COLS[col].w,
                   height: ROW_H,
                   display: "flex",
