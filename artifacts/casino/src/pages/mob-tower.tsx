@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { ChevronLeft, Volume2, VolumeX } from "lucide-react";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { soundSafe, soundBust, soundCashout, setMasterVolume, preloadSounds } from "../sounds";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
@@ -134,6 +135,9 @@ export default function MobTower() {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error);
       awardXP(betAmount);
+      // Challenge tracking — bet placed
+      fireChallengeEvent("bet_wagered", { amount: betAmount });
+      fireChallengeEvent("single_bet_placed", { amount: betAmount });
       setCurrentFloor(0);
       setMultiplier(1.0);
       setFloorResults(Array.from({ length: FLOORS }, () => null));
@@ -173,12 +177,16 @@ export default function MobTower() {
         soundBust();
         setAllBustTiles(d.allBustTiles);
         setPhase("lost");
+        fireChallengeEvent("mini_game_round_played");
+        fireChallengeEvent("bet_lost");
       } else if (d.complete) {
         setAllBustTiles(d.allBustTiles);
         setPayout(d.payout);
         setMultiplier(d.multiplier);
         setCurrentFloor(d.newFloor);
         setPhase("won");
+        fireChallengeEvent("mini_game_round_played");
+        fireChallengeEvent("bet_won");
       } else {
         soundSafe();
         setCurrentFloor(d.newFloor);
@@ -208,6 +216,8 @@ export default function MobTower() {
       setPayout(d.payout);
       setMultiplier(d.multiplier);
       setPhase("won");
+      fireChallengeEvent("mini_game_round_played");
+      fireChallengeEvent("bet_won");
     } catch (e: any) {
       setError(e.message || "Cashout failed");
     } finally {

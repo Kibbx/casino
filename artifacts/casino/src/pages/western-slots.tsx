@@ -3,10 +3,13 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { usePageTracker } from "../lib/usePageTracker";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
+import { BellagioChipsAnimation } from "./BellagioChipsAnimation";
+import { WesternPaylineOverlay, type PaylineWin } from "./western-payline-overlay";
 
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
-import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
+import buttonClickUrl  from "@assets/buttonclick_1777322204907.mp3";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 const WS   = import.meta.env.BASE_URL + "western-slots/";
@@ -33,9 +36,9 @@ const N_ROWS    = 3;
 // ── Reel animation (mirrors rome-slots exactly) ────────────────────────────────
 // setInterval (not RAF) because FiveM CEF throttles requestAnimationFrame.
 // Each reel has a longer prefix so they stop LEFT → RIGHT naturally.
-const REEL_PREFIXES = [16, 20, 24, 28, 32]; // random-symbols before the result
-const SPIN_SPEED    = 38;                    // px per 16ms tick
-const DECEL_ZONE    = CELL_H * 3.5;         // decelerate over last ~3.5 rows
+const REEL_PREFIXES = [12, 15, 18, 21, 24]; // random-symbols before the result
+const SPIN_SPEED    = 75;                    // px per 16ms tick
+const DECEL_ZONE    = CELL_H * 2.75;        // decelerate over last ~2.75 rows
 
 // ── Symbols ────────────────────────────────────────────────────────────────────
 type SymId = "Bag"|"Spades"|"Hearts"|"Crosses"|"Diamonds"|"Flask"|"Hat"|"Gun"|"Wild"|"Scatter";
@@ -166,12 +169,19 @@ function useWesternSounds() {
   const clickBufRef = useRef<AudioBuffer|null>(null);
   // Raw MP3 bytes fetched eagerly on mount — no AudioContext required
   const rawBytesRef = useRef<ArrayBuffer|null>(null);
+  // Decoded buffer for win_end_bet_over.webm — played on every non-zero win
+  const winBufRef   = useRef<AudioBuffer|null>(null);
+  const winBytesRef = useRef<ArrayBuffer|null>(null);
 
-  // Pre-fetch the click MP3 as soon as the component mounts
+  // Pre-fetch click + win audio as soon as the component mounts
   useEffect(() => {
     fetch(buttonClickUrl)
       .then(r => r.arrayBuffer())
       .then(arr => { rawBytesRef.current = arr; })
+      .catch(() => {});
+    fetch(WS + "win_end_bet_over.webm")
+      .then(r => r.arrayBuffer())
+      .then(arr => { winBytesRef.current = arr; })
       .catch(() => {});
   }, []);
 
@@ -183,6 +193,11 @@ function useWesternSounds() {
       if (rawBytesRef.current && !clickBufRef.current) {
         acRef.current.decodeAudioData(rawBytesRef.current.slice(0))
           .then(buf => { clickBufRef.current = buf; })
+          .catch(() => {});
+      }
+      if (winBytesRef.current && !winBufRef.current) {
+        acRef.current.decodeAudioData(winBytesRef.current.slice(0))
+          .then(buf => { winBufRef.current = buf; })
           .catch(() => {});
       }
     }
@@ -269,40 +284,98 @@ function useWesternSounds() {
     // If neither ready: silent click (no synth fallback — avoids double-sound)
   }
 
-  // Reel stop: firm clack + warm bronze chink — ~250 ms
+  // Reel stop: synthesized to match reel_stop_1.webm
+  //   212 ms · 12 ms pre-onset · 18 ms attack · core 70-130 Hz · sub 88→42 Hz · 67 Hz ring · 480 Hz click
   function playReelStop(_reelIndex: number) {
+    if (mutedRef.current || volRef.current === 0) return;
     const ctx = ac();
     const now = ctx.currentTime;
-    // Mechanical clack: low-mid noise
-    noiseBurst(ctx, now,         0.070, 32, 0.45, 175);
-    // Body: low square sweep
-    tone(ctx, now,         100,  0.10, 0.22, "square",    60);
-    // Bronze chink: warm fundamental
-    tone(ctx, now + 0.032, 660,  0.20, 0.20, "sine",     480);
-    // Chink shimmer: soft overtone
-    tone(ctx, now + 0.040, 1320, 0.12, 0.08, "triangle", 960);
-  }
+    const vol = volRef.current;
 
-  // Win: coin tinks (more for bigger wins)
-  function playWin(amount: number, bet: number) {
-    if (amount <= 0) return;
-    const ctx = ac();
-    const now = ctx.currentTime;
-    const mult = bet > 0 ? amount / bet : 1;
-    const isBig = mult >= 8;
-    const count = isBig ? 7 : Math.min(4, Math.ceil(mult));
-
-    for (let i = 0; i < count; i++) {
-      const t = now + i * (isBig ? 0.07 : 0.11);
-      const baseFreq = 900 + Math.random() * 500;
-      tone(ctx, t, baseFreq, 0.22, 0.28, "sine", baseFreq * 0.72);
+    // Layer A — primary impact: bandpass noise 70-130 Hz, 18 ms attack, multi-stage decay
+    {
+      const n = Math.ceil(ctx.sampleRate * 0.190);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = "bandpass"; filt.frequency.value = 95; filt.Q.value = 1.0;
+      const gain = ctx.createGain();
+      const t0 = now + 0.012;
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.90 * vol, t0 + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.28 * vol, t0 + 0.033);
+      gain.gain.exponentialRampToValueAtTime(0.06 * vol, t0 + 0.100);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.155);
+      src.connect(filt); filt.connect(gain); gain.connect(mg());
+      src.start(t0); src.stop(t0 + 0.190);
     }
 
-    if (isBig) {
-      // Western fanfare: G-C-E-G-C ascending
-      [392, 523.3, 659.3, 784, 1046.5].forEach((f, i) => {
-        tone(ctx, now + 0.55 + i * 0.11, f, 0.28, 0.22, "triangle");
-      });
+    // Layer B — sub-bass pitch drop: sine sweep 88 → 42 Hz
+    {
+      const osc = ctx.createOscillator(); osc.type = "sine";
+      const t0 = now + 0.015;
+      osc.frequency.setValueAtTime(88, t0);
+      osc.frequency.exponentialRampToValueAtTime(42, t0 + 0.100);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.55 * vol, t0 + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.120);
+      osc.connect(gain); gain.connect(mg());
+      osc.start(t0); osc.stop(t0 + 0.125);
+    }
+
+    // Layer C — resonance ring: 67 Hz damped sine (bumpy body at 45-115 ms)
+    {
+      const osc = ctx.createOscillator(); osc.type = "sine";
+      osc.frequency.value = 67;
+      const t0 = now + 0.040;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.38 * vol, t0 + 0.020);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.100);
+      osc.connect(gain); gain.connect(mg());
+      osc.start(t0); osc.stop(t0 + 0.110);
+    }
+
+    // Layer D — definition click: bandpass noise ~480 Hz, 35 ms
+    {
+      const n = Math.ceil(ctx.sampleRate * 0.040);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = "bandpass"; filt.frequency.value = 480; filt.Q.value = 3.0;
+      const gain = ctx.createGain();
+      const t0 = now + 0.018;
+      gain.gain.setValueAtTime(0.28 * vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
+      src.connect(filt); filt.connect(gain); gain.connect(mg());
+      src.start(t0); src.stop(t0 + 0.042);
+    }
+  }
+
+  // Win: play uploaded win_end_bet_over.webm (decoded through AudioContext
+  // so it shares the same mute/volume as the synthesized reel-stop sfx)
+  function playWin(_amount: number, _bet: number) {
+    if (mutedRef.current || volRef.current === 0) return;
+    const ctx = ac();
+    const doPlay = (buf: AudioBuffer) => {
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const gp = ctx.createGain();
+      gp.gain.value = 0.85 * volRef.current;
+      src.connect(gp).connect(mg());
+      src.start(ctx.currentTime);
+    };
+    if (winBufRef.current) {
+      doPlay(winBufRef.current);
+    } else if (winBytesRef.current) {
+      ctx.decodeAudioData(winBytesRef.current.slice(0))
+        .then(buf => { winBufRef.current = buf; doPlay(buf); })
+        .catch(() => {});
     }
   }
 
@@ -360,12 +433,12 @@ function HoverBtn({normal,hover,x,y,w,h,onClick,disabled=false,active=false,labe
 }
 
 // ── Stat panel ────────────────────────────────────────────────────────────────
-function Panel({img,x,y,w,h,label,value}:{
-  img:string;x:number;y:number;w:number;h:number;label:string;value:string|number;
+function Panel({img,x,y,w,h,label,value,zIndex=10}:{
+  img:string;x:number;y:number;w:number;h:number;label:string;value:string|number;zIndex?:number;
 }){
   return (
     <div style={{position:"absolute",left:x,top:y-h/2,width:w,height:h,
-      userSelect:"none",zIndex:10}}>
+      userSelect:"none",zIndex}}>
       {/* Label sits above the box */}
       <div style={{
         position:"absolute",bottom:"100%",left:0,width:"100%",
@@ -472,6 +545,7 @@ export default function WesternSlots() {
   const [showInfo,setShowInfo]   = useState(false);
   const [errMsg,setErrMsg]       = useState<string|null>(null);
   const [winPopup,setWinPopup]   = useState<{amount:number;bet:number;isJackpot:boolean;lineWins:any[];isFree:boolean;grid:SymId[][]}|null>(null);
+  const [overlayWins, setOverlayWins] = useState<PaylineWin[]>([]);
   const autoRef = useRef(autoSpin);
   useEffect(()=>{ autoRef.current=autoSpin; },[autoSpin]);
   // betRef / freeLeftRef avoid stale closures in spinOnce without adding those values to deps
@@ -492,6 +566,10 @@ export default function WesternSlots() {
   );
 
   const stripRefs      = useRef<(HTMLDivElement|null)[]>(Array(N_REELS).fill(null));
+  const containerRefs  = useRef<(HTMLDivElement|null)[]>(Array(N_REELS).fill(null));
+  // Lift-filler: cloned bottom symbol rendered below each reel window. Hidden
+  // by Reels Bottom.webp (z:3) at rest; rises into the lifted-cut gap on lift.
+  const fillerRefs     = useRef<(HTMLDivElement|null)[]>(Array(N_REELS).fill(null));
   const animRef        = useRef<ReturnType<typeof setInterval>|null>(null);
   // Canvas overlays for winning cell animations (15 cells: col*N_ROWS+row)
   const animCanvasRefs = useRef<(HTMLCanvasElement|null)[]>(Array(N_REELS*N_ROWS).fill(null));
@@ -575,13 +653,23 @@ export default function WesternSlots() {
     symAnimRef.current = setInterval(()=>{ drawFrame(frame); frame=(frame+1)%ANIM_FRAMES; }, MS);
   },[]);
 
-  // Trigger / stop symbol animations whenever spin completes
+  // Stop symbol animations when there are no wins; wins are animated
+  // per-payline via the onLineActive callback passed to WesternPaylineOverlay.
   useEffect(()=>{
-    if(!spinning){
-      if(winCells.size>0) startSymbolAnims(winCells);
-      else stopSymbolAnims();
-    }
+    if(!spinning && winCells.size===0) stopSymbolAnims();
   },[spinning, winCells]);
+
+  // Per-payline symbol animation — called by WesternPaylineOverlay each time
+  // the active payline changes. Stops any current canvas anims, then starts
+  // fresh ones only for the cells that belong to the newly active payline.
+  const onLineActive = useCallback(
+    (positions: Array<{ reel: number; row: number; symbol: string }>) => {
+      stopSymbolAnims();
+      const indices = new Set(positions.map(p => p.reel * N_ROWS + p.row));
+      if (indices.size > 0) startSymbolAnims(indices);
+    },
+    [stopSymbolAnims, startSymbolAnims],
+  );
 
   // ── Spin ───────────────────────────────────────────────────────────────────
   const spinOnce = useCallback(async()=>{
@@ -591,6 +679,7 @@ export default function WesternSlots() {
     setLastWin(0);
     setWinCells(new Set());
     setWinPopup(null);
+    setOverlayWins([]);
     stopSymbolAnims();
     soundsRef.current.playSpinStart();
 
@@ -614,6 +703,14 @@ export default function WesternSlots() {
         awardXP(betRef.current);
         if (data.freeSpinsAwarded > 0) awardedFreeSpins = data.freeSpinsAwarded;
       }
+      // Challenge tracking — fires after confirmed server transaction
+      fireChallengeEvent("any_game_round_played");
+      if (!isFree) {
+        fireChallengeEvent("bet_wagered", { amount: betRef.current });
+        fireChallengeEvent("single_bet_placed", { amount: betRef.current });
+      }
+      if ((data.totalWin ?? 0) > 0) fireChallengeEvent("bet_won");
+      else fireChallengeEvent("bet_lost");
     } catch(e: any) {
       spinningRef.current = false;
       setSpinning(false);
@@ -624,33 +721,69 @@ export default function WesternSlots() {
     // cols[col][row] — column-major grid returned by server
     const result: SymId[][] = data.cols as SymId[][];
 
-    // Build strips: [prev visible 3 rows, random padding, new result 3 rows]
-    // y=0 shows the prev visible (seamless, no snap)
+    // Build strips top-to-bottom as [result_3, random_padding, prev_3].
+    // Animation translates the strip DOWNWARD through the viewport, so symbols
+    // enter from the top and exit at the bottom. Initial translateY is
+    // -(length-3)*CELL_H (prev at viewport top) → target 0 (result at top).
     const newStrips = REEL_PREFIXES.map((pfx,col)=>{
       const prev = [0,1,2].map(r=>
         visibleSymsRef.current[col*N_ROWS+r] as SymId || "Bag"
       );
       return [
-        ...prev,
-        ...Array.from({length:pfx},randSym),
         result[col][0], result[col][1], result[col][2],
+        ...Array.from({length:pfx},randSym),
+        ...prev,
       ] as SymId[];
     });
     setStrips(newStrips);
 
-    // Reset all strips to y=0 (no CSS transition — direct DOM)
-    for(const el of stripRefs.current){
-      if(el){ el.style.transition="none"; el.style.transform="translateY(0)"; }
+    // Reset each strip to start with prev visible at viewport top:
+    // translateY = -(strip.length - N_ROWS) * CELL_H (no CSS transition)
+    for(let i=0;i<N_REELS;i++){
+      const el = stripRefs.current[i];
+      if(el){
+        el.style.transition="none";
+        el.style.transform=`translateY(${-(newStrips[i].length-N_ROWS)*CELL_H}px)`;
+      }
     }
 
     // Wait 2 frames so React renders new strips + browser paints
     await delay(32);
 
-    // Targets: slide to show the result rows at the tail of each strip
-    // target = -(strip.length - N_ROWS) * CELL_H
-    const targets = newStrips.map(strip=>-(strip.length-N_ROWS)*CELL_H);
-    const yPos    = Array(N_REELS).fill(0);
+    // Targets: slide DOWNWARD to 0 — strip's result rows (at head) align
+    // with viewport top once translateY reaches 0.
+    const targets = newStrips.map(()=>0);
+    const yPos    = newStrips.map(strip=>-(strip.length-N_ROWS)*CELL_H);
     const stopped = Array(N_REELS).fill(false);
+
+    // ── Sequential lift-before-spin: each reel lifts 8 px upward over 80 ms,
+    //    returns to 0 over 80 ms, then enters the spin loop. ──────────────────
+    const reelStarted = Array(N_REELS).fill(false);
+    const LIFT_PX = 40, LIFT_MS = 130, STAGGER_MS = 120;
+    for(let i=0;i<N_REELS;i++){
+      ((col)=>{
+        setTimeout(()=>{
+          const cEl = containerRefs.current[col];
+          const fEl = fillerRefs.current[col];
+          if(!cEl){ reelStarted[col]=true; return; }
+          const liftEls = [cEl, fEl].filter(Boolean) as HTMLElement[];
+          liftEls.forEach(el=>{
+            el.style.transition = `transform ${LIFT_MS}ms ease-out`;
+            el.style.transform  = `translateY(-${LIFT_PX}px)`;
+          });
+          setTimeout(()=>{
+            liftEls.forEach(el=>{
+              el.style.transition = `transform ${LIFT_MS}ms ease-in`;
+              el.style.transform  = "translateY(0)";
+            });
+            setTimeout(()=>{
+              liftEls.forEach(el=>{ el.style.transition = "none"; });
+              reelStarted[col] = true;
+            }, LIFT_MS);
+          }, LIFT_MS);
+        }, col * STAGGER_MS);
+      })(i);
+    }
 
     if(animRef.current) clearInterval(animRef.current);
 
@@ -660,13 +793,14 @@ export default function WesternSlots() {
           let anyMoving = false;
           for(let i=0;i<N_REELS;i++){
             if(stopped[i]) continue;
-            const remaining = yPos[i]-targets[i]; // positive, shrinking
+            if(!reelStarted[i]){ anyMoving=true; continue; } // still lifting
+            const remaining = targets[i]-yPos[i]; // positive, shrinking (translateY climbing toward 0)
             const speed = remaining>DECEL_ZONE
               ? SPIN_SPEED
               : Math.max(1.5, SPIN_SPEED*(remaining/DECEL_ZONE));
-            yPos[i] -= speed;
+            yPos[i] += speed;
             const el = stripRefs.current[i];
-            if(yPos[i]<=targets[i] || remaining<CELL_H*0.12){
+            if(yPos[i]>=targets[i] || remaining<CELL_H*0.12){
               yPos[i]=targets[i];
               stopped[i]=true;
               soundsRef.current.playReelStop(i);
@@ -701,6 +835,7 @@ export default function WesternSlots() {
 
     // One source of truth: backend lineWins for both display and cell highlighting.
     const lws: any[] = Array.isArray(data.lineWins) ? data.lineWins : [];
+    setOverlayWins(lws);
     const totalWin = data.totalWin ?? 0;
     lastWinRef.current = totalWin;
     setLastWin(totalWin);
@@ -759,6 +894,8 @@ export default function WesternSlots() {
     if (isFree && (data.freeSpinsRemaining ?? 0) === 0) {
       spinningRef.current = false;
       setSpinning(false);
+      // Cancel auto-spin — player must re-enable it after the bonus round
+      setAutoSpin(false); autoRef.current = false;
       await new Promise(r => setTimeout(r, 700));
       // Count-up animation (setInterval — RAF is throttled in FiveM CEF)
       const endValue = bonusWinRef.current;
@@ -770,11 +907,11 @@ export default function WesternSlots() {
                  && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         setBonusEndDisplayed(endValue);
       } else {
-        const duration = 2400;
+        const duration = 5500; // 5.5 s — slow, dramatic reveal
         const startTime = Date.now();
         bonusEndTimerRef.current = setInterval(() => {
           const t     = Math.min((Date.now() - startTime) / duration, 1);
-          const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+          const eased = 1 - Math.pow(1 - t, 5); // ease-out quintic — crawls to final value
           setBonusEndDisplayed(Math.round(eased * endValue));
           if (t >= 1) {
             setBonusEndDisplayed(endValue); // exact final value
@@ -883,7 +1020,7 @@ export default function WesternSlots() {
 
           {/* z:2 — Reel strip windows — one per column ─────────────────────── */}
           {Array.from({length:N_REELS},(_,col)=>(
-            <div key={col} style={{
+            <div key={col} ref={el=>{ containerRefs.current[col]=el; }} style={{
               position:"absolute",
               left:REEL_COL[col],
               top:REEL_TOP,
@@ -902,10 +1039,13 @@ export default function WesternSlots() {
                   const resultRow   = idx - resultStart;
                   const cellIdx     = col * N_ROWS + resultRow;
                   return (
-                    <div key={idx} style={{
-                      width:CELL_W,height:CELL_H,flexShrink:0,
-                      display:"flex",alignItems:"center",justifyContent:"center",
-                    }}>
+                    <div
+                      key={idx}
+                      data-cell={isResult ? cellIdx : undefined}
+                      style={{
+                        width:CELL_W,height:CELL_H,flexShrink:0,
+                        display:"flex",alignItems:"center",justifyContent:"center",
+                      }}>
                       <img
                         ref={isResult ? el=>{ cellImgRefs.current[cellIdx]=el; } : undefined}
                         src={WS+"symbols/"+sym+".webp"} draggable={false}
@@ -918,7 +1058,29 @@ export default function WesternSlots() {
             </div>
           ))}
 
-          {/* z:8 — Canvas animation overlays (always in DOM, visibility toggled by JS) */}
+          {/* Lift-filler: clone of each reel's bottom symbol, rendered directly
+              beneath the reel window. Sits behind Reels Bottom.webp (z:3) at
+              rest; rises into the 40 px gap exposed when the container lifts. */}
+          {Array.from({length:N_REELS},(_,col)=>(
+            strips[col]?.[N_ROWS-1] && (
+              <div key={`fill-${col}`} ref={el=>{ fillerRefs.current[col]=el; }} style={{
+                position:"absolute",
+                left:REEL_COL[col],
+                top:REEL_TOP+CELL_H*N_ROWS,
+                width:CELL_W,height:CELL_H,
+                display:"flex",alignItems:"center",justifyContent:"center",
+                pointerEvents:"none",overflow:"hidden",zIndex:2,
+              }}>
+                <img src={WS+"symbols/"+strips[col][N_ROWS-1]+".webp"} draggable={false}
+                  style={{width:"100%",height:"100%",objectFit:"contain",
+                    userSelect:"none"}}/>
+              </div>
+            )
+          ))}
+
+          {/* z:21 — Canvas animation overlays — above the payline SVG (z20) so
+                    winning-symbol sprites render in front of the glow line.
+                    Visibility is toggled per-payline via the onLineActive callback. */}
           {Array.from({length:N_REELS},(_,col)=>
             Array.from({length:N_ROWS},(_,row)=>{
               const idx = col*N_ROWS+row;
@@ -930,7 +1092,7 @@ export default function WesternSlots() {
                   width:CELL_W,height:CELL_H,
                   display:"flex",alignItems:"center",justifyContent:"center",
                   pointerEvents:"none",
-                  zIndex:8,
+                  zIndex:21,
                 }}>
                   <canvas
                     ref={el=>{ animCanvasRefs.current[idx]=el; }}
@@ -943,6 +1105,11 @@ export default function WesternSlots() {
             })
           )}
 
+
+          {/* Dim overlay removed — handled inside WesternPaylineOverlay SVG */}
+
+          {/* ── Payline glow overlay — pointer-events:none, z-index:20 ── */}
+          <WesternPaylineOverlay wins={overlayWins} onLineActive={onLineActive} />
 
           {/* z:3 — Reels Up top beam */}
           <img src={WS+"screen/Reels Up.webp"} draggable={false}
@@ -1058,7 +1225,7 @@ export default function WesternSlots() {
             x={1214} y={BAR_Y} w={204} h={55} label="Balance" value={chips}/>
 
           <Panel img={WS+"screen/Win Button.webp"}
-            x={1438} y={BAR_Y} w={164} h={55} label="Win" value={lastWin||"—"}/>
+            x={1438} y={BAR_Y} w={164} h={55} label="Win" value={lastWin||"—"} zIndex={25}/>
 
 
         </div>{/* end canvas */}
@@ -1068,60 +1235,10 @@ export default function WesternSlots() {
           const PP = WS + "popups/";
           const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
 
-          // Small win: compact banner at bottom, no image
+          // Small win: completely suppressed — no compact banner shown.
+          // (Paylines on the reel canvas already convey the win.)
           if (!winPopup.isJackpot && mult < 5) {
-            return (
-              <div style={{
-                position:"fixed",inset:0,zIndex:9998,pointerEvents:"none",
-                display:"flex",alignItems:"flex-end",justifyContent:"center",
-                paddingBottom:"7%",
-              }}>
-                <div style={{
-                  display:"flex",flexDirection:"column",alignItems:"center",gap:2,
-                  background:"linear-gradient(180deg,rgba(40,15,0,0.97) 0%,rgba(15,5,0,0.97) 100%)",
-                  border:"2px solid #8B4500",borderRadius:6,padding:"10px 40px 12px",
-                  boxShadow:"0 0 24px rgba(200,100,0,0.5),0 4px 20px rgba(0,0,0,0.8)",
-                }}>
-                  <span style={{fontFamily:"Oswald,sans-serif",fontWeight:400,fontSize:11,
-                    color:"rgba(255,200,100,0.8)",letterSpacing:"0.28em",textTransform:"uppercase"}}>
-                    {winPopup.isFree ? "Bonus Win" : "You Win"}
-                  </span>
-                  <span style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:38,
-                    color:"#ffd700",lineHeight:1,
-                    textShadow:"0 0 18px rgba(255,180,0,0.9),0 2px 6px rgba(0,0,0,0.9)",
-                    letterSpacing:"0.04em"}}>
-                    +{winPopup.amount.toLocaleString()}
-                  </span>
-                  {winPopup.lineWins.length > 0 && (
-                    <div style={{marginTop:6,display:"flex",flexDirection:"column",alignItems:"flex-start",gap:3,
-                      background:"rgba(0,0,0,0.35)",borderRadius:4,padding:"6px 12px"}}>
-                      {winPopup.lineWins.map((lw:any,i:number)=>{
-                        const ROW_LABEL=["Top","Mid","Bot"];
-                        const pl=PAYLINES[lw.lineIndex];
-                        const cells=Array.from({length:lw.count},(_,c)=>{
-                          const row=pl[c];
-                          const sym=winPopup.grid[c]?.[row]??"?";
-                          return `R${c+1}:${ROW_LABEL[row]}=${sym}`;
-                        });
-                        return (
-                          <div key={i} style={{fontFamily:"Oswald,sans-serif",fontSize:10,
-                            color:"rgba(255,210,100,0.85)",letterSpacing:"0.05em",lineHeight:1.5}}>
-                            <span style={{color:"rgba(255,230,130,0.6)"}}>Line {lw.lineIndex+1} </span>
-                            {cells.join("  ")}
-                            <span style={{color:"rgba(255,200,80,0.5)"}}> → </span>
-                            <span style={{color:"#ffd700"}}>+{lw.win.toLocaleString()}{winPopup.isFree?" ×2":""}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <span style={{fontFamily:"Oswald,sans-serif",fontWeight:500,fontSize:10,
-                    color:"rgba(200,160,60,0.75)",letterSpacing:"0.22em",textTransform:"uppercase",marginTop:2}}>
-                    BET Coins
-                  </span>
-                </div>
-              </div>
-            );
+            return null;
           }
 
           // Big / jackpot wins: full overlay with asset image + popupScale
@@ -1241,46 +1358,65 @@ export default function WesternSlots() {
 
         {/* ── Bonus round end screen ── */}
         {showBonusEnd&&(
-          <div
-            style={{position:"fixed",inset:0,zIndex:9997,pointerEvents:"all",
-              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-              background:"rgba(0,0,0,0.88)"}}
-            onClick={()=>{ bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
-          >
-            <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16,
-              animation:"bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both"}}>
-              <div style={{fontFamily:"Oswald,sans-serif",fontWeight:400,fontSize:18,
-                color:"rgba(255,210,120,0.65)",letterSpacing:"0.5em",textTransform:"uppercase"}}>
-                BONUS ROUND COMPLETE
-              </div>
-              <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:52,
-                color:"#FFD060",letterSpacing:"0.08em",
-                animation:"bonusShimmer 1.4s ease-in-out infinite"}}>
-                TOTAL WON
-              </div>
-              <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:96,
-                color:"#fff",lineHeight:1,
-                textShadow:"0 0 60px rgba(255,200,60,0.7),0 4px 12px rgba(0,0,0,0.9)"}}>
-                +{bonusEndDisplayed.toLocaleString()}
-              </div>
-              <div style={{fontFamily:"Oswald,sans-serif",fontSize:20,
-                color:"rgba(255,210,100,0.45)",letterSpacing:"0.18em"}}>
-                BET COINS
-              </div>
-              <button
-                onClick={e=>{ e.stopPropagation(); bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
-                style={{
-                  marginTop:12,
-                  fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:22,
-                  letterSpacing:"0.22em",textTransform:"uppercase",
-                  color:"#1a0a00",background:"linear-gradient(135deg,#FFD060 0%,#FFA020 100%)",
-                  border:"none",borderRadius:8,padding:"14px 52px",cursor:"pointer",
-                  boxShadow:"0 0 32px rgba(255,180,40,0.55),0 4px 12px rgba(0,0,0,0.7)",
+          <>
+            {/* Layer 1 — dark backdrop; click anywhere to dismiss */}
+            <div
+              style={{position:"fixed",inset:0,zIndex:9996,pointerEvents:"all",
+                background:"rgba(0,0,0,0.88)"}}
+              onClick={()=>{ bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
+            />
+
+            {/* Layer 2 — Bellagio chip fountain (pointer-events:none) */}
+            <BellagioChipsAnimation active={showBonusEnd} total={bonusWinTotal} />
+
+            {/* Layer 3 — card content; entire layer is clickable to dismiss */}
+            <div
+              style={{position:"fixed",inset:0,zIndex:9999,
+                pointerEvents:"all",
+                display:"flex",flexDirection:"column",
+                alignItems:"center",justifyContent:"center",
+                cursor:"pointer"}}
+              onClick={()=>{ bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
+            >
+              <div style={{
+                display:"flex",flexDirection:"column",alignItems:"center",gap:16,
+                animation:"bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
+                background:"rgba(0,0,0,0.55)",
+                borderRadius:20,
+                padding:"36px 56px 32px",
+                boxShadow:"0 0 80px rgba(255,180,40,0.15)",
+              }}>
+                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:400,fontSize:18,
+                  color:"rgba(255,210,120,0.65)",letterSpacing:"0.5em",textTransform:"uppercase"}}>
+                  BONUS ROUND COMPLETE
+                </div>
+                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:52,
+                  color:"#FFD060",letterSpacing:"0.08em",
+                  animation:"bonusShimmer 1.4s ease-in-out infinite"}}>
+                  TOTAL WON
+                </div>
+                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:96,
+                  color:"#fff",lineHeight:1,
+                  textShadow:"0 0 60px rgba(255,200,60,0.7),0 4px 12px rgba(0,0,0,0.9)"}}>
+                  +{bonusEndDisplayed.toLocaleString()}
+                </div>
+                <div style={{fontFamily:"Oswald,sans-serif",fontSize:20,
+                  color:"rgba(255,210,100,0.45)",letterSpacing:"0.18em"}}>
+                  BET COINS
+                </div>
+                <div style={{
+                  marginTop:18,
+                  fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:15,
+                  letterSpacing:"0.30em",textTransform:"uppercase",
+                  color:"#FFD060",
+                  animation:"bonusClickPulse 1.8s ease-in-out infinite",
+                  userSelect:"none",
                 }}>
-                Collect
-              </button>
+                  Click Anywhere to Continue
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {/* ── Sound settings panel — western Settings Pop Up image ── */}

@@ -32,3 +32,4 @@ export * from "./highlow";
 export * from "./mob-tower";
 export * from "./sport-bet-slips";
 export * from "./challenge-claims";
+export * from "./challenge-state";

@@ -5,6 +5,8 @@ import {
   getChallengeStates,
   markClaimed,
   CHALLENGES_EVENT,
+  setChallengeServerToken,
+  pullChallengeStateFromServer,
   type ChallengeDefinition,
   type ChallengeState,
 } from "../lib/challengeService";
@@ -252,6 +254,14 @@ export function ChallengesPage() {
     window.addEventListener(CHALLENGES_EVENT, refresh);
     return () => window.removeEventListener(CHALLENGES_EVENT, refresh);
   }, [refresh]);
+
+  // Sync with server on mount and whenever the session token changes
+  useEffect(() => {
+    setChallengeServerToken(sessionToken ?? null);
+    if (sessionToken) {
+      pullChallengeStateFromServer().then(refresh);
+    }
+  }, [sessionToken, refresh]);
 
   function pushToast(ok: boolean, title: string, sub: string) {
     const id = ++toastId.current;

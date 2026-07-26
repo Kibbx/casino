@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import {
   Tv2, TrendingUp, Clock, ChevronRight, ChevronLeft, X, Trash2,
   ReceiptText, Lock, AlertTriangle, Search,
@@ -1654,6 +1655,9 @@ export function SportsbookPage() {
       }
 
       setPlaced(true);
+      fireChallengeEvent("any_game_round_played");
+      fireChallengeEvent("bet_wagered", { amount: w });
+      fireChallengeEvent("single_bet_placed", { amount: w });
       if (isSingle) {
         // Remove only this pick; keep the rest of the slip intact
         setSlip(prev => prev.filter(e => e.selectionId !== entry.selectionId));

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
 import { usePasswordGuard, isGameUnlocked } from "../lib/gamePasswordGuard";
@@ -156,6 +157,9 @@ export default function HighLow() {
         return;
       }
       awardXP(betVal);
+      // Challenge tracking — bet placed
+      fireChallengeEvent("bet_wagered", { amount: betVal });
+      fireChallengeEvent("single_bet_placed", { amount: betVal });
       setBet(data.bet); setDisplayCard(data.currentCard);
       setMultiplier(1.0); setStreak(0); setPhase("playing");
       playSound("chip");
@@ -196,6 +200,8 @@ export default function HighLow() {
         setShakeScreen(true); setTimeout(() => setShakeScreen(false), 450);
         setPhase("lost"); setPayout(0);
         playSound("lose");
+        fireChallengeEvent("mini_game_round_played");
+        fireChallengeEvent("bet_lost");
       }
     } catch { setErrorMsg("Network error — try again"); }
     finally  { setIsBusy(false); }
@@ -213,6 +219,8 @@ export default function HighLow() {
       setPayout(data.payout); setMultiplier(data.multiplier);
       setCardGlow("win"); setPhase("cashed_out");
       playSound("cashOut");
+      fireChallengeEvent("mini_game_round_played");
+      fireChallengeEvent("bet_won");
     } catch { setErrorMsg("Network error — try again"); }
     finally  { setIsBusy(false); }
   }

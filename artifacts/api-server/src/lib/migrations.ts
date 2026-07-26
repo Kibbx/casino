@@ -1588,6 +1588,15 @@ export async function runMigrations(): Promise<void> {
     },
     // ── Sportsbook bet slips (parlay/single tracking) ─────────────────────────
     {
+      name: "challenge_state table",
+      sql: `CREATE TABLE IF NOT EXISTS challenge_state (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER NOT NULL UNIQUE,
+        state_json TEXT NOT NULL,
+        updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )`,
+    },
+    {
       name: "sport_bet_slips table",
       sql: `CREATE TABLE IF NOT EXISTS sport_bet_slips (
         id SERIAL PRIMARY KEY,

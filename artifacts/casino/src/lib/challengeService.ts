@@ -17,6 +17,108 @@
 const STORAGE_KEY = "bab_challenges_v4";
 export const CHALLENGES_EVENT = "bab:challenges:update";
 
+// ── Server sync ───────────────────────────────────────────────────────────────
+// Progress is pushed to /api/challenges/state after each local save (debounced)
+// and pulled on login so progress persists across logouts and refreshes.
+const _BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, "") ?? "";
+let _serverToken: string | null = null;
+let _pushTimer: ReturnType<typeof setTimeout> | null = null;
+
+/** Call once the player's session token is known (or null on logout). */
+export function setChallengeServerToken(token: string | null): void {
+  _serverToken = token;
+}
+
+/**
+ * Fetch server-stored progress and merge it into local state.
+ * Server wins for any challenge count that's higher than local.
+ * Safe to call concurrently — failures are silent.
+ */
+export async function pullChallengeStateFromServer(): Promise<void> {
+  if (!_serverToken) return;
+  try {
+    const r = await fetch(`${_BASE}/api/challenges/state`, {
+      headers: { Authorization: `Bearer ${_serverToken}` },
+    });
+    if (!r.ok) return;
+    const body = await r.json();
+    if (!body.state) return;
+    const remote: {
+      progress?: Record<string, number>;
+      consecutiveWins?: number;
+      claimed?: string[];
+    } = JSON.parse(body.state);
+    if (typeof remote !== "object" || !remote) return;
+
+    const local = load();
+    let dirty = false;
+
+    // Merge progress: take the higher count per challenge ID
+    if (remote.progress && typeof remote.progress === "object") {
+      for (const [id, val] of Object.entries(remote.progress)) {
+        if (typeof val === "number" && val > (local.progress[id] ?? 0)) {
+          local.progress[id] = val;
+          dirty = true;
+        }
+      }
+    }
+    // Merge consecutive wins (take the higher value)
+    if (
+      typeof remote.consecutiveWins === "number" &&
+      remote.consecutiveWins > (local.consecutiveWins ?? 0)
+    ) {
+      local.consecutiveWins = remote.consecutiveWins;
+      dirty = true;
+    }
+    // Merge claimed (union — never un-claim)
+    if (Array.isArray(remote.claimed)) {
+      for (const id of remote.claimed) {
+        if (!local.claimed.includes(id)) {
+          local.claimed.push(id);
+          dirty = true;
+        }
+      }
+    }
+
+    if (dirty) {
+      // Write directly to localStorage to avoid re-scheduling a push
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(local)); } catch {}
+      emit();
+    }
+  } catch {
+    // Silent — network errors must not break gameplay
+  }
+}
+
+function _schedulePush(): void {
+  if (!_serverToken) return;
+  if (_pushTimer !== null) clearTimeout(_pushTimer);
+  _pushTimer = setTimeout(_pushToServer, 1500);
+}
+
+async function _pushToServer(): Promise<void> {
+  _pushTimer = null;
+  if (!_serverToken) return;
+  try {
+    const local = load();
+    const payload = JSON.stringify({
+      progress: local.progress,
+      consecutiveWins: local.consecutiveWins,
+      claimed: local.claimed,
+    });
+    await fetch(`${_BASE}/api/challenges/state`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${_serverToken}`,
+      },
+      body: JSON.stringify({ state: payload }),
+    });
+  } catch {
+    // Fire-and-forget — localStorage stays as the real-time source of truth
+  }
+}
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ChallengeDefinition {
@@ -309,6 +411,7 @@ function load(): StoredState {
 
 function save(state: StoredState): void {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  _schedulePush(); // async push to server — debounced 1.5 s
 }
 
 // ── Rotation / reset logic ────────────────────────────────────────────────────

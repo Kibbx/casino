@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requirePlayer } from "../middleware/auth.js";
-import { db, playersTable, transactionsTable, challengeClaimsTable } from "@workspace/db";
+import { db, playersTable, transactionsTable, challengeClaimsTable, challengeStateTable } from "@workspace/db";
 import { eq, sql, and } from "drizzle-orm";
 import { broadcastPlayerBalance } from "../lib/table-ws.js";
 
@@ -35,6 +35,37 @@ function periodKeyFor(challengeId: string): string {
   // Special challenges ("s_*") and anything else: permanent (never re-awarded)
   return "permanent";
 }
+
+// GET /api/challenges/state — load persisted progress for this player
+router.get("/state", requirePlayer, async (req, res) => {
+  const playerId = (req as any).authenticatedPlayerId as number;
+  const [row] = await db
+    .select({ stateJson: challengeStateTable.stateJson })
+    .from(challengeStateTable)
+    .where(eq(challengeStateTable.playerId, playerId));
+  return res.json({ state: row?.stateJson ?? null });
+});
+
+// PUT /api/challenges/state — persist progress for this player
+router.put("/state", requirePlayer, async (req, res) => {
+  const playerId = (req as any).authenticatedPlayerId as number;
+  const { state } = req.body ?? {};
+  if (!state || typeof state !== "string" || state.length > 32_768) {
+    return res.status(400).json({ error: "Invalid state payload" });
+  }
+  // Basic sanity — must be valid JSON
+  try { JSON.parse(state); } catch {
+    return res.status(400).json({ error: "state must be valid JSON" });
+  }
+  await db
+    .insert(challengeStateTable)
+    .values({ playerId, stateJson: state })
+    .onConflictDoUpdate({
+      target: challengeStateTable.playerId,
+      set: { stateJson: state, updatedAt: sql`NOW()` },
+    });
+  return res.json({ ok: true });
+});
 
 // POST /api/challenges/claim-reward
 router.post("/claim-reward", requirePlayer, async (req, res) => {

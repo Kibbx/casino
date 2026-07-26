@@ -647,6 +647,11 @@
   65%  { transform: scale(1.06); opacity: 1; }
   100% { transform: scale(1);    opacity: 1; }
 }
+@keyframes bonusClickPulse {
+  0%   { opacity: 0.55; text-shadow: 0 0 12px rgba(252,211,77,0.3), 0 0 28px rgba(252,211,77,0.15); }
+  50%  { opacity: 1.00; text-shadow: 0 0 22px rgba(252,211,77,0.9), 0 0 48px rgba(252,211,77,0.45), 0 0 70px rgba(245,158,11,0.25); }
+  100% { opacity: 0.55; text-shadow: 0 0 12px rgba(252,211,77,0.3), 0 0 28px rgba(252,211,77,0.15); }
+}
 @keyframes bonusShimmer {
   0%, 100% { text-shadow: 0 0 30px rgba(255,200,0,0.5), 0 4px 8px rgba(0,0,0,0.9); }
   50%       { text-shadow: 0 0 70px rgba(255,230,80,1), 0 0 120px rgba(255,180,0,0.5), 0 4px 8px rgba(0,0,0,0.9); }

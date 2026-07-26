@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -23,6 +24,7 @@ import {
 } from "./rome-sounds";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 import { PaylineOverlay, type PaylineWin } from "./payline-overlay";
+import { BellagioChipsAnimation } from "./BellagioChipsAnimation";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLOTS_MAINTENANCE = false;
@@ -288,11 +290,11 @@ export default function RomeSlots() {
       setBonusEndDisplayed(endValue);
       return;
     }
-    const duration = 2400; // 2.4 s, matches the celebratory feel of the end screen
+    const duration = 5500; // 5.5 s — slow, dramatic reveal
     const startTime = performance.now();
     const tick = (now: number) => {
       const t     = Math.min((now - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 5); // ease-out quintic — fast start, crawls to final value
       setBonusEndDisplayed(Math.round(eased * endValue));
       if (t < 1) {
         bonusEndRafRef.current = requestAnimationFrame(tick);
@@ -456,6 +458,14 @@ export default function RomeSlots() {
       data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Spin failed");
       if (!isFree) awardXP(currentBet);
+      // Challenge tracking — fires after confirmed server transaction
+      fireChallengeEvent("any_game_round_played");
+      if (!isFree) {
+        fireChallengeEvent("bet_wagered", { amount: currentBet });
+        fireChallengeEvent("single_bet_placed", { amount: currentBet });
+      }
+      if ((data.totalWin ?? 0) > 0) fireChallengeEvent("bet_won");
+      else fireChallengeEvent("bet_lost");
     } catch (e: any) {
       spinningRef.current = false;
       setSpinning(false);
@@ -789,6 +799,10 @@ export default function RomeSlots() {
     if (!bonusEverActiveRef.current) return; // skip on initial mount (freeSpinsLeft starts at 0)
     // Stop music immediately (sync) — don't let it outlive a cancelled async
     stopBonusMusic();
+    // Cancel auto-spin SYNCHRONOUSLY here — if we wait until inside the async
+    // IIFE, the 700 ms delay gives the while-loop time to fire a paid spin.
+    setAutoSpin(false);
+    autoSpinRef.current = false;
     let cancelled = false;
     (async () => {
       await delay(700);
@@ -1228,54 +1242,70 @@ export default function RomeSlots() {
         </div>
       )}
 
-      {/* ── Bonus round end — compact toast, no screen takeover ── */}
+      {/* ── Bonus round end ── */}
       {showBonusEnd && (
-        <div
-          style={{
-            position: "fixed", inset: 0, zIndex: 9999, pointerEvents: "all",
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.88)",
-          }}
-          onClick={() => { bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
-        >
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
-            animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
-          }}>
-            <span style={{ fontSize: 52 }}>🏆</span>
+        <>
+          {/* Layer 1 — dark backdrop; click anywhere to dismiss */}
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 9998, pointerEvents: "all",
+              background: "rgba(0,0,0,0.88)",
+            }}
+            onClick={() => { bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
+          />
+
+          {/* Layer 2 — Bellagio chip fountain (pointer-events:none, sits behind card) */}
+          <BellagioChipsAnimation active={showBonusEnd} total={bonusWinTotal} />
+
+          {/* Layer 3 — card content; entire layer is clickable to dismiss */}
+          <div
+            style={{
+              position: "fixed", inset: 0, zIndex: 10001,
+              pointerEvents: "all",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              cursor: "pointer",
+            }}
+            onClick={() => { bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
+          >
             <div style={{
-              fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 16,
-              color: "rgba(252,211,77,0.65)", letterSpacing: "0.45em", textTransform: "uppercase",
-            }}>Bonus Round Complete</div>
-            <div style={{
-              fontFamily: "Cinzel,serif", fontWeight: 900, fontSize: 48,
-              color: "#fcd34d", letterSpacing: "0.06em",
-              animation: "bonusShimmer 1.4s ease-in-out infinite",
-            }}>TOTAL WON</div>
-            <div style={{
-              fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 96,
-              color: "#fff", lineHeight: 1,
-              textShadow: "0 0 60px rgba(245,158,11,0.8), 0 4px 12px rgba(0,0,0,0.9)",
-            }}>+{bonusEndDisplayed.toLocaleString()}</div>
-            <div style={{
-              fontFamily: "Cinzel,serif", fontSize: 18,
-              color: "rgba(252,211,77,0.45)", letterSpacing: "0.2em",
-            }}>COINS</div>
-            <button
-              onClick={e => { e.stopPropagation(); bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
-              style={{
-                marginTop: 14,
-                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 20,
-                letterSpacing: "0.22em", textTransform: "uppercase",
-                color: "#1a0800",
-                background: "linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%)",
-                border: "none", borderRadius: 8, padding: "14px 52px", cursor: "pointer",
-                boxShadow: "0 0 32px rgba(245,158,11,0.55), 0 4px 12px rgba(0,0,0,0.7)",
-              }}>
-              Collect
-            </button>
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
+              animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
+              background: "rgba(0,0,0,0.55)",
+              borderRadius: 20,
+              padding: "36px 56px 32px",
+              boxShadow: "0 0 80px rgba(245,158,11,0.18)",
+            }}>
+              <span style={{ fontSize: 52 }}>🏆</span>
+              <div style={{
+                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 16,
+                color: "rgba(252,211,77,0.65)", letterSpacing: "0.45em", textTransform: "uppercase",
+              }}>Bonus Round Complete</div>
+              <div style={{
+                fontFamily: "Cinzel,serif", fontWeight: 900, fontSize: 48,
+                color: "#fcd34d", letterSpacing: "0.06em",
+                animation: "bonusShimmer 1.4s ease-in-out infinite",
+              }}>TOTAL WON</div>
+              <div style={{
+                fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 96,
+                color: "#fff", lineHeight: 1,
+                textShadow: "0 0 60px rgba(245,158,11,0.8), 0 4px 12px rgba(0,0,0,0.9)",
+              }}>+{bonusEndDisplayed.toLocaleString()}</div>
+              <div style={{
+                fontFamily: "Cinzel,serif", fontSize: 18,
+                color: "rgba(252,211,77,0.45)", letterSpacing: "0.2em",
+              }}>COINS</div>
+              <div style={{
+                marginTop: 18,
+                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 15,
+                letterSpacing: "0.30em", textTransform: "uppercase",
+                color: "#fcd34d",
+                animation: "bonusClickPulse 1.8s ease-in-out infinite",
+                userSelect: "none",
+              }}>Click Anywhere to Continue</div>
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* ── Win popup — rendered OUTSIDE scaled canvas ── */}

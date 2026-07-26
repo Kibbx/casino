@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLocation } from "wouter";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { useStore } from "../store";
 import { usePageTracker } from "../lib/usePageTracker";
 import { useGetPlayer } from "@workspace/api-client-react";
@@ -338,6 +339,8 @@ export default function LotteryPage() {
       const d = await r.json();
       if (!r.ok) { setBuyMsg({ text: d.error || "Failed", ok: false }); return; }
       setBuyMsg({ text: `Bought ${d.qty} ticket${d.qty > 1 ? "s" : ""} — ${fmt(d.totalCost)} chips spent`, ok: true });
+      fireChallengeEvent("any_game_round_played");
+      fireChallengeEvent("bet_wagered", { amount: d.totalCost });
       await Promise.all([pollActive(), loadMyTickets()]);
     } catch { setBuyMsg({ text: "Network error", ok: false }); }
     finally { setBuying(false); }

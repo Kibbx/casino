@@ -3,6 +3,7 @@ import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { PromoZone } from "../components/PromoRegion";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { usePageTracker } from "../lib/usePageTracker";
@@ -152,6 +153,7 @@ export default function Crash() {
           freezeAtCrash(cp);
           setCrashPoint(cp);
           setGameState("crashed");
+          fireChallengeEvent("bet_lost");
         } else if (d.status === "cashed_out") {
           // Cashed out via another trigger — keep current animation state
           stopPolling();
@@ -216,12 +218,14 @@ export default function Crash() {
         setCashoutMultiplier(d.cashoutMultiplier);
         setPayout(d.payout);
         setCrashPoint(d.crashPoint);
+        fireChallengeEvent("bet_won");
       } else {
         // Already crashed by the time cashout hit
         const cp = d.crashPoint ?? 1.0;
         freezeAtCrash(cp);
         setCrashPoint(cp);
         setGameState("crashed");
+        fireChallengeEvent("bet_lost");
       }
     } catch {
       setGameState("crashed");
@@ -276,6 +280,10 @@ export default function Crash() {
       const clientAfterMs = Date.now();
       if (!r.ok) { setErrorMsg(d.error || "Failed to place bet"); setGameState("idle"); return; }
       awardXP(bet);
+      // Challenge tracking — bet placed
+      fireChallengeEvent("any_game_round_played");
+      fireChallengeEvent("bet_wagered", { amount: bet });
+      fireChallengeEvent("single_bet_placed", { amount: bet });
       setGameId(d.gameId);
 
       // Account for full RTT: half of it was transit after the server stamped serverNowMs

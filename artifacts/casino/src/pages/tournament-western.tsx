@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useStore } from "../store";
-import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
+import buttonClickUrl  from "@assets/buttonclick_1777322204907.mp3";
 
 const WS   = import.meta.env.BASE_URL + "western-slots/";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -24,7 +24,7 @@ const N_REELS   = 5;
 const N_ROWS    = 3;
 
 const REEL_PREFIXES = [12, 15, 18, 21, 24];
-const SPIN_SPEED    = 22;
+const SPIN_SPEED    = 75;
 const DECEL_ZONE    = CELL_H * 3.5;
 
 const ANIM_FRAMES  = 24;
@@ -145,10 +145,75 @@ function useWesternSounds() {
     if (clickBufRef.current) doPlay(clickBufRef.current);
     else if (rawBytesRef.current) ctx.decodeAudioData(rawBytesRef.current.slice(0)).then(buf => { clickBufRef.current = buf; doPlay(buf); }).catch(() => {});
   }
-  function playReelStop(reelIndex: number) {
-    const ctx = ac(); const now = ctx.currentTime;
-    noiseBurst(ctx, now, 0.11, 40, 0.62 - reelIndex * 0.03, 95 + reelIndex * 8);
-    tone(ctx, now + 0.03, 1400 + reelIndex * 120, 0.18, 0.16, "sine");
+  function playReelStop(_reelIndex: number) {
+    if (mutedRef.current || volRef.current === 0) return;
+    const ctx = ac();
+    const now = ctx.currentTime;
+    const vol = volRef.current;
+
+    // Layer A — primary impact: bandpass noise 70-130 Hz, 18 ms attack, multi-stage decay
+    {
+      const n = Math.ceil(ctx.sampleRate * 0.190);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = "bandpass"; filt.frequency.value = 95; filt.Q.value = 1.0;
+      const gain = ctx.createGain();
+      const t0 = now + 0.012;
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.90 * vol, t0 + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.28 * vol, t0 + 0.033);
+      gain.gain.exponentialRampToValueAtTime(0.06 * vol, t0 + 0.100);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.155);
+      src.connect(filt); filt.connect(gain); gain.connect(mg());
+      src.start(t0); src.stop(t0 + 0.190);
+    }
+
+    // Layer B — sub-bass pitch drop: sine sweep 88 → 42 Hz
+    {
+      const osc = ctx.createOscillator(); osc.type = "sine";
+      const t0 = now + 0.015;
+      osc.frequency.setValueAtTime(88, t0);
+      osc.frequency.exponentialRampToValueAtTime(42, t0 + 0.100);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.55 * vol, t0 + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.120);
+      osc.connect(gain); gain.connect(mg());
+      osc.start(t0); osc.stop(t0 + 0.125);
+    }
+
+    // Layer C — resonance ring: 67 Hz damped sine (bumpy body at 45-115 ms)
+    {
+      const osc = ctx.createOscillator(); osc.type = "sine";
+      osc.frequency.value = 67;
+      const t0 = now + 0.040;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, t0);
+      gain.gain.linearRampToValueAtTime(0.38 * vol, t0 + 0.020);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.100);
+      osc.connect(gain); gain.connect(mg());
+      osc.start(t0); osc.stop(t0 + 0.110);
+    }
+
+    // Layer D — definition click: bandpass noise ~480 Hz, 35 ms
+    {
+      const n = Math.ceil(ctx.sampleRate * 0.040);
+      const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = "bandpass"; filt.frequency.value = 480; filt.Q.value = 3.0;
+      const gain = ctx.createGain();
+      const t0 = now + 0.018;
+      gain.gain.setValueAtTime(0.28 * vol, t0);
+      gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
+      src.connect(filt); filt.connect(gain); gain.connect(mg());
+      src.start(t0); src.stop(t0 + 0.042);
+    }
   }
   function playWin(amount: number, bet: number) {
     if (amount <= 0) return;
@@ -363,16 +428,24 @@ export default function TournamentWestern({ tournamentId, tournamentName, initia
     }
 
     const result: SymId[][] = data.grid as SymId[][];
+    // Strip layout top-to-bottom: [result_3, random_padding, prev_3].
+    // Animation translates the strip DOWNWARD through the viewport, so
+    // symbols enter from the top and exit at the bottom. Initial
+    // translateY = -(length-3)*CELL_H (prev at viewport top) → target 0
+    // (result at top).
     const newStrips = REEL_PREFIXES.map((pfx,col)=>{
       const prev = [0,1,2].map(r=> visibleSymsRef.current[col*N_ROWS+r] as SymId || "Bag");
-      return [...prev, ...Array.from({length:pfx},randSym), result[col][0], result[col][1], result[col][2]] as SymId[];
+      return [result[col][0], result[col][1], result[col][2], ...Array.from({length:pfx},randSym), ...prev] as SymId[];
     });
     setStrips(newStrips);
-    for(const el of stripRefs.current){ if(el){ el.style.transition="none"; el.style.transform="translateY(0)"; } }
+    for(let i=0;i<N_REELS;i++){
+      const el = stripRefs.current[i];
+      if(el){ el.style.transition="none"; el.style.transform=`translateY(${-(newStrips[i].length-N_ROWS)*CELL_H}px)`; }
+    }
     await delay(32);
 
-    const targets = newStrips.map(strip=>-(strip.length-N_ROWS)*CELL_H);
-    const yPos = Array(N_REELS).fill(0);
+    const targets = newStrips.map(()=>0);
+    const yPos = newStrips.map(strip=>-(strip.length-N_ROWS)*CELL_H);
     const stopped = Array(N_REELS).fill(false);
     if(animRef.current) clearInterval(animRef.current);
 
@@ -381,11 +454,11 @@ export default function TournamentWestern({ tournamentId, tournamentName, initia
         let anyMoving = false;
         for(let i=0;i<N_REELS;i++){
           if(stopped[i]) continue;
-          const remaining = yPos[i]-targets[i];
+          const remaining = targets[i]-yPos[i];
           const speed = remaining>DECEL_ZONE ? SPIN_SPEED : Math.max(1.5, SPIN_SPEED*(remaining/DECEL_ZONE));
-          yPos[i] -= speed;
+          yPos[i] += speed;
           const el = stripRefs.current[i];
-          if(yPos[i]<=targets[i] || remaining<CELL_H*0.12){
+          if(yPos[i]>=targets[i] || remaining<CELL_H*0.12){
             yPos[i]=targets[i]; stopped[i]=true;
             soundsRef.current.playReelStop(i);
             if(el){ el.style.transition="none"; el.style.transform=`translateY(${targets[i]}px)`; }

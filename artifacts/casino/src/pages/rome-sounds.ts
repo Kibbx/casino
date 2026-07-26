@@ -226,16 +226,77 @@ export function playReelTick() {
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
-// Massive wooden block drop — deep sub thump + heavy wood crack
+// Synthesized to match reel_stop_1.webm:
+//   212 ms total · 12 ms pre-onset · 18 ms attack to peak at 30 ms
+//   Core band: 70-130 Hz thud · sub sweep 88→42 Hz · 67 Hz resonance ring · 480 Hz click
 export function playReelStop() {
-  // Deep low thump: heavy low noise for block mass
-  playNoise(0,    0.095, 0.40, 140, 1.4);
-  // Sub-bass body: deep sine plunge (the "weight" of the block)
-  playOsc(62,  0,    0.16, 0.24, "sine",   26);
-  // Mid wood body: secondary resonance layer
-  playNoise(0,    0.050, 0.22, 340, 2.8);
-  // Impact transient: heavy square crack on contact
-  playOsc(280, 0,    0.042, 0.14, "square", 130);
+  if (masterMuted || masterVolume === 0) return;
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+
+  // Layer A — primary impact: bandpass noise 70-130 Hz, 18 ms attack, multi-stage decay
+  {
+    const n = Math.ceil(ctx.sampleRate * 0.190);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = "bandpass"; filt.frequency.value = 95; filt.Q.value = 1.0;
+    const gain = ctx.createGain();
+    const t0 = now + 0.012;
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.linearRampToValueAtTime(0.90 * masterVolume, t0 + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.28 * masterVolume, t0 + 0.033);
+    gain.gain.exponentialRampToValueAtTime(0.06 * masterVolume, t0 + 0.100);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.155);
+    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    src.start(t0); src.stop(t0 + 0.190);
+  }
+
+  // Layer B — sub-bass pitch drop: sine sweep 88 → 42 Hz (the "weight" of the stop)
+  {
+    const osc = ctx.createOscillator(); osc.type = "sine";
+    const t0 = now + 0.015;
+    osc.frequency.setValueAtTime(88, t0);
+    osc.frequency.exponentialRampToValueAtTime(42, t0 + 0.100);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.linearRampToValueAtTime(0.55 * masterVolume, t0 + 0.018);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.120);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + 0.125);
+  }
+
+  // Layer C — resonance ring: 67 Hz damped sine (produces the bumpy body at 45-115 ms)
+  {
+    const osc = ctx.createOscillator(); osc.type = "sine";
+    osc.frequency.value = 67;
+    const t0 = now + 0.040;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.001, t0);
+    gain.gain.linearRampToValueAtTime(0.38 * masterVolume, t0 + 0.020);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.100);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + 0.110);
+  }
+
+  // Layer D — definition click: bandpass noise ~480 Hz, 35 ms (mechanical impact edge)
+  {
+    const n = Math.ceil(ctx.sampleRate * 0.040);
+    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = "bandpass"; filt.frequency.value = 480; filt.Q.value = 3.0;
+    const gain = ctx.createGain();
+    const t0 = now + 0.018;
+    gain.gain.setValueAtTime(0.28 * masterVolume, t0);
+    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
+    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+    src.start(t0); src.stop(t0 + 0.042);
+  }
 }
 
 // ── Win sounds ───────────────────────────────────────────────────────────────

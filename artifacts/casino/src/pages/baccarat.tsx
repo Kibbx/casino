@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useStore } from "../store";
 import { awardXP } from "../lib/rewardsState";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCcw } from "lucide-react";
@@ -300,6 +301,12 @@ export default function BaccaratPage() {
       const data = await r.json();
       if (!r.ok) { setGamePhase("idle"); showError(data.error ?? "Failed"); return; }
       awardXP(betAmount);
+      // Challenge tracking — fires after confirmed server transaction
+      fireChallengeEvent("any_game_round_played");
+      fireChallengeEvent("bet_wagered", { amount: betAmount });
+      fireChallengeEvent("single_bet_placed", { amount: betAmount });
+      if ((data.netProfit ?? 0) > 0) fireChallengeEvent("bet_won");
+      else if ((data.netProfit ?? 0) < 0) fireChallengeEvent("bet_lost");
 
       // Wait for dealing animation to finish before revealing
       const elapsed = Date.now() - startedAt;

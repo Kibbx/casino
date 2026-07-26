@@ -1,0 +1,33 @@
+Replicate the payline win animation style from the reference images for the existing slot game.
+
+Required behavior:
+- Present winning paylines one at a time.
+- For each active payline, dim the rest of the game and keep only that payline and its winning symbols fully lit.
+- Draw the payline as a bright glowing cyan/turquoise line connecting the winning symbol positions.
+- Animate the line in from left to right, as if it is being traced across the reels.
+- Keep the winning symbols highlighted while that line is active.
+- Show the payline payout as a small inline label directly on the line, like the reference, not as a popup box.
+- The inline payout amount should appear near the left/center portion of the payline and stay visually attached to the line.
+- Use the real payout value for that payline (examples: `15.00`, `7.50`).
+- If the line changes shape, position the inline amount dynamically from the line path or winning symbol coordinates; do not hard-code screenshot coordinates.
+- After a short hold, move to the next winning payline and repeat.
+
+Visual style:
+- Payline: neon cyan/turquoise glow, thin line, bright and clearly visible above the reels.
+- Winning symbols: fully bright with their existing highlight/glow.
+- Inline payout amount: bold slot-style number, turquoise/cyan fill, warm orange/gold outline, subtle shadow/glow, compact size.
+- If a winning symbol is WILD, keep the WILD tile highlighted exactly as normal.
+
+Animation timing:
+- Fade/dim overlay in quickly.
+- Trace each payline from left to right over about 250–400 ms.
+- Pop/fade the inline payout label in as the line completes.
+- Hold each payline for about 700–1200 ms before switching to the next.
+- Remove the dim effect when the payline presentation ends.
+
+Important constraints:
+- Do not change win logic, paylines, symbol data, payouts, reel results, sounds, balance updates, controls, or layout.
+- Do not use the big centered win popup during this payline presentation.
+- Keep the bottom HUD WIN total working normally.
+- Use the game’s existing payline/win data dynamically.
+- Make the smallest possible change to the current files only.

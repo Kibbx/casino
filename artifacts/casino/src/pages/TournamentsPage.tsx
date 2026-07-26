@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { PageWrapper } from "./shared";
 import { useLocation } from "wouter";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { motion } from "framer-motion";
 import { Users, Clock, Trophy, Zap, Shield, Star, Gift, ChevronRight } from "lucide-react";
 import { useStore } from "../store";
@@ -213,6 +214,7 @@ function TournamentCard({ t, myPlayerId, sessionToken, onRegistered, index }: {
         const b = await res.json().catch(() => ({}));
         setErr((b as any).error ?? "Registration failed.");
       } else {
+        fireChallengeEvent("tournament_entered");
         onRegistered();
       }
     } catch { setErr("Network error."); }

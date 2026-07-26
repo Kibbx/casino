@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation } from "wouter";
+import { fireChallengeEvent } from "../lib/challengeEventService";
 import { useStore } from "../store";
 import { useGetPlayer } from "@workspace/api-client-react";
 import { usePlayerSocket } from "../lib/usePlayerSocket";
@@ -150,6 +151,8 @@ export default function BingoPage() {
       const d = await r.json();
       if (!r.ok) { setBuyMsg({ text: d.error || "Failed", ok: false }); return; }
       setBuyMsg({ text: `Bought ${quantity} card${quantity > 1 ? "s" : ""} for ${fmt(d.totalCost)} chips!`, ok: true });
+      fireChallengeEvent("any_game_round_played");
+      fireChallengeEvent("bet_wagered", { amount: d.totalCost });
       fetchMyCards(round.id);
     } catch {
       setBuyMsg({ text: "Request failed", ok: false });
