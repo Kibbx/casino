@@ -467,7 +467,7 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
         width:         "100%",
         height:        "100%",
         pointerEvents: "none",
-        zIndex:        20,
+        zIndex:        30,
         overflow:      "visible",
       }}
       viewBox={`0 0 ${CW} ${CH}`}

@@ -7,9 +7,9 @@
  * pointer-events: none throughout.
  *
  * Layer contract (z-index within the parent 1920×1080 canvas div):
- *   z20  — dim rect + payline glow lines   (svgRef)
  *   z21  — animated winning-symbol canvases (western-slots.tsx, driven by onLineActive)
- *   z22  — bigText total + per-line labels  (labelSvgRef)
+ *   z25  — dim rect + payline glow lines   (svgRef)  — sits ABOVE icons / sprites
+ *   z26  — bigText total + per-line labels  (labelSvgRef)
  */
 
 import { useEffect, useRef } from "react";
@@ -152,7 +152,7 @@ function animate(
 
 // ── Line group builder ────────────────────────────────────────────────────────
 // Returns a 4-child group: [0]=glowPath [1]=corePath [2]=dotGroup [3]=hlPath
-// Labels are managed separately in the label SVG (z22) so they sit above
+// Labels are managed separately in the label SVG (z26) so they sit above
 // the z21 animated-symbol canvases.
 function buildLineGroup(
   d: string,
@@ -368,8 +368,8 @@ interface PaylineOverlayProps {
 }
 
 export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProps) {
-  const svgRef        = useRef<SVGSVGElement>(null);  // z20 — dim + paylines
-  const labelSvgRef   = useRef<SVGSVGElement>(null);  // z22 — bigText + per-line labels
+  const svgRef        = useRef<SVGSVGElement>(null);  // z25 — dim + paylines
+  const labelSvgRef   = useRef<SVGSVGElement>(null);  // z26 — bigText + per-line labels
   const timersRef     = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cancelsRef    = useRef<(() => void)[]>([]);
   const cancelledRef  = useRef(false);
@@ -409,8 +409,8 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
     }));
 
     // ── Payline groups — appended after dimRect, so order within main SVG is:
-    //    dim < payline glow lines. Winning-symbol canvases (z21) sit above this
-    //    entire SVG (z20) in the stacking context.
+    //    dim < payline glow lines. The whole SVG sits at z25 — above z21
+    //    winning-symbol canvases so the glow line draws on top of the icons.
     const groups: SVGGElement[] = wins.map(({ lineIndex, count }) => {
       const pts = paylinePoints(lineIndex, count);
       const d   = catmullRomPath(pts);
@@ -419,8 +419,8 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
       return g;
     });
 
-    // ── Per-line labels — in the label SVG (z22) so they render above the
-    //    z21 animated-symbol canvases.
+    // ── Per-line labels — in the label SVG (z26) so they render above the
+    //    z25 payline-glow SVG.
     const labels: SVGTextElement[] = wins.map(({ lineIndex, count, win }) => {
       const pts = paylinePoints(lineIndex, count);
       const lbl = buildLabel(pts, win);
@@ -431,7 +431,7 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
     const blurEl = svg.querySelector(`#${filterId} feGaussianBlur`) as SVGFEGaussianBlurElement | null;
     const pulseStops: (() => void)[] = new Array(groups.length).fill(null);
 
-    // ── Centered total win — bigText lives in the label SVG (z22).
+    // ── Centered total win — bigText lives in the label SVG (z26).
     const totalWin = wins.reduce((s, w) => s + w.win, 0);
     const bigText = svgEl("text");
     bigText.setAttribute("x",                "960");
@@ -568,20 +568,21 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
 
   return (
     <>
-      {/* z20 — dim rect + payline glow lines */}
+      {/* z25 — dim rect + payline glow lines (above z21 winning-sprite canvases
+                so the glow line draws on top of the icons) */}
       <svg
         ref={svgRef}
-        style={{ ...svgStyle, zIndex: 20 }}
+        style={{ ...svgStyle, zIndex: 25 }}
         viewBox={`0 0 ${CW} ${CH}`}
         xmlns="http://www.w3.org/2000/svg"
       >
         {defs}
       </svg>
 
-      {/* z22 — bigText total + per-line payout labels (above z21 canvases) */}
+      {/* z26 — bigText total + per-line payout labels (above the glow line) */}
       <svg
         ref={labelSvgRef}
-        style={{ ...svgStyle, zIndex: 22 }}
+        style={{ ...svgStyle, zIndex: 26 }}
         viewBox={`0 0 ${CW} ${CH}`}
         xmlns="http://www.w3.org/2000/svg"
       />
