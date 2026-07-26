@@ -79,13 +79,6 @@ export const PAYLINES: number[][] = [
 
 type Grid = string[][];
 
-// DEV: set to true to force a 3-scatter result (random columns + rows) on the next spin.
-// Set to false to turn the force off and resume normal random outcomes.
-let _forceScatter3 = true;
-
-// Flip on demand via DEV endpoint
-export function devForceScatter3(on = true) { _forceScatter3 = on; }
-
 function buildPool(): string[] {
   const pool: string[] = [];
   for (const s of SYMBOLS) for (let i = 0; i < s.weight; i++) pool.push(s.id);
@@ -192,27 +185,7 @@ router.post("/spin", requirePlayer, async (req, res) => {
   }
 
   const betPerLine = Math.floor(totalBet / PAYLINES.length);
-  // DEV: force a 3-scatter grid whenever the flag is on
-  let grid: Grid;
-  if (_forceScatter3) {
-    console.log("[rome-slots] DEV: forced 3-scatter grid (cols 1,2,5)");
-    // Force scatters in columns 1, 2, 5 (0-indexed: 0, 1, 4) — one scatter per column at a random row
-    const scatterCols: number[] = [0, 1, 4];
-    // Pick one scatter row per scatter column
-    const scatterRow: Record<number, number> = {};
-    for (const c of scatterCols) scatterRow[c] = Math.floor(Math.random() * 3);
-    const normalPool = POOL.filter(s => s !== "Scatter");
-    const randNormal = () => normalPool[Math.floor(Math.random() * normalPool.length)];
-    const filler = (col: number, row: number) =>
-      scatterCols.includes(col) && scatterRow[col] === row ? "Scatter" : randNormal();
-    grid = [
-      [filler(0,0), filler(1,0), filler(2,0), filler(3,0), filler(4,0)],
-      [filler(0,1), filler(1,1), filler(2,1), filler(3,1), filler(4,1)],
-      [filler(0,2), filler(1,2), filler(2,2), filler(3,2), filler(4,2)],
-    ];
-  } else {
-    grid = spinGrid();
-  }
+  const grid = spinGrid();
   const lineWins = evaluateGrid(grid, betPerLine);
   const scatters = countScatters(grid);
 
