@@ -114,13 +114,15 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 // Each reel has a different prefix length so they stop left-to-right with natural stagger.
 // Strip layout: [prefixCount random symbols] [row0result, row1result, row2result]
 // Animation scrolls translateY from 0 → -(prefixCount * ROW_H)
-const REEL_PREFIXES = [16, 20, 24, 28, 32]; // symbols before the result per reel
-const SPIN_SPEED    = 38;                    // px per requestAnimationFrame tick (~60fps)
+// setInterval (not RAF) because FiveM CEF throttles requestAnimationFrame.
+const REEL_PREFIXES = [12, 15, 18, 21, 24]; // symbols before the result per reel
+const SPIN_SPEED    = 75;                    // px per 16ms tick
+const DECEL_ZONE    = ROW_H * 2.75;          // decelerate over last ~2.75 rows
 
 // ── Scatter tease config ───────────────────────────────────────────────────────
-// Extra symbols added per tease step. At SPIN_SPEED=38px/frame, 216px/row, 60fps:
-// 30 symbols ≈ 2.8 s. Each reel in the chain gets 30 × step more, so they
-// stop ~2.8 s apart and each one is clearly still spinning when the previous lands.
+// Extra symbols added per tease step. At SPIN_SPEED=75px/16ms-tick (≈4687 px/s),
+// 216 px/row: 30 symbols ≈ 1.4 s. Each reel in the chain gets 30 × step more, so they
+// stop ~1.4 s apart and each one is clearly still spinning when the previous lands.
 const TEASE_STEP = 30;
 
 function buildInitialStrips(): string[][] {
@@ -539,7 +541,6 @@ export default function RomeSlots() {
     const yPos    = Array(REELS).fill(0);
     const stopped = Array(REELS).fill(false);
     const targets = newStrips.map(strip => -(strip.length - ROWS) * ROW_H);
-    const DECEL_ZONE = ROW_H * 4; // decelerate over the last ~4 rows
 
     if (animRef.current) { clearInterval(animRef.current as any); animRef.current = null; }
 
@@ -591,11 +592,11 @@ export default function RomeSlots() {
             const remaining = yPos[i] - targets[i]; // positive, shrinking
             const speed = remaining > DECEL_ZONE
               ? SPIN_SPEED
-              : Math.max(2, SPIN_SPEED * (remaining / DECEL_ZONE));
+              : Math.max(1.5, SPIN_SPEED * (remaining / DECEL_ZONE));
             yPos[i] -= speed;
             const el = stripRefs.current[i];
             // Snap + fire stop when within 1 step OR remaining imperceptible (<15% row)
-            if (yPos[i] <= targets[i] || remaining < ROW_H * 0.15) {
+            if (yPos[i] <= targets[i] || remaining < ROW_H * 0.12) {
               yPos[i] = targets[i]; // clamp — zero overshoot
               stopped[i] = true;
               if (el) { el.style.transition = "none"; el.style.transform = `translateY(${targets[i]}px)`; }
