@@ -116,13 +116,13 @@ const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 // Animation scrolls translateY from 0 → -(prefixCount * ROW_H)
 // setInterval (not RAF) because FiveM CEF throttles requestAnimationFrame.
 const REEL_PREFIXES = [12, 15, 18, 21, 24]; // symbols before the result per reel
-const SPIN_SPEED    = 90;                    // px per 16ms tick (slightly slower than Western's 75)
+const SPIN_SPEED    = 75;                    // px per 16ms tick
 const DECEL_ZONE    = ROW_H * 2.75;          // decelerate over last ~2.75 rows
 
 // ── Scatter tease config ───────────────────────────────────────────────────────
-// Extra symbols added per tease step. At SPIN_SPEED=90px/16ms-tick (≈5625 px/s),
-// 216 px/row: 30 symbols ≈ 1.15 s. Each reel in the chain gets 30 × step more, so they
-// stop ~1.15 s apart and each one is clearly still spinning when the previous lands.
+// Extra symbols added per tease step. At SPIN_SPEED=75px/16ms-tick (≈4687 px/s),
+// 216 px/row: 30 symbols ≈ 1.4 s. Each reel in the chain gets 30 × step more, so they
+// stop ~1.4 s apart and each one is clearly still spinning when the previous lands.
 const TEASE_STEP = 30;
 
 function buildInitialStrips(): string[][] {
