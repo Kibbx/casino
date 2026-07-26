@@ -1434,44 +1434,6 @@ export async function runMigrations(): Promise<void> {
       sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS total_won BIGINT NOT NULL DEFAULT 0`,
     },
     {
-      name: "seed demo players",
-      sql: `
-        DO $$
-        BEGIN
-          IF NOT EXISTS (SELECT 1 FROM players LIMIT 1) THEN
-            INSERT INTO players (username, state_id, pin, chips, hands_played, wins, total_won, real_balance, referral_code, is_bot)
-            VALUES
-              ('ShadowKing',   'DEMO001', '0000', 2450000,  8420,  4800,  1920000, 95000,  'DEMO001', false),
-              ('NeonRacer',    'DEMO002', '0000', 987000,   5210,  2700,  780000,  40000,  'DEMO002', false),
-              ('CrimsonAce',   'DEMO003', '0000', 3800000,  12300, 7100,  3200000, 180000, 'DEMO003', false),
-              ('VoltageX',     'DEMO004', '0000', 145000,   1800,  820,   98000,   12000,  'DEMO004', false),
-              ('FrostByte',    'DEMO005', '0000', 560000,   3900,  2100,  430000,  28000,  'DEMO005', false),
-              ('BlazeThorn',   'DEMO006', '0000', 7200000,  21000, 12400, 6800000, 350000, 'DEMO006', false),
-              ('MirageOne',    'DEMO007', '0000', 320000,   2600,  1300,  210000,  20000,  'DEMO007', false),
-              ('IronClaw',     'DEMO008', '0000', 88000,    1100,  440,   52000,   8000,   'DEMO008', false),
-              ('NightWolf',    'DEMO009', '0000', 1650000,  7200,  3900,  1300000, 75000,  'DEMO009', false),
-              ('CobraStrike',  'DEMO010', '0000', 4500000,  15800, 9200,  4100000, 220000, 'DEMO010', false),
-              ('StarDrifter',  'DEMO011', '0000', 230000,   2100,  980,   160000,  15000,  'DEMO011', false),
-              ('RubyShark',    'DEMO012', '0000', 920000,   4700,  2500,  720000,  38000,  'DEMO012', false),
-              ('PhantomEdge',  'DEMO013', '0000', 62000,    800,   310,   35000,   5000,   'DEMO013', false),
-              ('TitanFall',    'DEMO014', '0000', 5100000,  18200, 10800, 4700000, 260000, 'DEMO014', false),
-              ('GlitchMode',   'DEMO015', '0000', 410000,   3100,  1600,  310000,  22000,  'DEMO015', false),
-              ('ArcFlash',     'DEMO016', '0000', 1100000,  6400,  3400,  880000,  55000,  'DEMO016', false),
-              ('SerpentKing',  'DEMO017', '0000', 195000,   1500,  690,   120000,  10000,  'DEMO017', false),
-              ('DuskRider',    'DEMO018', '0000', 2800000,  9800,  5600,  2400000, 130000, 'DEMO018', false),
-              ('IceFang',      'DEMO019', '0000', 730000,   4200,  2200,  570000,  32000,  'DEMO019', false),
-              ('OmegaVault',   'DEMO020', '0000', 9500000,  28000, 16500, 9100000, 500000, 'DEMO020', false),
-              ('PixelRogue',   'DEMO021', '0000', 380000,   2800,  1450,  270000,  18000,  'DEMO021', false),
-              ('ToxicDawn',    'DEMO022', '0000', 155000,   1300,  580,   85000,   9000,   'DEMO022', false),
-              ('GoldViper',    'DEMO023', '0000', 3300000,  11500, 6700,  2900000, 160000, 'DEMO023', false),
-              ('SilverGhost',  'DEMO024', '0000', 510000,   3600,  1900,  400000,  25000,  'DEMO024', false),
-              ('BronzeFist',   'DEMO025', '0000', 72000,    950,   380,   42000,   6000,   'DEMO025', false)
-            ON CONFLICT (username) DO NOTHING;
-          END IF;
-        END $$
-      `,
-    },
-    {
       name: "players.biggest_win column",
       sql: `ALTER TABLE players ADD COLUMN IF NOT EXISTS biggest_win BIGINT NOT NULL DEFAULT 0`,
     },
@@ -1542,44 +1504,6 @@ export async function runMigrations(): Promise<void> {
           )
         WHERE p.is_bot IS NOT TRUE
           AND EXISTS (SELECT 1 FROM transactions t WHERE t.player_id = p.id)
-      `,
-    },
-    {
-      name: "seed 30 real-name demo players",
-      sql: `
-        INSERT INTO players (username, state_id, pin, chips, hands_played, wins, total_won, real_balance, referral_code, is_bot)
-        VALUES
-          ('Marcus Thompson',   'REAL001', '0000', 3200000, 18400,  5520,  -820000, 0, 'REAL001', false),
-          ('Tyler Rodriguez',   'REAL002', '0000',  720000,  5800,  1560,  -180000, 0, 'REAL002', false),
-          ('Jordan Williams',   'REAL003', '0000', 5800000, 24000,  8160,   720000, 0, 'REAL003', false),
-          ('Devon Carter',      'REAL004', '0000',  180000,  3200,   800,  -110000, 0, 'REAL004', false),
-          ('Brandon Mitchell',  'REAL005', '0000', 1450000, 11200,  3808,   160000, 0, 'REAL005', false),
-          ('Kayla Johnson',     'REAL006', '0000',  540000,  4100,  1230,   -15000, 0, 'REAL006', false),
-          ('Nathan Rivera',     'REAL007', '0000',   95000,  2600,   598,  -195000, 0, 'REAL007', false),
-          ('Alexis Martin',     'REAL008', '0000', 2100000,  9700,  3298,   410000, 0, 'REAL008', false),
-          ('Ethan Davis',       'REAL009', '0000',  410000, 16800,  4704,  -590000, 0, 'REAL009', false),
-          ('Jasmine Wilson',    'REAL010', '0000',  320000,  2200,   682,    22000, 0, 'REAL010', false),
-          ('Chris Anderson',    'REAL011', '0000', 1900000, 13500,  4590,   165000, 0, 'REAL011', false),
-          ('Brittany Taylor',   'REAL012', '0000',  145000,  1400,   364,   -28000, 0, 'REAL012', false),
-          ('Darius Moore',      'REAL013', '0000', 9200000, 31000, 10230,  1420000, 0, 'REAL013', false),
-          ('Samantha Lewis',    'REAL014', '0000',  680000,  7200,  2016,  -108000, 0, 'REAL014', false),
-          ('Kyle Jackson',      'REAL015', '0000', 2400000, 19600,  6664,   105000, 0, 'REAL015', false),
-          ('Amanda Harris',     'REAL016', '0000',  220000,  1800,   486,   -38000, 0, 'REAL016', false),
-          ('Malik Robinson',    'REAL017', '0000', 3800000, 14200,  4970,   510000, 0, 'REAL017', false),
-          ('Stephanie Clark',   'REAL018', '0000',  490000,  6300,  1701,  -145000, 0, 'REAL018', false),
-          ('Trevor Walker',     'REAL019', '0000',   72000,  8900,  2136,  -680000, 0, 'REAL019', false),
-          ('Destiny Hall',      'REAL020', '0000',  390000,   900,   306,    21000, 0, 'REAL020', false),
-          ('Austin Allen',      'REAL021', '0000', 1750000, 10800,  3564,   255000, 0, 'REAL021', false),
-          ('Cassandra Young',   'REAL022', '0000',  630000,  5500,  1485,  -172000, 0, 'REAL022', false),
-          ('Cameron Hernandez', 'REAL023', '0000', 7100000, 27500,  9625,  1210000, 0, 'REAL023', false),
-          ('Brianna Scott',     'REAL024', '0000',  480000,  3800,  1178,    12000, 0, 'REAL024', false),
-          ('Patrick King',      'REAL025', '0000', 2900000, 16000,  5440,   305000, 0, 'REAL025', false),
-          ('Vanessa Wright',    'REAL026', '0000',  250000,  2900,   754,   -75000, 0, 'REAL026', false),
-          ('Logan Baker',       'REAL027', '0000', 1200000,  8400,  2772,    82000, 0, 'REAL027', false),
-          ('Dominique Nelson',  'REAL028', '0000', 1600000, 12700,  4191,  -195000, 0, 'REAL028', false),
-          ('Shane Hill',        'REAL029', '0000',   38000,  6100,  1342,  -592000, 0, 'REAL029', false),
-          ('Monique Gonzalez',  'REAL030', '0000',  580000,  1600,   576,    22000, 0, 'REAL030', false)
-        ON CONFLICT (username) DO NOTHING
       `,
     },
     {
