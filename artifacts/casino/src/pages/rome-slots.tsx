@@ -504,43 +504,76 @@ export default function RomeSlots() {
       }
     }
 
-    // ── 3. Build strips: prev result at index 0-2 (so y=0 matches old visual, no snap)
-    //       then random padding, then tease padding (if any), then actual result ─
+    // ── 3. Build strips: NEW result at index 0-2 (so translateY(0) lands at
+    //       result), random+tease padding in the middle, OLD result (prev) at
+    //       the bottom. Animation scrolls translateY DOWN from a position
+    //       ABOVE the viewport (showing prev) to 0 (showing result), so
+    //       symbols enter from the top and exit at the bottom.
     const newStrips = REEL_PREFIXES.map((prefixCount, reelIdx) => {
       const prev = [0, 1, 2].map(r =>
         visibleSymsRef.current[reelIdx * ROWS + r] || "BronzeCoin"
       );
       return [
-        ...prev,
+        data.grid[0][reelIdx],
+        data.grid[1][reelIdx],
+        data.grid[2][reelIdx],
         ...Array.from({ length: prefixCount }, () =>
           SYMBOL_IDS[Math.floor(Math.random() * SYMBOL_IDS.length)]
         ),
         ...Array.from({ length: teaseExtraSyms[reelIdx] }, () =>
           SYMBOL_IDS[Math.floor(Math.random() * SYMBOL_IDS.length)]
         ),
-        data.grid[0][reelIdx],
-        data.grid[1][reelIdx],
-        data.grid[2][reelIdx],
+        ...prev,
       ];
     });
     setStrips(newStrips);
 
-    // ── 3. Reset all strip positions to top (no transition) ──────────────────
-    //       y=0 now shows the OLD result symbols → seamless, no visual snap
-    for (const el of stripRefs.current) {
-      if (el) { el.style.transition = "none"; el.style.transform = "translateY(0)"; }
+    // ── 3b. Reset each strip ABOVE the viewport — translateY = -(length - ROWS) *
+    //        ROW_H places the OLD result row at viewport top, identical to what
+    //        was shown before the spin (no snap). Animation will scroll DOWN.
+    for (let i = 0; i < REELS; i++) {
+      const el = stripRefs.current[i];
+      if (el) {
+        el.style.transition = "none";
+        el.style.transform = `translateY(${-(newStrips[i].length - ROWS) * ROW_H}px)`;
+      }
     }
 
     // Wait 2 frames for React to re-render the new strips and browser to paint
     await new Promise(r => setTimeout(r, 32));
 
-    // ── 4. Drive reel scroll via setInterval (RAF throttled in FiveM CEF) ──────
-    //       Targets: result symbols are always the last ROWS entries in each strip.
+    // ── 3c. Sequential lift-before-spin (mirrors Western): each reel's container
+    //        jumps LIFT_PX pixels UP over LIFT_MS, returns to 0 over LIFT_MS, then
+    //        releases into the spin loop. Stagger STAGGER_MS between reels.
+    const reelStarted = Array(REELS).fill(false);
+    const LIFT_PX = 40, LIFT_MS = 130, STAGGER_MS = 120;
+    for (let i = 0; i < REELS; i++) {
+      ((col) => {
+        setTimeout(() => {
+          const cEl = reelContainerRefs.current[col];
+          if (!cEl) { reelStarted[col] = true; return; }
+          cEl.style.transition = `transform ${LIFT_MS}ms ease-out`;
+          cEl.style.transform  = `translateY(-${LIFT_PX}px)`;
+          setTimeout(() => {
+            cEl.style.transition = `transform ${LIFT_MS}ms ease-in`;
+            cEl.style.transform  = "translateY(0)";
+            setTimeout(() => {
+              cEl.style.transition = "none";
+              reelStarted[col] = true;
+            }, LIFT_MS);
+          }, LIFT_MS);
+        }, col * STAGGER_MS);
+      })(i);
+    }
+
+    // ── 4. Drive reel scroll DOWNWARD via setInterval (RAF throttled in FiveM CEF) ─
+    //       Each strip starts at translateY = -(length - ROWS) * ROW_H (OLD result at
+    //       viewport top) and slides DOWN to 0 (NEW result at viewport top).
     //       Decelerate smoothly over the final DECEL_ZONE px — no CSS transition
     //       snap, no overshoot, lands exactly on the target pixel.
-    const yPos    = Array(REELS).fill(0);
+    const yPos    = newStrips.map(strip => -(strip.length - ROWS) * ROW_H);
     const stopped = Array(REELS).fill(false);
-    const targets = newStrips.map(strip => -(strip.length - ROWS) * ROW_H);
+    const targets = newStrips.map(() => 0);
 
     if (animRef.current) { clearInterval(animRef.current as any); animRef.current = null; }
 
@@ -589,14 +622,15 @@ export default function RomeSlots() {
 
           for (let i = 0; i < REELS; i++) {
             if (stopped[i]) continue;
-            const remaining = yPos[i] - targets[i]; // positive, shrinking
+            if (!reelStarted[i]) { anyMoving = true; continue; } // still lifting
+            const remaining = targets[i] - yPos[i]; // positive, shrinking (yPos climbing toward 0)
             const speed = remaining > DECEL_ZONE
               ? SPIN_SPEED
               : Math.max(1.5, SPIN_SPEED * (remaining / DECEL_ZONE));
-            yPos[i] -= speed;
+            yPos[i] += speed;
             const el = stripRefs.current[i];
             // Snap + fire stop when within 1 step OR remaining imperceptible (<15% row)
-            if (yPos[i] <= targets[i] || remaining < ROW_H * 0.12) {
+            if (yPos[i] >= targets[i] || remaining < ROW_H * 0.12) {
               yPos[i] = targets[i]; // clamp — zero overshoot
               stopped[i] = true;
               if (el) { el.style.transition = "none"; el.style.transform = `translateY(${targets[i]}px)`; }
@@ -659,7 +693,7 @@ export default function RomeSlots() {
           }
         }, 16) as any;
       }),
-      new Promise<void>(r => setTimeout(r, Math.max(20000, Math.max(...targets.map(t => Math.abs(t))) / SPIN_SPEED * 16 * 1.4 + 3000))),
+      new Promise<void>(r => setTimeout(r, Math.max(20000, Math.max(...yPos.map(t => Math.abs(t))) / SPIN_SPEED * 16 * 1.4 + 3000))),
     ]);
     // Force-snap all reels + clear any lingering tease effects (safety)
     clearTeaseEffects();
