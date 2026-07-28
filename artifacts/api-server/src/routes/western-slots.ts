@@ -123,6 +123,26 @@ function buildFreePool(): string[] {
 const FREE_POOL = buildFreePool();
 
 // Returns cols[col][row] — column-major, matching the client's result format
+// ── DEV-ONLY TEST HELPER ────────────────────────────────────────────────────
+// Forces exactly 3 Scatters in cols 0, 2, 4 so the tease chain reliably
+// fires during local testing: the 2nd landing in col 2 arms the teaser
+// (pulses col 3 + dims stopped reels), and the 3rd landing in col 4
+// resolves it. Non-scatter cells are drawn from the supplied pool with
+// "Scatter" filtered out so a 4th scatter can never slip in. MUST be
+// gated to dev — leave the call-site `process.env.NODE_ENV !== "production"`
+// check in place so production spins remain RNG-only.
+function forceScatterGrid(pool: string[]): string[][] {
+  const nonS = pool.filter(s => s !== "Scatter");
+  const r = () => nonS[Math.floor(Math.random() * nonS.length)];
+  return [
+    [r(), r(), "Scatter"],
+    [r(), r(), r()],
+    ["Scatter", r(), r()],
+    [r(), r(), r()],
+    [r(), r(), "Scatter"],
+  ];
+}
+
 export function spinCols(free = false): string[][] {
   const pool = free ? FREE_POOL : POOL;
   return Array.from({ length: 5 }, () =>
@@ -256,7 +276,7 @@ router.post("/spin", requirePlayer, async (req, res) => {
     return res.status(400).json({ error: "Insufficient chips" });
   }
 
-  const cols = spinCols();
+  const cols = process.env.NODE_ENV !== "production" ? forceScatterGrid(POOL) : spinCols();
   const { lineWins, scatterWin, scatters, freeSpinsAwarded, totalWin } = evalCols(cols, totalBet);
   const net = totalWin - totalBet;
 
@@ -314,7 +334,7 @@ router.post("/free-spin", requirePlayer, async (req, res) => {
   const bonusBet = player.bonusBet ?? 0;
   const remaining = (player.bonusSpins ?? 1) - 1;
 
-  const cols = spinCols(true); // boosted free-spin pool
+  const cols = spinCols(true); // boosted free-spin pool (RNG-only, even in dev)
   const { lineWins, scatterWin, scatters, totalWin: rawWin } = evalCols(cols, bonusBet);
   const totalWin = rawWin * FREE_SPIN_MULTIPLIER;
 
@@ -341,7 +361,17 @@ router.post("/free-spin", requirePlayer, async (req, res) => {
   if (totalWin > 0) await broadcastPlayerBalance(playerId, newBalance);
   await recordPlayerActivity(playerId, updated[0]?.username ?? `player_${playerId}`, "western-slots", true);
 
-  return res.json({ cols, lineWins, scatterWin, scatters, totalWin, freeSpinsRemaining: remaining, newBalance, multiplier: FREE_SPIN_MULTIPLIER });
+  return res.json({
+    cols,
+    lineWins,
+    scatterWin,
+    scatters,
+    totalWin,
+    bonusBet,
+    freeSpinsRemaining: remaining,
+    newBalance,
+    multiplier: FREE_SPIN_MULTIPLIER,
+  });
 });
 
 // ── GET /western-slots/free-spins-status ─────────────────────────────────────

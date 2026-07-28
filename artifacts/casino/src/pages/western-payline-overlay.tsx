@@ -9,7 +9,7 @@
  * Layer contract (z-index within the parent 1920×1080 canvas div):
  *   z21  — animated winning-symbol canvases (western-slots.tsx, driven by onLineActive)
  *   z25  — dim rect + payline glow lines   (svgRef)  — sits ABOVE icons / sprites
- *   z26  — bigText total + per-line labels  (labelSvgRef)
+ *   z26  — centered total + per-line labels (labelSvgRef)
  */
 
 import { useEffect, useRef } from "react";
@@ -65,11 +65,11 @@ const LBL_FILL    = "#FFE782";  // inline label fill: gold
 const LBL_STROKE  = "#3a1800";  // inline label outline: dark brown
 
 // ── Timing (ms) ───────────────────────────────────────────────────────────────
-const DRAW_MS      = 300;   // left-to-right trace
-const HIGHLIGHT_MS = 100;   // sweep shimmer
-const HOLD_MS      = 900;   // hold each payline (≈ 1.2 s within 800–1200 ms spec)
+const DRAW_MS      = 180;   // left-to-right trace (was 300 — tightened for a snappier read)
+const HIGHLIGHT_MS = 70;    // sweep shimmer
+const HOLD_MS      = 600;   // hold each payline (was 900 within the 800–1200 ms spec)
 const FADE_MS      = 110;   // opacity fades
-const BIG_HOLD_MS  = 200;   // brief settle so big amount has shrunk before label reveals
+const BIG_HOLD_MS  = 130;   // brief settle so big amount has shrunk before label reveals
 const GROW_MS      = 1000;  // Stage-1 grow phase
 const TAIL_MS      = 700;   // Stage-1 shrink+fade phase
 const STEP_PAD_MS  = 30;    // gap between cycles
@@ -362,14 +362,17 @@ function clearLabelContent(labelSvg: SVGSVGElement): void {
 // ── Main component ────────────────────────────────────────────────────────────
 interface PaylineOverlayProps {
   wins: PaylineWin[];
+  /** Hide the centered total during free-spin payline sequences. */
+  showTotalWin?: boolean;
   /** Called each time the active payline changes. Pass winning positions for
    *  the now-active line so the caller can animate exactly those symbols. */
   onLineActive?: (positions: Array<{ reel: number; row: number; symbol: string }>) => void;
 }
 
-export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProps) {
-  const svgRef        = useRef<SVGSVGElement>(null);  // z25 — dim + paylines
-  const labelSvgRef   = useRef<SVGSVGElement>(null);  // z26 — bigText + per-line labels
+export function WesternPaylineOverlay({ wins, showTotalWin = true, onLineActive }: PaylineOverlayProps) {
+  const svgRef        = useRef<SVGSVGElement>(null);  // z25 — dim rect + <defs>
+  const lineSvgRef    = useRef<SVGSVGElement>(null);  // z28 — glow/core/dots/trace ABOVE sprite canvases (z27)
+  const labelSvgRef   = useRef<SVGSVGElement>(null);  // z29 — per-line labels (above the line draw)
   const timersRef     = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cancelsRef    = useRef<(() => void)[]>([]);
   const cancelledRef  = useRef(false);
@@ -386,6 +389,16 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
 
     clearOverlayContent(svg, timersRef.current, cancelsRef.current);
     clearLabelContent(labelSvg);
+    // Wipe any previous payline groups from lineSvgRef. clearOverlayContent
+    // only handles the dim svg, but the glow/core/dots/highlight live in
+    // this separate SVG. Without this the previously-traced line stays
+    // drawn when overlayWins flips (e.g., when a spin begins it goes to
+    // [] and the effect body short-circuits without rebuilding them).
+    if (lineSvgRef.current) {
+      while (lineSvgRef.current.children.length) {
+        lineSvgRef.current.removeChild(lineSvgRef.current.firstChild!);
+      }
+    }
     timersRef.current  = [];
     cancelsRef.current = [];
 
@@ -408,14 +421,16 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
       dimRect.style.opacity = String(v);
     }));
 
-    // ── Payline groups — appended after dimRect, so order within main SVG is:
-    //    dim < payline glow lines. The whole SVG sits at z25 — above z21
-    //    winning-symbol canvases so the glow line draws on top of the icons.
+    // ── Payline groups — appended to a SEPARATE SVG (lineSvgRef at z28) so
+    //    the glow/core/dots/lhlSweep rides ABOVE the winning-cell sprite
+    //    canvases (z27 in western-slots.tsx) while the dim rect stays BELOW
+    //    them at z25. Filtering + clipping are by id, so defs in svgRef still
+    //    resolve here.
     const groups: SVGGElement[] = wins.map(({ lineIndex, count }) => {
       const pts = paylinePoints(lineIndex, count);
       const d   = catmullRomPath(pts);
       const g   = buildLineGroup(d, pts, clipId, filterId);
-      svg.appendChild(g);
+      lineSvgRef.current?.appendChild(g);
       return g;
     });
 
@@ -431,27 +446,27 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
     const blurEl = svg.querySelector(`#${filterId} feGaussianBlur`) as SVGFEGaussianBlurElement | null;
     const pulseStops: (() => void)[] = new Array(groups.length).fill(null);
 
-    // ── Centered total win — bigText lives in the label SVG (z26).
+    // The centered total is shown for normal spins, but can be suppressed
+    // during the bonus round while keeping the per-payline labels.
     const totalWin = wins.reduce((s, w) => s + w.win, 0);
     const bigText = svgEl("text");
-    bigText.setAttribute("x",                "960");
-    bigText.setAttribute("y",                "560");
-    bigText.setAttribute("text-anchor",      "middle");
-    bigText.setAttribute("dominant-baseline","middle");
-    bigText.setAttribute("font-family",      "Oswald, sans-serif");
-    bigText.setAttribute("font-weight",      "900");
-    bigText.setAttribute("font-size",        "50");
-    bigText.setAttribute("fill",             COLOR_CORE);
-    bigText.setAttribute("stroke",           "#3a1800");
-    bigText.setAttribute("stroke-width",     "8");
-    bigText.setAttribute("paint-order",      "stroke fill");
-    bigText.setAttribute("style",            "letter-spacing:0.06em;filter:drop-shadow(0 6px 18px rgba(0,0,0,0.95));");
-    bigText.textContent   = totalWin > 0 ? `${totalWin.toLocaleString()}.00` : "";
+    bigText.setAttribute("x", "960");
+    bigText.setAttribute("y", "560");
+    bigText.setAttribute("text-anchor", "middle");
+    bigText.setAttribute("dominant-baseline", "middle");
+    bigText.setAttribute("font-family", "Oswald, sans-serif");
+    bigText.setAttribute("font-weight", "900");
+    bigText.setAttribute("font-size", "50");
+    bigText.setAttribute("fill", COLOR_CORE);
+    bigText.setAttribute("stroke", "#3a1800");
+    bigText.setAttribute("stroke-width", "8");
+    bigText.setAttribute("paint-order", "stroke fill");
+    bigText.setAttribute("style", "letter-spacing:0.06em;filter:drop-shadow(0 6px 18px rgba(0,0,0,0.95));");
+    bigText.textContent = totalWin > 0 ? `${totalWin.toLocaleString()}.00` : "";
     bigText.style.opacity = "0";
-    labelSvg.appendChild(bigText);
+    if (showTotalWin) labelSvg.appendChild(bigText);
 
-    // ── Stage-1 total cascade (plays once per spin) ──
-    if (totalWin > 0) {
+    if (showTotalWin && totalWin > 0) {
       cancelsRef.current.push(animate(0, 1, 220, easeOutCubic, v => {
         bigText.style.opacity = String(v);
       }));
@@ -568,8 +583,9 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
 
   return (
     <>
-      {/* z25 — dim rect + payline glow lines (above z21 winning-sprite canvases
-                so the glow line draws on top of the icons) */}
+      {/* z25 — dim rect only. Below sprite canvases (z27) so the dim layer
+                sits behind the bright winning tiles. <defs> lives here so
+                filter/clip IDs are still resolved by elements in lineSvgRef. */}
       <svg
         ref={svgRef}
         style={{ ...svgStyle, zIndex: 25 }}
@@ -579,10 +595,21 @@ export function WesternPaylineOverlay({ wins, onLineActive }: PaylineOverlayProp
         {defs}
       </svg>
 
-      {/* z26 — bigText total + per-line payout labels (above the glow line) */}
+      {/* z28 — payline glow line + winning-symbol dots + left-to-right
+                trace/highlight. ABOVE the sprite canvases (z27) so the line
+                draws on top of the bright winning tiles. Renders the groups
+                appended by the useEffect above via lineSvgRef. */}
+      <svg
+        ref={lineSvgRef}
+        style={{ ...svgStyle, zIndex: 28 }}
+        viewBox={`0 0 ${CW} ${CH}`}
+        xmlns="http://www.w3.org/2000/svg"
+      />
+
+      {/* z29 — per-line payout labels (above the line draw on winning cells). */}
       <svg
         ref={labelSvgRef}
-        style={{ ...svgStyle, zIndex: 26 }}
+        style={{ ...svgStyle, zIndex: 29 }}
         viewBox={`0 0 ${CW} ${CH}`}
         xmlns="http://www.w3.org/2000/svg"
       />

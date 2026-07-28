@@ -4,8 +4,8 @@ import { useStore } from "../store";
 import { usePageTracker } from "../lib/usePageTracker";
 import { awardXP } from "../lib/rewardsState";
 import { fireChallengeEvent } from "../lib/challengeEventService";
-import { BellagioChipsAnimation } from "./BellagioChipsAnimation";
 import { WesternPaylineOverlay, type PaylineWin } from "./western-payline-overlay";
+import { playCustomSound, stopCustomSound, startWinCountSound, stopWinCountSound, updateWinCountPitch, startLoop, stopLoop, setCustomSoundsVolume, setCustomSoundsMuted } from "../lib/customSounds";
 
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
@@ -34,9 +34,11 @@ const N_ROWS    = 3;
 // Reels Bottom (1535×228): left=193, top=883  ← control bar shelf
 
 // ── Reel animation (mirrors rome-slots exactly) ────────────────────────────────
-// setInterval (not RAF) because FiveM CEF throttles requestAnimationFrame.
+// Money counters use elapsed-time animation so skipped/throttled frames never
+// change the final payout or the animation's effective speed.
 // Each reel has a longer prefix so they stop LEFT → RIGHT naturally.
 const REEL_PREFIXES = [12, 15, 18, 21, 24]; // random-symbols before the result
+const TEASE_STEP    = 30;                    // extra-symbols/column after 2nd scatter
 const SPIN_SPEED    = 75;                    // px per 16ms tick
 const DECEL_ZONE    = CELL_H * 2.75;        // decelerate over last ~2.75 rows
 
@@ -158,6 +160,27 @@ function evalResult(cols: SymId[][], bet: number): {win:number; cells:Set<number
 }
 
 const DEFAULT_BET_STEPS = [20,40,100,200,400,1000,2000,5000];
+const WIN_COUNT_CURVE_EXPONENT = 1.35;
+const WIN_COUNT_DURATION_TIERS = [
+  { maxMultiplier: 2, durationMs: 500 },
+  { maxMultiplier: 10, durationMs: 900 },
+  { maxMultiplier: 25, durationMs: 1500 },
+  { maxMultiplier: 50, durationMs: 2200 },
+  { maxMultiplier: 100, durationMs: 3200 },
+] as const;
+const WIN_COUNT_MAX_DURATION_MS = 4500;
+// Bonus-exit totals are a calmer presentation than popup wins. Keep the
+// multiplier tiers shared, but give the full congratulations count-up more
+// time to read.
+const BONUS_EXIT_DURATION_MULTIPLIER = 4;
+
+function getWinCountDuration(winCents: number, betCents: number): number {
+  const multiplier = betCents > 0 ? winCents / betCents : 1;
+  for (const tier of WIN_COUNT_DURATION_TIERS) {
+    if (multiplier < tier.maxMultiplier) return tier.durationMs;
+  }
+  return WIN_COUNT_MAX_DURATION_MS;
+}
 const delay = (ms:number) => new Promise(r=>setTimeout(r,ms));
 
 // ── Web Audio sound system ─────────────────────────────────────────────────────
@@ -169,7 +192,7 @@ function useWesternSounds() {
   const clickBufRef = useRef<AudioBuffer|null>(null);
   // Raw MP3 bytes fetched eagerly on mount — no AudioContext required
   const rawBytesRef = useRef<ArrayBuffer|null>(null);
-  // Decoded buffer for win_end_bet_over.webm — played on every non-zero win
+  // Decoded buffer for win_bet.webm — played on every non-zero win
   const winBufRef   = useRef<AudioBuffer|null>(null);
   const winBytesRef = useRef<ArrayBuffer|null>(null);
 
@@ -179,7 +202,7 @@ function useWesternSounds() {
       .then(r => r.arrayBuffer())
       .then(arr => { rawBytesRef.current = arr; })
       .catch(() => {});
-    fetch(WS + "win_end_bet_over.webm")
+    fetch(WS + "win_bet.webm")
       .then(r => r.arrayBuffer())
       .then(arr => { winBytesRef.current = arr; })
       .catch(() => {});
@@ -357,7 +380,7 @@ function useWesternSounds() {
     }
   }
 
-  // Win: play uploaded win_end_bet_over.webm (decoded through AudioContext
+  // Win: play uploaded win_bet.webm (decoded through AudioContext
   // so it shares the same mute/volume as the synthesized reel-stop sfx)
   function playWin(_amount: number, _bet: number) {
     if (mutedRef.current || volRef.current === 0) return;
@@ -536,15 +559,37 @@ export default function WesternSlots() {
   const [bonusWinTotal,setBonusWinTotal] = useState(0);
   const bonusWinRef = useRef(0);
   const [showBonusEnd,setShowBonusEnd] = useState(false);
+  const [bonusEndCountComplete,setBonusEndCountComplete] = useState(false);
+  const bonusEndCountCompleteRef = useRef(false);
   const bonusEndResolveRef = useRef<(()=>void)|null>(null);
-  // Animated value for bonus-end "TOTAL WON" — uses setInterval (not RAF) since
-  // FiveM CEF throttles requestAnimationFrame. See top-of-file note.
+  // Resolved when the win popup overlay is dismissed (its onClick
+  // handler). Used by spinOnce when the LAST free spin had any lines —
+  // it must wait for the popup + payline animation to land before
+  // showing the bonus-complete splash, otherwise the splash covers
+  // the still-running mega/huge win card.
+  const winPopupDismissResolveRef = useRef<(()=>void)|null>(null);
+  // Animated value for bonus-end "TOTAL WON", stored internally as cents.
   const [bonusEndDisplayed,setBonusEndDisplayed] = useState(0);
-  const bonusEndTimerRef = useRef<ReturnType<typeof setInterval>|null>(null);
+  const bonusEndFrameRef = useRef<number|null>(null);
+  const bonusEndAnimRef = useRef<{startCents:number; finalCents:number; startTime:number; durationMs:number}|null>(null);
   const lastWinRef = useRef(0);
   const [showInfo,setShowInfo]   = useState(false);
   const [errMsg,setErrMsg]       = useState<string|null>(null);
   const [winPopup,setWinPopup]   = useState<{amount:number;bet:number;isJackpot:boolean;lineWins:any[];isFree:boolean;grid:SymId[][]}|null>(null);
+  // Mega wins get a two-step reveal: start on the Huge Win artwork, then
+  // replace it with the final Mega Win artwork after the first beat lands.
+  const [megaPopupStage,setMegaPopupStage] = useState<"huge"|"mega">("mega");
+  const megaPopupTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null);
+  // Rolling counter value drawn on the jackpot / huge / mega popup webp.
+  // Animates 0 → winPopup.amount each time winPopup is set to a big-win tier
+  // (handled in the [winPopup] useEffect below).
+  const [popCounterValue, setPopCounterValue] = useState<number>(0);
+  // Reveal gate for the win popup. winPopup carries the data as soon as
+  // the spin result is in, but the popup itself (and the win_end_bet audio)
+  // must NOT show until every distinct payline in the sequence has been
+  // shown on screen at least once. Flipped true inside onLineActive when
+  // the last new payline shape is fired; cleared on overlayWins flip.
+  const [popupRevealed, setPopupRevealed] = useState<boolean>(false);
   const [overlayWins, setOverlayWins] = useState<PaylineWin[]>([]);
   const autoRef = useRef(autoSpin);
   useEffect(()=>{ autoRef.current=autoSpin; },[autoSpin]);
@@ -579,6 +624,11 @@ export default function WesternSlots() {
   const frameImgsRef   = useRef<Map<SymId,HTMLImageElement>>(new Map());
   // setInterval handle for symbol animation loop
   const symAnimRef     = useRef<ReturnType<typeof setInterval>|null>(null);
+  // setInterval handle for the jackpot / huge / mega popup counter animation.
+  // Driven by the [winPopup] useEffect below; ramps popCounterValue
+  // 0 → winPopup.amount over ~1.8 s with easeOutCubic.
+  const popCounterFrameRef  = useRef<number|null>(null);
+  const popCounterAnimRef = useRef<{startCents:number; finalCents:number; startTime:number; durationMs:number}|null>(null);
 
   // On mount: position strips + preload spritesheets + sync free-spins from server
   useEffect(()=>{
@@ -616,7 +666,16 @@ export default function WesternSlots() {
       cv.style.visibility="hidden";
       cv.getContext("2d")?.clearRect(0,0,cv.width,cv.height);
     }
-    for(const img of cellImgRefs.current){ if(img) img.style.visibility=""; }
+    for(const img of cellImgRefs.current){
+      if(img){
+        img.style.visibility="";
+        img.style.display="";
+      }
+    }
+    // Symbol anims and the per-payline "multi" cue share a lifecycle —
+    // spin-start or sequence-cancellation tears them down together so
+    // the sound never lingers into the next spin.
+    stopCustomSound("multi");
   },[]);
 
   const startSymbolAnims = useCallback((winIndices: Set<number>)=>{
@@ -638,12 +697,21 @@ export default function WesternSlots() {
         const fr = Math.floor(frame / SPRITE_COLS);
         const ctx = cv.getContext("2d");
         if(!ctx) return;
+        // Clear the canvas backbuffer (transparent) before drawing each sprite
+        // frame. Canvas stays alpha-transparent; transparent pixels in the
+        // source frame composite with the layers below.
         ctx.clearRect(0,0,cv.width,cv.height);
         ctx.drawImage(sheet, fc*SPRITE_CELL, fr*SPRITE_CELL, SPRITE_CELL, SPRITE_CELL,
                       0, 0, cv.width, cv.height);
         cv.style.visibility="visible";
         const staticImg = cellImgRefs.current[idx];
-        if(staticImg) staticImg.style.visibility="hidden";
+        if(staticImg){
+          // Both visibility AND display must be toggled — CSS has been seen
+          // overriding `visibility:hidden`, so use `display:none` to take the
+          // static symbol fully out of the layer below the canvas.
+          staticImg.style.visibility="hidden";
+          staticImg.style.display="none";
+        }
       });
     };
 
@@ -659,16 +727,196 @@ export default function WesternSlots() {
     if(!spinning && winCells.size===0) stopSymbolAnims();
   },[spinning, winCells]);
 
+  // ── Big-win popup counter ──────────────────────────────────────────────────
+  // The counter is time-based: skipped/throttled frames jump to the amount
+  // implied by elapsed time instead of adding a fixed amount per frame.
+  useEffect(()=>{
+    if (popCounterFrameRef.current !== null) {
+      cancelAnimationFrame(popCounterFrameRef.current);
+      popCounterFrameRef.current = null;
+    }
+    popCounterAnimRef.current = null;
+    // Gate on popupRevealed (not just winPopup) so the count-up doesn't
+    // start the moment winPopup is set. winPopup gets created at
+    // spin-result time — hundreds of ms before the popup JSX renders,
+    // which is gated on popupRevealed. Without this gate, by the time
+    // the popup mounts, popCounterValue has already reached the target
+    // and the user sees a static number. Now: the roll-up starts on the
+    // same frame the popup image becomes visible.
+    if(!popupRevealed || !winPopup){ setPopCounterValue(0); return; }
+    // Only 10×+ wins get a popup. Smaller wins remain represented by
+    // the payline animation on the reels and must not start a hidden
+    // counter animation.
+    const counterMult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+    if (!winPopup.isJackpot && counterMult < 10) {
+      setPopCounterValue(0);
+      return;
+    }
+    // Every popup tier (jackpot / huge / mega / small) animates the
+    // count-up — the previous `mult < 5` early-exit left small wins
+    // rendering the popup image with `+0` because the roll-up never
+    // fired (bug shown in `image_1785190616734.png`). Now that all
+    // tiers render the same overlay, the count-up applies to all of
+    // them. If the spin paid nothing, we bail out above via the
+    // winPopup.amount === 0 check below.
+    if (!winPopup.amount || winPopup.amount <= 0) { setPopCounterValue(0); return; }
+    const startCents = 0;
+    const finalCents = Math.round(winPopup.amount * 100);
+    const durationMs = getWinCountDuration(finalCents, Math.round(winPopup.bet * 100));
+    const startTime = performance.now();
+    popCounterAnimRef.current = { startCents, finalCents, startTime, durationMs };
+    const frame = (now: number) => {
+      const anim = popCounterAnimRef.current;
+      if (!anim) return;
+      const progress = Math.min(Math.max((now - anim.startTime) / anim.durationMs, 0), 1);
+      const curvedProgress = Math.pow(progress, WIN_COUNT_CURVE_EXPONENT);
+      const displayedCents = progress >= 1
+        ? anim.finalCents
+        : Math.round(anim.startCents + (anim.finalCents - anim.startCents) * curvedProgress);
+      setPopCounterValue(displayedCents / 100);
+      updateWinCountPitch(displayedCents, anim.finalCents);
+      if (progress >= 1) {
+        popCounterAnimRef.current = null;
+        popCounterFrameRef.current = null;
+        stopWinCountSound();
+        return;
+      }
+      popCounterFrameRef.current = requestAnimationFrame(frame);
+    };
+    popCounterFrameRef.current = requestAnimationFrame(frame);
+    return ()=>{
+      if (popCounterFrameRef.current !== null) {
+        cancelAnimationFrame(popCounterFrameRef.current);
+        popCounterFrameRef.current = null;
+      }
+      popCounterAnimRef.current = null;
+    };
+  }, [popupRevealed, winPopup]);
+
+  // Huge/Mega/Jackpot popups share a looping count-up bed. Start it only
+  // after the popup is revealed, and stop it as soon as the displayed amount
+  // reaches the exact final payout. This also covers the Mega popup's Huge
+  // intro because the loop is tied to the amount counter, not the artwork
+  // stage.
+  useEffect(() => {
+    if (popupRevealed && winPopup && !showBonusEnd) {
+      const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+      const eligible = winPopup.isJackpot || mult >= 10;
+      const countFinished = popCounterValue >= winPopup.amount;
+      if (eligible && !countFinished) {
+        startWinCountSound();
+        updateWinCountPitch(Math.round(popCounterValue * 100), Math.round(winPopup.amount * 100));
+      }
+      else stopWinCountSound();
+    } else {
+      stopWinCountSound();
+    }
+  }, [popupRevealed, winPopup, showBonusEnd, popCounterValue]);
+
+  // Reuse the win-count bed for the bonus exit summary. It starts with the
+  // total-win counter and ends only when the displayed amount reaches the
+  // exact cumulative bonus payout, so tapping the scene cannot cut off the
+  // audio/count-up pairing.
+  useEffect(() => {
+    if (showBonusEnd && bonusWinTotal > 0 && !bonusEndCountComplete) {
+      startWinCountSound();
+      updateWinCountPitch(
+        Math.round(bonusEndDisplayed * 100),
+        Math.round(bonusWinTotal * 100),
+      );
+    } else if (showBonusEnd && bonusEndCountComplete) {
+      stopWinCountSound();
+    }
+  }, [showBonusEnd, bonusWinTotal, bonusEndDisplayed, bonusEndCountComplete]);
+
+  useEffect(() => () => stopWinCountSound(), []);
+
+  // Give the Mega Win popup its own reveal beat. This is intentionally
+  // separate from the amount counter: the number keeps rolling while the
+  // artwork transitions from Huge Win to Mega Win.
+  useEffect(() => {
+    if (megaPopupTimerRef.current !== null) {
+      clearTimeout(megaPopupTimerRef.current);
+      megaPopupTimerRef.current = null;
+    }
+    setMegaPopupStage("mega");
+    if (!popupRevealed || !winPopup || winPopup.isJackpot) return;
+    const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+    // Match the Rome tier thresholds: 10×+ is Huge, 20×+ is Mega.
+    // Only the 10×–19.99× range gets the Huge → Mega reveal. Lower
+    // wins stay on the Huge-style artwork and must never flash Mega.
+    if (mult < 10 || mult >= 20) return;
+
+    setMegaPopupStage("huge");
+    megaPopupTimerRef.current = setTimeout(() => {
+      setMegaPopupStage("mega");
+      megaPopupTimerRef.current = null;
+    }, 900);
+    return () => {
+      if (megaPopupTimerRef.current !== null) {
+        clearTimeout(megaPopupTimerRef.current);
+        megaPopupTimerRef.current = null;
+      }
+    };
+  }, [popupRevealed, winPopup]);
+
+  // Fire win_end_bet exactly once when popupRevealed flips true (i.e. the
+  // last distinct payline has been shown for the first time in this
+  // sequence). The static total money text and the sting land together,
+  // AFTER every multi/payline has been played. Latched via
+  // winEndBetPlayedRef (cleared on overlayWins flip) so loop cycles and
+  // re-renders cannot replay the cue.
+  useEffect(()=>{
+    if(!popupRevealed) return;
+    if(winEndBetPlayedRef.current) return;
+    winEndBetPlayedRef.current = true;
+    // 500ms gap so the win_bet sting sits clearly after the final multi tail
+    // — long enough to read as its own celebratory beat, short enough not
+    // to feel like two separate events.
+    setTimeout(() => soundsRef.current.playWin(0, 0), 500);
+  }, [popupRevealed]);
+
+  // Tracks payline shapes that already fired the "multi" cue in the current
+  // sequence, plus a latch so win_end_bet fires exactly once at the very
+  // end — only after every distinct payline has been shown at least once.
+  const playedPaylineKeysRef = useRef<Set<string>>(new Set());
+  const winEndBetPlayedRef    = useRef(false);
+
+  // Reset both on every new win sequence (overlayWins flips).
+  useEffect(() => {
+    playedPaylineKeysRef.current.clear();
+    winEndBetPlayedRef.current = false;
+    setPopupRevealed(false);
+  }, [overlayWins]);
+
   // Per-payline symbol animation — called by WesternPaylineOverlay each time
   // the active payline changes. Stops any current canvas anims, then starts
   // fresh ones only for the cells that belong to the newly active payline.
+  // On every UNIQUE payline shape, fires the "multi" cue (loop cycles reuse
+  // the same positions-array, so the dedup blocks replay). Once every
+  // distinct payline has been shown at least once, fires the win_end_bet
+  // sting via a small 350ms delay so it is audibly separated from the
+  // last "multi" cue — exactly one sting per sequence.
   const onLineActive = useCallback(
     (positions: Array<{ reel: number; row: number; symbol: string }>) => {
       stopSymbolAnims();
       const indices = new Set(positions.map(p => p.reel * N_ROWS + p.row));
       if (indices.size > 0) startSymbolAnims(indices);
+      const key = positions.map(p => `${p.reel},${p.row}`).join("|");
+      if (!playedPaylineKeysRef.current.has(key)) {
+        playedPaylineKeysRef.current.add(key);
+        playCustomSound("multi");
+        // All distinct paylines in this sequence have now been seen at
+        // least once. Reveal the popup + fire win_end_bet on this frame
+        // (via the [popupRevealed] useEffect) so the static total money
+        // text and the sting land AFTER every multi cue and payline
+        // trace, never before.
+        if (playedPaylineKeysRef.current.size >= overlayWins.length) {
+          setPopupRevealed(true);
+        }
+      }
     },
-    [stopSymbolAnims, startSymbolAnims],
+    [stopSymbolAnims, startSymbolAnims, overlayWins],
   );
 
   // ── Spin ───────────────────────────────────────────────────────────────────
@@ -721,6 +969,36 @@ export default function WesternSlots() {
     // cols[col][row] — column-major grid returned by server
     const result: SymId[][] = data.cols as SymId[][];
 
+    // ── SCATTER tease setup (mirrors rome-slots) ────────────────────────────
+    // Detect which columns hold a Scatter in the resolved result. The moment
+    // the 2nd Scatter lands, every column from the next reel onward is given
+    // additional random padding (TEASE_STEP * step where step=1,2,3…), so
+    // each successive reel is still visibly spinning when the previous
+    // teaser stops. The animate loop below pulses a yellow boxShadow on
+    // the next unpaid reel and dims already-stopped reels.
+    const scatterInCol: boolean[] = Array(N_REELS).fill(false);
+    for (let c = 0; c < N_REELS; c++) {
+      for (let r = 0; r < N_ROWS; r++) {
+        if (result[c][r] === "Scatter") { scatterInCol[c] = true; break; }
+      }
+    }
+    const teaseExtraSyms: number[] = Array(N_REELS).fill(0);
+    let scsSoFar      = 0;
+    let firstTeaseCol = -1;
+    for (let c = 0; c < N_REELS; c++) {
+      if (scatterInCol[c]) {
+        scsSoFar++;
+        if (scsSoFar === 2 && firstTeaseCol < 0) firstTeaseCol = c + 1;
+      }
+    }
+    if (firstTeaseCol >= 0 && firstTeaseCol < N_REELS) {
+      for (let c = firstTeaseCol; c < N_REELS; c++) {
+        const step    = c - firstTeaseCol + 1; // 1, 2, 3 …
+        const passLast = Math.max(0, REEL_PREFIXES[N_REELS - 1] - REEL_PREFIXES[c]);
+        teaseExtraSyms[c] = passLast + TEASE_STEP * step;
+      }
+    }
+
     // Build strips top-to-bottom as [result_3, random_padding, prev_3].
     // Animation translates the strip DOWNWARD through the viewport, so symbols
     // enter from the top and exit at the bottom. Initial translateY is
@@ -732,6 +1010,7 @@ export default function WesternSlots() {
       return [
         result[col][0], result[col][1], result[col][2],
         ...Array.from({length:pfx},randSym),
+        ...Array.from({length:teaseExtraSyms[col]},randSym),
         ...prev,
       ] as SymId[];
     });
@@ -759,7 +1038,7 @@ export default function WesternSlots() {
     // ── Sequential lift-before-spin: each reel lifts 8 px upward over 80 ms,
     //    returns to 0 over 80 ms, then enters the spin loop. ──────────────────
     const reelStarted = Array(N_REELS).fill(false);
-    const LIFT_PX = 40, LIFT_MS = 130, STAGGER_MS = 120;
+    const LIFT_PX = 40, LIFT_MS = 90, STAGGER_MS = 85;
     for(let i=0;i<N_REELS;i++){
       ((col)=>{
         setTimeout(()=>{
@@ -787,10 +1066,57 @@ export default function WesternSlots() {
 
     if(animRef.current) clearInterval(animRef.current);
 
+    // SCATTER cells accumulate across reels so all scatters — whether
+    // they land early or late — animate together the moment each reel
+    // settles. startSymbolAnims replaces the active canvas indices with
+    // the union passed in, so calling it after each reel-stop correctly
+    // unions scatter cells across all settled columns.
+    const settledScatterCells = new Set<number>();
+
+    // ── SCATTER tease helpers (closure-local; reset every spin) ───────────
+    // Direct DOM writes to containerRefs, so React never re-renders the
+    // pulse frames. The focus shifts reel-to-reel as the teaser lands;
+    // resolution wipes all glow + dim styles.
+    const applyTeaseDim = (idx: number) => {
+      const el = containerRefs.current[idx];
+      if (el) {
+        el.style.transition = "filter 0.25s";
+        el.style.filter     = "brightness(0.42)";
+        el.style.boxShadow  = "";
+      }
+    };
+    const clearTeaseEffects = () => {
+      for (let j = 0; j < N_REELS; j++) {
+        const el = containerRefs.current[j];
+        if (el) {
+          el.style.transition = "filter 0.3s, box-shadow 0.3s";
+          el.style.filter     = "";
+          el.style.boxShadow  = "";
+        }
+      }
+    };
+    let teaseScatterCount = 0;
+    let teaseReelIdx      = -1;
+    let pulsePhase        = 0;
+
     await Promise.race([
       new Promise<void>(resolve=>{
         animRef.current = setInterval(()=>{
           let anyMoving = false;
+          // SCATTER tease pulse — sinusoidal brightness + yellow boxShadow
+          // on the focused unstopped reel. Phase modulo 40 ≈ two full
+          // breath cycles per ~640ms — matches rome-slots exactly.
+          if (teaseReelIdx >= 0 && !stopped[teaseReelIdx]) {
+            pulsePhase = (pulsePhase + 1) % 40;
+            const bright  = 1.08 + 0.10 * Math.sin(pulsePhase * Math.PI / 20);
+            const spread  = 18  + 8    * Math.sin(pulsePhase * Math.PI / 20);
+            const glowEl  = containerRefs.current[teaseReelIdx];
+            if (glowEl) {
+              glowEl.style.transition = "";
+              glowEl.style.filter     = `brightness(${bright.toFixed(3)})`;
+              glowEl.style.boxShadow  = `0 0 ${spread.toFixed(0)}px 6px rgba(255,195,50,0.72)`;
+            }
+          }
           for(let i=0;i<N_REELS;i++){
             if(stopped[i]) continue;
             if(!reelStarted[i]){ anyMoving=true; continue; } // still lifting
@@ -805,6 +1131,64 @@ export default function WesternSlots() {
               stopped[i]=true;
               soundsRef.current.playReelStop(i);
               if(el){ el.style.transition="none"; el.style.transform=`translateY(${targets[i]}px)`; }
+              // Sync visibleSymsRef for the just-settled column so startSymbolAnims
+              // looks up the correct sprite sheet on its very first frame.
+              // visibleSymsRef is otherwise only refreshed after the
+              // await Promise.race block, which fires AFTER every reel
+              // settles — without this sync the canvas would draw the
+              // previous spin's icon for ~50ms per frame before catching
+              // up to SCATTER.
+              // SCATTER landing punch — fires once per reel that resolves with at
+              // least one Scatter on it (NOT per Scatter cell, so a column
+              // with two Scatters hits the cue clean instead of double-
+              // triggering). Latches via hasScatterInReel so the sound
+              // doesn't accumulate as the loop iterates rows.
+              let hasScatterInReel = false;
+              for (let r = 0; r < N_ROWS; r++) {
+                visibleSymsRef.current[i * N_ROWS + r] = result[i][r];
+                if (result[i][r] === "Scatter") {
+                  settledScatterCells.add(i * N_ROWS + r);
+                  hasScatterInReel = true;
+                }
+              }
+              if (hasScatterInReel) playCustomSound("scatter_land");
+              if (settledScatterCells.size > 0) startSymbolAnims(settledScatterCells);
+
+              // ── SCATTER tease orchestration (mirrors rome-slots) ────────
+              // 1) When the focused tease reel stops: shift focus forward if
+              //    it had no scatter & count < 3, otherwise wipe visuals.
+              if (i === teaseReelIdx) {
+                teaseReelIdx = -1;
+                if (!scatterInCol[i] && teaseScatterCount < 3) {
+                  let nextReel = -1;
+                  for (let j = i + 1; j < N_REELS; j++) { if (!stopped[j]) { nextReel = j; break; } }
+                  if (nextReel >= 0) {
+                    teaseReelIdx = nextReel;
+                    pulsePhase   = 0;
+                    applyTeaseDim(i); // the just-stopped teaser dims like the others
+                  } else {
+                    clearTeaseEffects(); // ran out of reels — clean up
+                  }
+                } else {
+                  clearTeaseEffects(); // 3rd scatter or already 3 — resolve
+                }
+              }
+              // 2) Bump scatter count; arm the pulse exactly on the 2nd.
+              if (scatterInCol[i]) {
+                teaseScatterCount++;
+                if (teaseScatterCount === 2) {
+                  let nextReel = -1;
+                  for (let j = i + 1; j < N_REELS; j++) { if (!stopped[j]) { nextReel = j; break; } }
+                  if (nextReel >= 0) {
+                    teaseReelIdx = nextReel;
+                    pulsePhase   = 0;
+                    for (let j = 0; j < N_REELS; j++) { if (stopped[j]) applyTeaseDim(j); }
+                  }
+                }
+              }
+              // 3) Dim any reel that stops after the tease is already live
+              //    (running dim — re-applying keeps brightness override active).
+              if (teaseReelIdx >= 0 && i !== teaseReelIdx) applyTeaseDim(i);
             } else {
               anyMoving=true;
               if(el) el.style.transform=`translateY(${yPos[i]}px)`;
@@ -819,6 +1203,10 @@ export default function WesternSlots() {
       }),
       new Promise<void>(r=>setTimeout(r,10000)),
     ]);
+    // Belt-and-braces: wipe any leftover tease glow/dim. The loop's
+    // own focus-forward already cleared on every resolution; this is
+    // a no-op safety net for the abrupt timeout path.
+    clearTeaseEffects();
     // Force-snap all reels to their targets (safety — no-op if already snapped)
     if(animRef.current){ clearInterval(animRef.current); animRef.current=null; }
     for(let i=0;i<N_REELS;i++){
@@ -865,9 +1253,21 @@ export default function WesternSlots() {
     }
 
     if (totalWin > 0) {
-      const isJackpot = lws.some((lw: any) => lw.symbol === "Wild" && lw.matchCount === 5);
-      soundsRef.current.playWin(totalWin, betRef.current);
-      setWinPopup({ amount: totalWin, bet: betRef.current, isJackpot, lineWins: lws, isFree, grid: result });
+      // Keep popup tiers wager-relative. Paid spins use the current bet;
+      // free spins use the persisted bonus bet returned by the server
+      // (the same wager used to calculate the payout), never a fixed
+      // coin threshold.
+      const resultBet = isFree
+        ? (Number(data.bonusBet) > 0 ? Number(data.bonusBet) : betRef.current)
+        : betRef.current;
+      const isJackpot = lws.some((lw: any) =>
+        lw.symbol === "Wild" && lw.matchCount === 5
+      );
+      // "multi" cue + win_end_bet sting are fired from onLineActive at the
+      // payline-animation level: multi on each unique payline shape, and
+      // win_end_bet exactly once after every distinct payline in the
+      // sequence has been shown. Spin-result site is cue-free.
+      setWinPopup({ amount: totalWin, bet: resultBet, isJackpot, lineWins: lws, isFree, grid: result });
     }
 
     // Track cumulative bonus winnings
@@ -884,10 +1284,17 @@ export default function WesternSlots() {
       setFreeLeft(f => f + awardedFreeSpins);
       freeLeftRef.current += awardedFreeSpins;
       setFreeTotal(awardedFreeSpins);
-      soundsRef.current.playFreeSpinTrigger();
+      // Celebratory sting that lands at the same instant the bonus
+      // entry scene appears — distinct from the per-reel scatter /
+      // background loop, so the event reads as a one-shot punch
+      // rather than a machine-gun retrigger. (The old playFreeSpinTrigger
+      // engine pulse was deliberately retired here so the sting reads
+      // as the single bonus-arrival cue, not a stack of two.)
+      playCustomSound("bonus_entry");
+      // Bonus entry scene stays up until the user clicks to continue —
+      // no auto-dismiss timer. Mirrors rome-slots behavior so the player
+      // can read the count + tap at their own pace.
       setShowFreeSpinsBanner(true);
-      await new Promise(r => setTimeout(r, 4500));
-      setShowFreeSpinsBanner(false);
     }
 
     // Bonus round complete — show end summary (dismissed by player tap)
@@ -897,41 +1304,111 @@ export default function WesternSlots() {
       // Cancel auto-spin — player must re-enable it after the bonus round
       setAutoSpin(false); autoRef.current = false;
       await new Promise(r => setTimeout(r, 700));
-      // Count-up animation (setInterval — RAF is throttled in FiveM CEF)
-      const endValue = bonusWinRef.current;
-      if (bonusEndTimerRef.current !== null) { clearInterval(bonusEndTimerRef.current); bonusEndTimerRef.current = null; }
-      setBonusEndDisplayed(0);
-      if (endValue <= 0) {
-        // nothing to animate
-      } else if (typeof window !== "undefined"
-                 && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        setBonusEndDisplayed(endValue);
-      } else {
-        const duration = 5500; // 5.5 s — slow, dramatic reveal
-        const startTime = Date.now();
-        bonusEndTimerRef.current = setInterval(() => {
-          const t     = Math.min((Date.now() - startTime) / duration, 1);
-          const eased = 1 - Math.pow(1 - t, 5); // ease-out quintic — crawls to final value
-          setBonusEndDisplayed(Math.round(eased * endValue));
-          if (t >= 1) {
-            setBonusEndDisplayed(endValue); // exact final value
-            if (bonusEndTimerRef.current !== null) {
-              clearInterval(bonusEndTimerRef.current);
-              bonusEndTimerRef.current = null;
-            }
-          }
-        }, 16);
+      stopLoop("western_bonus");
+      // If the LAST free spin paid out any paylines, let every distinct
+      // payline sequence complete one full presentation cycle before
+      // switching to the bonus-complete scene. The overlay intentionally
+      // cycles while a win is active, so waiting for a user click (or a
+      // fixed safety timeout) can leave the win popup mounted underneath
+      // the Congratulations card. Clear both layers explicitly after the
+      // cycle so the end scene always starts on a clean canvas.
+      if (totalWin > 0 && lws.length > 0) {
+        const PAYLINE_CYCLE_MS = 1100;
+        await delay(lws.length * PAYLINE_CYCLE_MS + 500);
+        setWinPopup(null);
+        setOverlayWins([]);
+        winPopupDismissResolveRef.current = null;
+        await delay(80);
       }
+      // Hard-stop every win presentation before mounting the final bonus
+      // scene. The explicit render gate below prevents a stale React commit
+      // from showing the mega/huge popup underneath Congratulations.
+      setWinPopup(null);
+      setOverlayWins([]);
+      setPopupRevealed(false);
+      setWinCells(new Set());
+      stopSymbolAnims();
+       // Continue from the already-earned bonus total instead of restarting
+       // the visual total from zero.
+       const endValue = bonusWinRef.current;
+       const startValue = bonusEndDisplayed;
+       const startCents = Math.round(startValue * 100);
+       const finalCents = Math.round(endValue * 100);
+        const durationMs = getWinCountDuration(
+         Math.max(0, finalCents - startCents),
+         Math.round((Number(data.bonusBet) > 0 ? Number(data.bonusBet) : betRef.current) * 100),
+        ) * BONUS_EXIT_DURATION_MULTIPLIER;
+       if (bonusEndFrameRef.current !== null) {
+         cancelAnimationFrame(bonusEndFrameRef.current);
+         bonusEndFrameRef.current = null;
+       }
+       bonusEndAnimRef.current = null;
+       setBonusEndDisplayed(startValue);
+       bonusEndCountCompleteRef.current = finalCents <= startCents;
+      setBonusEndCountComplete(bonusEndCountCompleteRef.current);
       setShowBonusEnd(true);
-      await new Promise<void>(r => { bonusEndResolveRef.current = r; });
+      if (endValue > 0 && !(typeof window !== "undefined"
+          && window.matchMedia("(prefers-reduced-motion: reduce)").matches)) {
+         const startTime = performance.now();
+         bonusEndAnimRef.current = { startCents, finalCents, startTime, durationMs };
+         const frame = (now: number) => {
+           const anim = bonusEndAnimRef.current;
+           if (!anim) return;
+           const progress = Math.min(Math.max((now - anim.startTime) / anim.durationMs, 0), 1);
+           const curvedProgress = Math.pow(progress, WIN_COUNT_CURVE_EXPONENT);
+           const displayedCents = progress >= 1
+             ? anim.finalCents
+             : Math.round(anim.startCents + (anim.finalCents - anim.startCents) * curvedProgress);
+           setBonusEndDisplayed(displayedCents / 100);
+           updateWinCountPitch(displayedCents, anim.finalCents);
+           if (progress >= 1) {
+             bonusEndAnimRef.current = null;
+             bonusEndFrameRef.current = null;
+             bonusEndCountCompleteRef.current = true;
+             setBonusEndCountComplete(true);
+             stopWinCountSound();
+             return;
+           }
+           bonusEndFrameRef.current = requestAnimationFrame(frame);
+         };
+         bonusEndFrameRef.current = requestAnimationFrame(frame);
+      } else if (endValue > 0) {
+        setBonusEndDisplayed(endValue);
+        bonusEndCountCompleteRef.current = true;
+        setBonusEndCountComplete(true);
+         stopWinCountSound();
+      }
+      await new Promise<void>(r => {
+        bonusEndResolveRef.current = () => {
+          // Clicking skips the remaining animation and shows the exact total.
+          if (!bonusEndCountCompleteRef.current) {
+            const finalCents = Math.round(bonusWinRef.current * 100);
+            setBonusEndDisplayed(finalCents / 100);
+            bonusEndAnimRef.current = null;
+            if (bonusEndFrameRef.current !== null) {
+              cancelAnimationFrame(bonusEndFrameRef.current);
+              bonusEndFrameRef.current = null;
+            }
+            bonusEndCountCompleteRef.current = true;
+            setBonusEndCountComplete(true);
+            stopWinCountSound();
+            return;
+          }
+          r();
+        };
+      });
       setShowBonusEnd(false);
       bonusWinRef.current = 0;
       setBonusWinTotal(0);
       setBonusEndDisplayed(0);
-      if (bonusEndTimerRef.current !== null) {
-        clearInterval(bonusEndTimerRef.current);
-        bonusEndTimerRef.current = null;
-      }
+      bonusEndCountCompleteRef.current = false;
+      setBonusEndCountComplete(false);
+      setFreeTotal(0);
+       if (bonusEndFrameRef.current !== null) {
+         cancelAnimationFrame(bonusEndFrameRef.current);
+         bonusEndFrameRef.current = null;
+       }
+       bonusEndAnimRef.current = null;
       return;
     }
 
@@ -1078,7 +1555,7 @@ export default function WesternSlots() {
             )
           ))}
 
-          {/* z:21 — Canvas animation overlays — above the payline SVG (z20) so
+          {/* z:27 — Canvas animation overlays — above the payline SVG (z:25) so
                     winning-symbol sprites render in front of the glow line.
                     Visibility is toggled per-payline via the onLineActive callback. */}
           {Array.from({length:N_REELS},(_,col)=>
@@ -1092,7 +1569,7 @@ export default function WesternSlots() {
                   width:CELL_W,height:CELL_H,
                   display:"flex",alignItems:"center",justifyContent:"center",
                   pointerEvents:"none",
-                  zIndex:21,
+                  zIndex:27,
                 }}>
                   <canvas
                     ref={el=>{ animCanvasRefs.current[idx]=el; }}
@@ -1109,7 +1586,11 @@ export default function WesternSlots() {
           {/* Dim overlay removed — handled inside WesternPaylineOverlay SVG */}
 
           {/* ── Payline glow overlay — pointer-events:none, z-index:20 ── */}
-          <WesternPaylineOverlay wins={overlayWins} onLineActive={onLineActive} />
+          <WesternPaylineOverlay
+            wins={overlayWins}
+            showTotalWin={!winPopup?.isFree}
+            onLineActive={onLineActive}
+          />
 
           {/* z:3 — Reels Up top beam */}
           <img src={WS+"screen/Reels Up.webp"} draggable={false}
@@ -1231,29 +1712,57 @@ export default function WesternSlots() {
         </div>{/* end canvas */}
 
         {/* ── Win popup — rendered OUTSIDE scaled canvas (same pattern as Rome slots) ── */}
-        {winPopup && (() => {
+         {winPopup && popupRevealed && !showBonusEnd && (() => {
           const PP = WS + "popups/";
           const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
 
-          // Small win: completely suppressed — no compact banner shown.
-          // (Paylines on the reel canvas already convey the win.)
-          if (!winPopup.isJackpot && mult < 5) {
-            return null;
-          }
+           // Suppress sub-10× wins; the reel payline animation already
+           // communicates those smaller payouts.
+           if (!winPopup.isJackpot && mult < 10) return null;
 
-          // Big / jackpot wins: full overlay with asset image + popupScale
-          const cfg = winPopup.isJackpot
-            ? { img: PP+"PopUp Jackpot.webp",  glow:"#ffe000", amtColor:"#fff8a0", textTop:"62%" }
-            : mult >= 15
-            ? { img: PP+"PopUp Huge Win.webp",  glow:"#ff8800", amtColor:"#ffd580", textTop:"63%" }
-            : { img: PP+"PopUp Mega Win.webp",  glow:"#ffcc00", amtColor:"#ffe880", textTop:"63%" };
+           // 10×+ wins render through the full tiered popup pipeline.
+           // Lock the tier before applying the Mega reveal sequence.
+           // Huge wins must remain Huge throughout; only the lower Mega
+           // tier is allowed to start on Huge artwork and then swap to
+           // Mega artwork.
+           // Match Rome: 10×+ is Huge, 20×+ is Mega. The Mega reveal
+           // applies only to the 10×–19.99× range; lower wins also
+           // remain on Huge-style artwork rather than falling through
+           // to Mega.
+           const isMegaWin = !winPopup.isJackpot && mult >= 20;
+           const isHugeWin = !winPopup.isJackpot && mult >= 10 && !isMegaWin;
+           const showingMegaIntro = isMegaWin && megaPopupStage === "huge";
+           const cfg = winPopup.isJackpot
+            ? { img: PP+"PopUp Jackpot.webp",  glow:"#ffe000", amtColor:"#fff8a0", textTop:"70%" }
+             : isMegaWin
+             ? showingMegaIntro
+               ? { img: PP+"PopUp Huge Win.webp", glow:"#ff8800", amtColor:"#ffd580", textTop:"71%" }
+               : { img: PP+"PopUp Mega Win.webp", glow:"#ffcc00", amtColor:"#ffe880", textTop:"71%" }
+             : isHugeWin
+            ? { img: PP+"PopUp Huge Win.webp",  glow:"#ff8800", amtColor:"#ffd580", textTop:"71%" }
+              : { img: PP+"PopUp Huge Win.webp",  glow:"#ff8800", amtColor:"#ffd580", textTop:"71%" };
 
           return (
             <div style={{
               position:"fixed",inset:0,zIndex:9998,
               display:"flex",alignItems:"center",justifyContent:"center",
               background:"rgba(0,0,0,0.65)",
-            }} onClick={()=>setWinPopup(null)}>
+            }} onClick={()=>{
+               if (popCounterAnimRef.current) {
+                 setPopCounterValue(winPopup.amount);
+                 popCounterAnimRef.current = null;
+                 if (popCounterFrameRef.current !== null) {
+                   cancelAnimationFrame(popCounterFrameRef.current);
+                   popCounterFrameRef.current = null;
+                 }
+               }
+              setWinPopup(null);
+              stopWinCountSound();
+              // Unblock the bonus-complete scene if it was waiting on
+              // the win popup to clear during the last free spin.
+              winPopupDismissResolveRef.current?.();
+              winPopupDismissResolveRef.current = null;
+            }}>
               <div style={{
                 position:"relative",width:520,height:580,
                 transform:`scale(${popupScale})`,transformOrigin:"center center",
@@ -1265,58 +1774,127 @@ export default function WesternSlots() {
                   position:"absolute",left:0,right:0,top:cfg.textTop,
                   display:"flex",flexDirection:"column",alignItems:"center",gap:6,
                 }}>
-                  <span style={{
+                   {/* Animated total — popCounterValue ramps 0 → winPopup.amount
+                           over ~5.5 s with easeOutCubic, gated on popupRevealed
+                          so the roll coincides with the popup becoming visible
+                          (not with winPopup being set). Final value lands on
+                          winPopup.amount as a snap in the last frame. */}
+                   <span style={{
                     fontFamily:"Oswald,sans-serif",fontWeight:900,
                     fontSize:72,color:cfg.amtColor,lineHeight:1,
                     textShadow:`0 0 30px ${cfg.glow},0 0 60px ${cfg.glow}88,0 3px 8px rgba(0,0,0,0.9)`,
                     letterSpacing:"0.03em",
-                  }}>+{winPopup.amount.toLocaleString()}</span>
-                  <span style={{
-                    fontFamily:"Oswald,sans-serif",fontWeight:600,
-                    fontSize:20,color:"rgba(255,220,100,0.85)",
-                    textShadow:"0 2px 6px rgba(0,0,0,0.8)",
-                    letterSpacing:"0.18em",textTransform:"uppercase",
-                  }}>BET Coins</span>
-                  {winPopup.lineWins.length > 0 && (
-                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:4,marginTop:8,
-                      background:"rgba(0,0,0,0.45)",borderRadius:6,padding:"8px 16px",maxHeight:180,overflowY:"auto"}}>
-                      {winPopup.lineWins.map((lw:any,i:number)=>{
-                        const lineNum  = lw.lineNumber ?? (lw.lineIndex + 1);
-                        const count    = lw.matchCount ?? lw.count;
-                        const sym      = lw.symbol;
-                        const payVal   = lw.paytableValue ?? "?";
-                        const payout   = lw.payout ?? lw.win;
-                        const wild     = lw.usedWild;
-                        return (
-                          <div key={i} style={{fontFamily:"Oswald,sans-serif",fontSize:12,
-                            color:"rgba(255,215,100,0.9)",letterSpacing:"0.04em",lineHeight:1.6}}>
-                            <span style={{color:"rgba(255,230,140,0.5)",marginRight:6}}>L{lineNum}</span>
-                            <span style={{fontWeight:700}}>{count}× {sym}</span>
-                            <span style={{color:"rgba(255,200,80,0.55)",margin:"0 6px"}}>—</span>
-                            <span>{payVal}× bet</span>
-                            <span style={{color:"rgba(255,200,80,0.55)",margin:"0 6px"}}>—</span>
-                            <span style={{color:"#ffd700",fontWeight:700}}>+{payout.toLocaleString()}{winPopup.isFree?" ×2":""}</span>
-                            {wild&&<span style={{color:"rgba(200,180,255,0.6)",fontSize:10,marginLeft:6}}>· Wild</span>}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                   }}>{Math.min(popCounterValue, winPopup.amount).toLocaleString()}</span>
+                  {/* "BET Coins" subtitle + per-payline win strip removed —
+                       only the rolling total amount renders inside the win
+                       popup now. */}
                 </div>
               </div>
             </div>
           );
         })()}
 
+        {/* ── Bonus round ENTRY scene — shown when 3+ Scatters award free spins.
+            State is gated by `showFreeSpinsBanner` (set true in spinOnce after the
+            `bonus_entry` custom sting is fired). Stays up until the user clicks
+            to continue; the `startLoop("western_bonus")` music fires on that
+            same click. */}
+        {showFreeSpinsBanner && (
+        <div
+          onClick={() => { setShowFreeSpinsBanner(false); startLoop("western_bonus"); }}
+          style={{
+            position:"fixed",inset:0,zIndex:10000,cursor:"pointer",
+            background:"radial-gradient(ellipse at 50% 48%, rgba(70,24,0,0.97) 0%, rgba(6,2,0,0.99) 72%)",
+            display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+            overflow:"hidden",
+          }}
+        >
+          {/* Rotating conic rays */}
+          <div style={{
+            position:"absolute",inset:"-50%",
+            backgroundImage:[
+              "conic-gradient(from 0deg at 50% 50%,",
+              "transparent 0deg, rgba(255,180,0,0.07) 8deg, transparent 16deg,",
+              "transparent 30deg, rgba(255,160,0,0.05) 36deg, transparent 42deg,",
+              "transparent 60deg, rgba(255,180,0,0.07) 66deg, transparent 72deg,",
+              "transparent 90deg, rgba(255,160,0,0.05) 96deg, transparent 102deg,",
+              "transparent 120deg, rgba(255,180,0,0.07) 126deg, transparent 132deg,",
+              "transparent 150deg, rgba(255,160,0,0.05) 156deg, transparent 162deg,",
+              "transparent 180deg, rgba(255,180,0,0.07) 186deg, transparent 192deg,",
+              "transparent 210deg, rgba(255,160,0,0.05) 216deg, transparent 222deg,",
+              "transparent 240deg, rgba(255,180,0,0.07) 246deg, transparent 252deg,",
+              "transparent 270deg, rgba(255,160,0,0.05) 276deg, transparent 282deg,",
+              "transparent 300deg, rgba(255,180,0,0.07) 306deg, transparent 312deg,",
+              "transparent 330deg, rgba(255,160,0,0.05) 336deg, transparent 342deg)",
+            ].join(" "),
+            animation:"bonusRayRotate 12s linear infinite",
+            pointerEvents:"none",
+          }} />
+
+          {/* Expanding rings */}
+          {[0, 0.9, 1.8].map((delayS, i) => (
+            <div key={i} style={{
+              position:"absolute",
+              width:320, height:320, borderRadius:"50%",
+              border:`${i === 0 ? 2 : 1}px solid rgba(255,190,0,0.35)`,
+              animation:`bonusRingExpand 2.4s ease-out ${delayS}s infinite`,
+              pointerEvents:"none",
+            }} />
+          ))}
+
+          {/* BONUS ROUND title */}
+          <div style={{
+            fontFamily:"'Cinzel',serif", fontWeight:900, fontSize:52,
+            color:"#fcd34d", letterSpacing:"0.12em",
+            textShadow:"0 0 40px rgba(255,200,0,0.9), 0 0 80px rgba(255,140,0,0.4), 0 4px 10px rgba(0,0,0,0.9)",
+            animation:"bonusTitleCrash 0.65s cubic-bezier(0.34,1.56,0.64,1) both, bonusShimmer 2.2s ease-in-out 0.65s infinite",
+          }}>⚡ BONUS ROUND ⚡</div>
+
+          {/* Subtitle */}
+          <div style={{
+            fontFamily:"'Cinzel',serif", fontWeight:400, fontSize:15,
+            color:"rgba(252,211,77,0.55)", letterSpacing:"0.45em",
+            textTransform:"uppercase", marginTop:10, marginBottom:28,
+            animation:"bonusSubtitleSlide 0.45s ease-out 0.5s both",
+          }}>Free Spins Awarded</div>
+
+          {/* Count */}
+          <div style={{
+            fontFamily:"'Oswald',sans-serif", fontWeight:900, fontSize:130,
+            color:"#fff", lineHeight:1,
+            textShadow:"0 0 60px rgba(255,180,0,1), 0 0 120px rgba(255,120,0,0.5), 0 4px 12px rgba(0,0,0,0.9)",
+            animation:"bonusCountPop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.85s both",
+          }}>{freeTotal}</div>
+
+          {/* "FREE SPINS" label */}
+          <div style={{
+            fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:24,
+            color:"rgba(252,211,77,0.85)", letterSpacing:"0.28em",
+            textShadow:"0 2px 8px rgba(0,0,0,0.8)",
+            animation:"bonusSubtitleSlide 0.45s ease-out 1.1s both",
+            marginTop:6,
+          }}>FREE SPINS</div>
+
+          {/* Tap hint */}
+          <div style={{
+            position:"absolute", bottom:"7%",
+            fontFamily:"'Cinzel',serif", fontSize:12,
+            color:"rgba(255,210,80,0.35)", letterSpacing:"0.32em",
+            textTransform:"uppercase",
+            animation:"bonusSubtitleSlide 0.4s ease-out 1.6s both",
+          }}>Tap anywhere to continue</div>
+        </div>
+      )}
+
         {/* ── Bonus active: screen edge glow ── */}
-        {freeLeft>0&&!showFreeSpinsBanner&&!showBonusEnd&&(
+        {freeTotal>0&&!showFreeSpinsBanner&&!showBonusEnd&&(
           <div style={{position:"fixed",inset:0,zIndex:9990,pointerEvents:"none",
             border:"3px solid rgba(255,180,0,0.4)",borderRadius:2,
             animation:"bonusEdgePulse 1.8s ease-in-out infinite"}} />
         )}
 
         {/* ── Free spins counter (enhanced) ── */}
-        {freeLeft>0&&!showFreeSpinsBanner&&!showBonusEnd&&(
+        {freeTotal>0&&!showFreeSpinsBanner&&!showBonusEnd&&(
           <div style={{
             position:"fixed",top:"3%",left:"50%",transform:"translateX(-50%)",
             zIndex:9996,pointerEvents:"none",
@@ -1340,19 +1918,6 @@ export default function WesternSlots() {
                 / {freeTotal}
               </span>
             </div>
-            {bonusWinTotal>0&&(
-              <>
-                <div style={{width:1,height:28,background:"rgba(255,180,0,0.3)"}}/>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
-                  <span style={{fontFamily:"Oswald,sans-serif",fontSize:10,
-                    color:"rgba(255,200,100,0.55)",letterSpacing:"0.15em"}}>WON</span>
-                  <span style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:22,
-                    color:"#FFD060",textShadow:"0 0 12px rgba(255,200,0,0.5)"}}>
-                    +{bonusEndDisplayed.toLocaleString()}
-                  </span>
-                </div>
-              </>
-            )}
           </div>
         )}
 
@@ -1363,56 +1928,86 @@ export default function WesternSlots() {
             <div
               style={{position:"fixed",inset:0,zIndex:9996,pointerEvents:"all",
                 background:"rgba(0,0,0,0.88)"}}
-              onClick={()=>{ bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
+              onClick={()=>{
+                if (bonusEndCountCompleteRef.current) {
+                  soundsRef.current.playWin(bonusEndDisplayed, betRef.current);
+                }
+                bonusEndResolveRef.current?.();
+                bonusEndResolveRef.current=null;
+              }}
             />
 
-            {/* Layer 2 — Bellagio chip fountain (pointer-events:none) */}
-            <BellagioChipsAnimation active={showBonusEnd} total={bonusWinTotal} />
-
-            {/* Layer 3 — card content; entire layer is clickable to dismiss */}
+            {/* Card content; entire layer is clickable to dismiss */}
             <div
               style={{position:"fixed",inset:0,zIndex:9999,
                 pointerEvents:"all",
                 display:"flex",flexDirection:"column",
                 alignItems:"center",justifyContent:"center",
                 cursor:"pointer"}}
-              onClick={()=>{ bonusEndResolveRef.current?.(); bonusEndResolveRef.current=null; }}
+              onClick={()=>{
+                if (bonusEndCountCompleteRef.current) {
+                  soundsRef.current.playWin(bonusEndDisplayed, betRef.current);
+                }
+                bonusEndResolveRef.current?.();
+                bonusEndResolveRef.current=null;
+              }}
             >
               <div style={{
                 display:"flex",flexDirection:"column",alignItems:"center",gap:16,
                 animation:"bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
                 background:"rgba(0,0,0,0.55)",
-                borderRadius:20,
-                padding:"36px 56px 32px",
-                boxShadow:"0 0 80px rgba(255,180,40,0.15)",
+                borderRadius:22,
+                padding:"40px 72px 36px",
+                boxShadow:"0 0 90px rgba(255,180,40,0.20)",
               }}>
-                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:400,fontSize:18,
-                  color:"rgba(255,210,120,0.65)",letterSpacing:"0.5em",textTransform:"uppercase"}}>
-                  BONUS ROUND COMPLETE
-                </div>
-                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:52,
-                  color:"#FFD060",letterSpacing:"0.08em",
-                  animation:"bonusShimmer 1.4s ease-in-out infinite"}}>
-                  TOTAL WON
-                </div>
-                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:96,
-                  color:"#fff",lineHeight:1,
-                  textShadow:"0 0 60px rgba(255,200,60,0.7),0 4px 12px rgba(0,0,0,0.9)"}}>
-                  +{bonusEndDisplayed.toLocaleString()}
-                </div>
-                <div style={{fontFamily:"Oswald,sans-serif",fontSize:20,
-                  color:"rgba(255,210,100,0.45)",letterSpacing:"0.18em"}}>
-                  BET COINS
-                </div>
                 <div style={{
-                  marginTop:18,
-                  fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:15,
+                  fontFamily:"'Cinzel',serif", fontWeight:700, fontSize:36,
+                  color:"#FFD060", letterSpacing:"0.18em",
+                  textShadow:"0 0 30px rgba(255,200,60,0.55),0 2px 6px rgba(0,0,0,0.85)",
+                }}>
+                  Congratulations
+                </div>
+
+                {/* thin divider */}
+                <div style={{width:160,height:1,marginTop:-2,
+                  background:"linear-gradient(90deg,transparent,rgba(255,200,80,0.55),transparent)"}}/>
+
+                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:22,
+                  color:"rgba(255,210,120,0.75)",letterSpacing:"0.40em",
+                  textTransform:"uppercase",marginTop:-2}}>
+                  You Have Won
+                </div>
+
+                <div style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:110,
+                  color:"#fff",lineHeight:1,
+                  textShadow:"0 0 70px rgba(255,200,60,0.75),0 4px 14px rgba(0,0,0,0.9)"}}>
+                  ${bonusEndDisplayed.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </div>
+
+                <div style={{fontFamily:"Oswald,sans-serif",fontSize:20,
+                  color:"rgba(255,210,100,0.75)",letterSpacing:"0.12em",
+                  textTransform:"uppercase"}}>
+                  In
+                  <span style={{fontFamily:"Oswald,sans-serif",fontWeight:700,
+                    fontSize:30,letterSpacing:0,
+                    color:"#FFD060",margin:"0 12px",lineHeight:1,
+                    textShadow:"0 0 22px rgba(255,200,60,0.7),0 2px 6px rgba(0,0,0,0.85)",
+                    verticalAlign:"-2px"}}>{freeTotal}</span>
+                  Free Spins
+                </div>
+
+                <div style={{
+                  marginTop:8,
+                  fontFamily:"Oswald,sans-serif",fontWeight:600,fontSize:14,
                   letterSpacing:"0.30em",textTransform:"uppercase",
-                  color:"#FFD060",
+                  color:"rgba(255,210,120,0.45)",
                   animation:"bonusClickPulse 1.8s ease-in-out infinite",
                   userSelect:"none",
                 }}>
-                  Click Anywhere to Continue
+                  Tap to Continue
                 </div>
               </div>
             </div>
@@ -1461,7 +2056,7 @@ export default function WesternSlots() {
                   <img
                     src={WS+(sfxMuted?"popups/Radio Button Off.webp":"popups/Radio Button On.webp")}
                     draggable={false}
-                    onClick={()=>{ const m=!sfxMuted; setSfxMuted(m); sounds.setMuted(m); }}
+                    onClick={()=>{ const m=!sfxMuted; setSfxMuted(m); sounds.setMuted(m); setCustomSoundsMuted(m); }}
                     style={{width:76,height:36,cursor:"pointer",
                       opacity:1,transition:"opacity 0.15s"}}
                   />
@@ -1474,7 +2069,7 @@ export default function WesternSlots() {
                     flexShrink:0}}>Vol</span>
                   <input type="range" min={0} max={1} step={0.05} value={sfxVolume}
                     disabled={sfxMuted}
-                    onChange={e=>{const v=parseFloat(e.target.value);setSfxVolume(v);sounds.setVolume(v);}}
+                    onChange={e=>{const v=parseFloat(e.target.value);setSfxVolume(v);sounds.setVolume(v);setCustomSoundsVolume(v);}}
                     style={{flex:1,accentColor:"#7B3500",opacity:sfxMuted?0.25:1}}/>
                   <span style={{color:sfxMuted?"rgba(61,21,0,0.3)":"#5D2800",
                     fontSize:11,minWidth:30,textAlign:"right",flexShrink:0}}>
