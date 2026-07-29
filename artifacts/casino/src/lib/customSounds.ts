@@ -3,11 +3,11 @@
  *
  * HOW TO ADD A SOUND
  * ──────────────────
- * 1. Copy your audio file (.mp3 or .wav) into:
+ * 1. Copy your audio file (.webm) into:
  *      artifacts/casino/public/sounds/
  *
  * 2. Add one line to the CUSTOM_SOUNDS map below:
- *      "mySound": "/sounds/my-file.mp3",
+ *      "mySound": "/sounds/my-file.webm",
  *
  * 3. Call it anywhere in the app:
  *      import { playCustomSound } from "../lib/customSounds";
@@ -16,16 +16,16 @@
  * Notes:
  *  • Each file is decoded once and cached — no lag on repeat plays.
  *  • Volume follows the master gain in sounds.ts automatically.
- *  • Use .mp3 for best compatibility with FiveM's CEF browser.
+ *  • Use .webm for the casino sound assets.
  */
 
 /* ─────────────────────────────────────────────────────────────────
    ADD YOUR SOUNDS HERE
-   Format:  "soundName": "/sounds/filename.mp3",
+   Format:  "soundName": "/sounds/filename.webm",
 ───────────────────────────────────────────────────────────────── */
 const CUSTOM_SOUNDS: Record<string, string> = {
   // Per-payline "multi" cue — plays at the start of each winning payline.
-  "multi": "/sounds/multi.mp3",
+  "multi": "/sounds/multi.webm",
   // Per-reel "scatter_land" cue — fires whenever a Scatter is present in
   // the column that just came to rest. One play per reel (even if multiple
   // Scatters land in the same column) so the sound feels like a punch,
@@ -36,17 +36,21 @@ const CUSTOM_SOUNDS: Record<string, string> = {
   // loop, so the three layers read as separate events:
   //   1. bonus_entry (this)     → "bonus just awarded"
   //   2. scatter_land (webm)    → per-reel scatter punch while spinning
-  //   3. western_bonus (mp3)    → bg loop once player taps to continue
-  "bonus_entry": "/sounds/bonus_entry.mp3",
+  //   3. western_bonus (webm)   → bg loop once player taps to continue
+  "bonus_entry": "/sounds/bonus_entry.webm",
   // Background music loop that fires the moment the player taps off the
   // bonus entry scene and runs until the bonus round ends.
-  "western_bonus": "/sounds/western_bonus.mp3",
+  "western_bonus": "/sounds/western_bonus.webm",
+   "bet_click": "/sounds/select_1785207729227.webm",
   // Looping count-up bed for Huge, Mega, and Jackpot win popups.
   "win_count": "/sounds/win_count.webm",
-  // "winBig":    "/sounds/win-big.mp3",
-  // "jackpot2":  "/sounds/jackpot.mp3",
+  // "winBig":    "/sounds/win-big.webm",
+  // "jackpot2":  "/sounds/jackpot.webm",
   // "countdown": "/sounds/countdown.wav",
 };
+export const BET_INCREASE_PLAYBACK_RATE = 1.25;
+export const BET_DECREASE_PLAYBACK_RATE = 0.8;
+export const BET_CLICK_VOLUME = 0.2275;
 /* ─────────────────────────────────────────────────────────────────
    ADD YOUR PER-CUE VOLUME DEFAULTS HERE
    Format:  "soundName": 0–1 multiplier on top of CUSTOM_SOUNDS.
@@ -86,6 +90,8 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 // recreating the gain graph (which would re-trigger the audio).
 let masterGainValue = 0.5;
 let sharedMasterGain: GainNode | null = null;
+let musicGainValue = 1;
+let sharedMusicGain: GainNode | null = null;
 // Mute button has its own gate downstream of `sharedMasterGain` so we
 // can kill the bonus loop (and every other custom cue) in real time
 // without clobbering the user's volume slider position — silencing
@@ -96,7 +102,7 @@ let sharedMuteGate: GainNode | null = null;
 
 let audioCtx: AudioContext | null = null;
 const bufferCache = new Map<string, AudioBuffer>();
-const loadingSet  = new Set<string>();
+const loadingPromises = new Map<string, Promise<AudioBuffer | null>>();
 // Tracks the currently-playing AudioBufferSourceNode per cue name so a
 // retrigger can stop the previous instance cleanly instead of overlapping.
 // Entries are cleared either by the source's `onended` callback or by the
@@ -130,6 +136,18 @@ function makeMaster(ac: AudioContext): GainNode {
   return sharedMasterGain;
 }
 
+function makeMusicMaster(ac: AudioContext): GainNode {
+  makeMaster(ac);
+  if (!sharedMusicGain) {
+    sharedMusicGain = ac.createGain();
+    sharedMusicGain.gain.value = musicGainValue;
+    sharedMusicGain.connect(sharedMuteGate!);
+  } else if (sharedMusicGain.gain.value !== musicGainValue) {
+    sharedMusicGain.gain.value = musicGainValue;
+  }
+  return sharedMusicGain;
+}
+
 /** Match the western-slots volume slider. 0 = silent, 1 = full.
  *  Re-routes gain on the shared master so already-playing audio
  *  (including the bonus loop) AND any cue started after this call
@@ -148,6 +166,12 @@ export function setCustomSoundsMuted(m: boolean): void {
   if (sharedMuteGate) sharedMuteGate.gain.value = mutedFlag ? 0 : 1;
 }
 
+/** Set the independent bonus-music volume without restarting the loop. */
+export function setCustomMusicVolume(v: number): void {
+  musicGainValue = Math.max(0, Math.min(1, v));
+  if (sharedMusicGain) sharedMusicGain.gain.value = musicGainValue;
+}
+
 /** Pre-load all registered custom sounds into memory. Call once at app start (optional). */
 export function preloadCustomSounds(): void {
   Object.entries(CUSTOM_SOUNDS).forEach(([name]) => loadBuffer(name).catch(() => {}));
@@ -155,26 +179,30 @@ export function preloadCustomSounds(): void {
 
 async function loadBuffer(name: string): Promise<AudioBuffer | null> {
   if (bufferCache.has(name)) return bufferCache.get(name)!;
-  if (loadingSet.has(name))  return null;
+  const existingLoad = loadingPromises.get(name);
+  if (existingLoad) return existingLoad;
 
   const path = CUSTOM_SOUNDS[name];
   if (!path) return null;
 
-  loadingSet.add(name);
-  try {
-    const ac  = getCtx();
-    const res = await fetch(`${BASE}${path}`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const raw     = await res.arrayBuffer();
-    const decoded = await ac.decodeAudioData(raw);
-    bufferCache.set(name, decoded);
-    return decoded;
-  } catch (e) {
-    console.warn(`[customSounds] Failed to load "${name}":`, e);
-    return null;
-  } finally {
-    loadingSet.delete(name);
-  }
+  const load = (async () => {
+    try {
+      const ac  = getCtx();
+      const res = await fetch(`${BASE}${path}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const raw     = await res.arrayBuffer();
+      const decoded = await ac.decodeAudioData(raw);
+      bufferCache.set(name, decoded);
+      return decoded;
+    } catch (e) {
+      console.warn(`[customSounds] Failed to load "${name}":`, e);
+      return null;
+    } finally {
+      loadingPromises.delete(name);
+    }
+  })();
+  loadingPromises.set(name, load);
+  return load;
 }
 
 /**
@@ -224,6 +252,32 @@ export function playCustomSound(name: string, volume = 1): void {
         src.connect(m);
       }
 
+      src.start(ac.currentTime);
+    })
+    .catch(() => {});
+}
+
+/**
+ * Play the bet selector click with a directional pitch.
+ * A new source is created for every valid button press so clicks never loop
+ * or reuse a currently-playing source.
+ */
+export function playBetClickSound(direction: "increase" | "decrease"): void {
+  const playbackRate = direction === "increase"
+    ? BET_INCREASE_PLAYBACK_RATE
+    : BET_DECREASE_PLAYBACK_RATE;
+  loadBuffer("bet_click")
+    .then(buffer => {
+      if (!buffer) return;
+      const ac = getCtx();
+      const src = ac.createBufferSource();
+      src.buffer = buffer;
+      src.playbackRate.value = playbackRate;
+
+      const gain = ac.createGain();
+      gain.gain.value = BET_CLICK_VOLUME;
+      src.connect(gain);
+      gain.connect(makeMaster(ac));
       src.start(ac.currentTime);
     })
     .catch(() => {});
@@ -301,7 +355,7 @@ export function startLoop(name: string, volume = 1, _pitchRampSeconds?: number):
     pendingLoops.delete(name);
     if (!buffer) return;
     const ac = getCtx();
-    const m  = makeMaster(ac);
+     const m  = makeMusicMaster(ac);
     const src = ac.createBufferSource();
     src.buffer = buffer;
     src.loop = true;

@@ -10,7 +10,7 @@ import { usePageTracker } from "../lib/usePageTracker";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft } from "lucide-react";
 import { playSound } from "../lib/sounds";
-import buttonClickUrl from "@assets/buttonclick_1777322204907.mp3";
+import buttonClickUrl from "@assets/buttonclick_1777322204907.webm";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 
 function playBtnClick() {

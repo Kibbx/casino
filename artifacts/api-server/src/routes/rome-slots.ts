@@ -55,7 +55,7 @@ const PAYTABLE: Record<string, Record<number, number>> = {
 export const SCATTER_PAY: Record<number, number> = { 3: 3, 4: 11, 5: 44 };
 
 // Free spins awarded on scatter trigger (3/4/5 scatters)
-const FREE_SPINS_MAP: Record<number, number> = { 3: 8, 4: 12, 5: 18 };
+const FREE_SPINS_MAP: Record<number, number> = { 3: 10, 4: 12, 5: 15 };
 
 // Free spins are persisted in the players table:
 //   bonusSpins  — how many remain
@@ -124,6 +124,25 @@ export function spinGrid(free = false): Grid {
   return grid;
 }
 
+// Development-only deterministic result for testing the 3-Scatter bonus flow.
+// It is intentionally not exported or available in production.
+function buildDevThreeScatterGrid(): Grid {
+  const nonScatterPool = POOL.filter(symbol => symbol !== "Scatter");
+  const grid: Grid = [];
+  const scatterCells = new Set(["0:0", "1:2", "2:4"]);
+  for (let row = 0; row < 3; row++) {
+    grid.push([]);
+    for (let reel = 0; reel < 5; reel++) {
+      grid[row].push(
+        scatterCells.has(`${row}:${reel}`)
+          ? "Scatter"
+          : nonScatterPool[Math.floor(Math.random() * nonScatterPool.length)],
+      );
+    }
+  }
+  return grid;
+}
+
 interface LineWin {
   lineIndex: number;
   symbol: string;
@@ -185,7 +204,11 @@ router.post("/spin", requirePlayer, async (req, res) => {
   }
 
   const betPerLine = Math.floor(totalBet / PAYLINES.length);
-  const grid = spinGrid();
+  const forceDevThreeScatters =
+    process.env.NODE_ENV !== "production" &&
+    req.body?.forceDevThreeScatters === true &&
+    ((req as any).playerSession?.staffRoles ?? []).some((role: string) => role.toLowerCase() === "owner");
+  const grid = forceDevThreeScatters ? buildDevThreeScatterGrid() : spinGrid();
   const lineWins = evaluateGrid(grid, betPerLine);
   const scatters = countScatters(grid);
 

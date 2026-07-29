@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useStore } from "../store";
-import buttonClickUrl  from "@assets/buttonclick_1777322204907.mp3";
+import buttonClickUrl  from "@assets/buttonclick_1777322204907.webm";
 
 const WS   = import.meta.env.BASE_URL + "western-slots/";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");

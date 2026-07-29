@@ -11,24 +11,52 @@ import { useGetSlotsStatus } from "@workspace/api-client-react";
 import {
   playSpinClick,
   playReelTick,
+  playReelStop,
   playScatterLand,
+  playResultWin,
   playBonusMusic,
+  playBonusAmbience,
+  playBonusEntryThunderstrike,
   stopBonusMusic,
-  playSmallWin,
-  playHugeWin,
-  playMegaWin,
+  stopBonusAmbience,
   setRomeSfxVolume,
   setRomeSfxMuted,
   getRomeSfxVolume,
   getRomeSfxMuted,
+  preloadRomeSounds,
 } from "./rome-sounds";
+import {
+  playBetClickSound,
+  playCustomSound,
+  startWinCountSound,
+  stopWinCountSound,
+  updateWinCountPitch,
+} from "../lib/customSounds";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
 import { PaylineOverlay, type PaylineWin } from "./payline-overlay";
-import { BellagioChipsAnimation } from "./BellagioChipsAnimation";
+import { Menu, X, ChevronUp, ChevronDown, RotateCw, RefreshCw, Volume2, VolumeX, Music2, Info } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const SLOTS_MAINTENANCE = false;
 const RS   = import.meta.env.BASE_URL + "rome-slots/";
+const WIN_COUNT_CURVE_EXPONENT = 1.35;
+const WIN_COUNT_DURATION_TIERS = [
+  { maxMultiplier: 2, durationMs: 500 },
+  { maxMultiplier: 10, durationMs: 900 },
+  { maxMultiplier: 25, durationMs: 1500 },
+  { maxMultiplier: 50, durationMs: 2200 },
+  { maxMultiplier: 100, durationMs: 3200 },
+] as const;
+const WIN_COUNT_MAX_DURATION_MS = 4500;
+const BONUS_EXIT_DURATION_MULTIPLIER = 4;
+
+function getWinCountDuration(winCents: number, betCents: number): number {
+  const multiplier = betCents > 0 ? winCents / betCents : 1;
+  for (const tier of WIN_COUNT_DURATION_TIERS) {
+    if (multiplier < tier.maxMultiplier) return tier.durationMs;
+  }
+  return WIN_COUNT_MAX_DURATION_MS;
+}
 
 const HEADER_H = 72; // px — fixed header bar height
 
@@ -63,10 +91,6 @@ const ROW_H    = 216;          // (866-217)/3 = 216
 const ROWS  = 3;
 const REELS = 5;
 
-// Bottom GUI panel image (1920×146)
-const PANEL_Y = 934;
-const PANEL_H = 146;
-
 // ── Symbol data ───────────────────────────────────────────────────────────────
 const SYMBOL_IDS = [
   "BronzeCoin", "CooperCoin", "SilverCoin", "GoldCoin",
@@ -80,6 +104,12 @@ const ANIM_SYMBOLS = new Set([
 ]);
 const ANIM_FRAMES  = 24;
 const ANIM_FPS     = 20; // frames per second → 50ms per frame
+// Keep completed winners brighter without adding a post-overlay halo. The
+// drop-shadow previously made static winners appear larger/frozen after the
+// payline trace ended, while animated frames themselves had no matching glow.
+const SYMBOL_VIEW_W = 250;
+const SYMBOL_VIEW_H = 215;
+const WILD_CENTER_OFFSET_X = 4;
 
 // Paylines — mirrors api-server/src/routes/rome-slots.ts PAYLINES exactly
 const PAYLINES: number[][] = [
@@ -181,9 +211,11 @@ function PanelDisplay({ img, w, h, x, y, label, value, highlight }: {
 export default function RomeSlots() {
   useGameClosedRedirect("fortuna", "/slots");
   const [, navigate] = useLocation();
-  const { playerId, sessionToken } = useStore();
+  const { playerId, sessionToken, playerStaffRoles } = useStore();
+  const isOwner = playerStaffRoles.some(role => role.toLowerCase() === "owner");
   usePageTracker("rome-slots");
   usePasswordGuard("slots");
+  useEffect(() => { preloadRomeSounds(); }, []);
   useEffect(() => { if (!isGameUnlocked("slots")) navigate("/slots-hub"); }, []);
   useEffect(() => { if (SLOTS_MAINTENANCE) navigate("/slots-hub"); }, []);
 
@@ -213,9 +245,6 @@ export default function RomeSlots() {
   const spinningRef = useRef(false);
   useEffect(() => { if (!spinning) setDisplayChips(liveChips ?? 0); }, [liveChips, spinning]);
   const [lastWin, setLastWin] = useState(0);
-  const [winPopup, setWinPopup] = useState<WinTier>(null);
-  const [winLineBreakdown, setWinLineBreakdown] = useState<{lineIndex:number;count:number;symbol:string;win:number}[]>([]);
-  const [winIsFree, setWinIsFree] = useState(false);
   const [errMsg, setErrMsg] = useState<string | null>(null);
   const [autoSpin, setAutoSpin] = useState(false);
   const autoSpinRef = useRef(false);
@@ -223,6 +252,12 @@ export default function RomeSlots() {
   const [showSfx, setShowSfx] = useState(false);
   const [sfxMuted, setSfxMuted] = useState(getRomeSfxMuted);
   const [sfxVolume, setSfxVolume] = useState(getRomeSfxVolume);
+  const [musicVolume, setMusicVolume] = useState(() =>
+    Number(localStorage.getItem("fortuna-music-volume") ?? "1")
+  );
+  const [musicEnabled, setMusicEnabled] = useState(
+    () => localStorage.getItem("fortuna-music-enabled") !== "false"
+  );
   // Free spins mode
   const [freeSpinsLeft, setFreeSpinsLeft] = useState(0);
   const [freeSpinsTotal, setFreeSpinsTotal] = useState(0);
@@ -232,21 +267,92 @@ export default function RomeSlots() {
   const bonusWinRef = useRef(0);
   const [showBonusEnd, setShowBonusEnd] = useState(false);
   const bonusEndResolveRef = useRef<(()=>void)|null>(null);
+  const [bonusEndCountComplete, setBonusEndCountComplete] = useState(false);
+  const bonusEndCountCompleteRef = useRef(false);
+  const paylineFirstPassCompleteRef = useRef(true);
+  const paylineFirstPassResolveRef = useRef<(() => void) | null>(null);
   // Animated value displayed in the bonus-end summary (count-up from 0 → bonusWinTotal)
   const [bonusEndDisplayed, setBonusEndDisplayed] = useState(0);
   const bonusEndRafRef = useRef<number | null>(null);
   const [showFreeSpinsEntry, setShowFreeSpinsEntry] = useState(false);
+  const [showDevThreeScatters, setShowDevThreeScatters] = useState(false);
   const freeSpinsEntryRef  = useRef(false);  // ref mirror — readable inside spinOnce callback
   const bonusEverActiveRef = useRef(false);  // guard: prevents bonus-end firing on mount
   // True once reels have settled
   const [reelsStopped, setReelsStopped] = useState(false);
   // Winning paylines to display in the overlay (cleared on each new spin)
   const [overlayWins, setOverlayWins] = useState<PaylineWin[]>([]);
+  const [bigWinPopup, setBigWinPopup] = useState<{
+    amount: number;
+    multiplier: number;
+    tier: "huge" | "mega";
+  } | null>(null);
   const animRef        = useRef<number | null>(null);
 
   // ── Animated win counter ─────────────────────────────────────────────────
   const [displayedWin, setDisplayedWin] = useState(0);
   const winRafRef = useRef<number | null>(null);
+  const betHoldTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const betHoldIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const toggleMusic = () => {
+    const next = !musicEnabled;
+    setMusicEnabled(next);
+    localStorage.setItem("fortuna-music-enabled", String(next));
+    if (!next) stopBonusMusic();
+    else if (freeSpinsRef.current > 0) playBonusMusic();
+  };
+  const updateSfxVolume = (value: number) => {
+    setSfxVolume(value);
+    setRomeSfxVolume(value);
+  };
+  const updateMusicVolume = (value: number) => {
+    setMusicVolume(value);
+    localStorage.setItem("fortuna-music-volume", String(value));
+    // Rome currently exposes one shared audio master; keep music aligned
+    // with that existing sound engine rather than adding a parallel mixer.
+    setRomeSfxVolume(value);
+  };
+  const changeBet = (direction: "increase" | "decrease") => {
+    if (spinning) return;
+    setBet(current => {
+      const index = betSteps.indexOf(current);
+      const nextIndex = index + (direction === "increase" ? 1 : -1);
+      if (index < 0 || nextIndex < 0 || nextIndex >= betSteps.length) return current;
+      playBetClickSound(direction);
+      return betSteps[nextIndex];
+    });
+  };
+  const stopBetHold = () => {
+    if (betHoldTimerRef.current) clearTimeout(betHoldTimerRef.current);
+    if (betHoldIntervalRef.current) clearInterval(betHoldIntervalRef.current);
+    betHoldTimerRef.current = null;
+    betHoldIntervalRef.current = null;
+  };
+  const startBetHold = (direction: "increase" | "decrease") => {
+    if (spinning) return;
+    stopBetHold();
+    betHoldTimerRef.current = setTimeout(() => {
+      betHoldIntervalRef.current = setInterval(() => changeBet(direction), 120);
+    }, 350);
+  };
+  useEffect(() => () => stopBetHold(), []);
+  useEffect(() => {
+    if (!showSfx) return;
+    const closeMenu = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest("[data-western-settings-menu]")) setShowSfx(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowSfx(false);
+    };
+    document.addEventListener("mousedown", closeMenu);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showSfx]);
 
   /**
    * animateWinCount — counts displayed win from 0 → endValue using ease-out
@@ -295,27 +401,38 @@ export default function RomeSlots() {
       cancelAnimationFrame(bonusEndRafRef.current);
       bonusEndRafRef.current = null;
     }
-    if (endValue <= 0) { setBonusEndDisplayed(0); return; }
+    const finalCents = Math.max(0, Math.round(endValue * 100));
+    if (finalCents <= 0) { setBonusEndDisplayed(0); return; }
     if (typeof window !== "undefined"
         && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setBonusEndDisplayed(endValue);
+      setBonusEndDisplayed(finalCents / 100);
       return;
     }
-    const duration = 5500; // 5.5 s — slow, dramatic reveal
+    const duration = getWinCountDuration(
+      finalCents,
+      Math.round(bet * 100),
+    ) * BONUS_EXIT_DURATION_MULTIPLIER;
     const startTime = performance.now();
     const tick = (now: number) => {
       const t     = Math.min((now - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 5); // ease-out quintic — fast start, crawls to final value
-      setBonusEndDisplayed(Math.round(eased * endValue));
+      const curvedProgress = Math.pow(t, WIN_COUNT_CURVE_EXPONENT);
+      const displayedCents = t >= 1
+        ? finalCents
+        : Math.round(finalCents * curvedProgress);
+      setBonusEndDisplayed(displayedCents / 100);
+      updateWinCountPitch(displayedCents, finalCents);
       if (t < 1) {
         bonusEndRafRef.current = requestAnimationFrame(tick);
       } else {
-        setBonusEndDisplayed(endValue); // exact final value — no float drift
+        setBonusEndDisplayed(finalCents / 100);
+        bonusEndCountCompleteRef.current = true;
+        setBonusEndCountComplete(true);
+        stopWinCountSound();
         bonusEndRafRef.current = null;
       }
     };
     bonusEndRafRef.current = requestAnimationFrame(tick);
-  }, []);
+  }, [bet]);
   // Direct DOM refs for each reel's inner strip
   const stripRefs          = useRef<(HTMLDivElement | null)[]>(Array(REELS).fill(null));
   // Outer reel container refs — used for dim/glow tease effects (no React re-render)
@@ -324,12 +441,17 @@ export default function RomeSlots() {
   const animCanvasRefs = useRef<(HTMLCanvasElement | null)[]>(Array(REELS * ROWS).fill(null));
   // Refs to the result-row static <img> elements in each reel strip (same 15-cell indexing)
   const cellImgRefs    = useRef<(HTMLImageElement | null)[]>(Array(REELS * ROWS).fill(null));
+  const highlightedPaylineCellsRef = useRef<Set<number>>(new Set());
+  const highlightedStaticSymbolsRef = useRef<Map<number, string>>(new Map());
+  const paylineSoundedRef = useRef<Set<number>>(new Set());
   // Which symbol is in each overlay cell (updated when reels stop)
   const visibleSymsRef = useRef<string[]>(Array(REELS * ROWS).fill("BronzeCoin"));
   // Pre-decoded frame Image objects: sym → frame array (index 0 = frame 1)
   const frameImgsRef   = useRef<Map<string, HTMLImageElement[]>>(new Map());
   // Interval handle for symbol animation (setInterval — immune to CEF RAF throttling)
   const symAnimIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeSymbolAnimIndicesRef = useRef<Set<number>>(new Set());
+  const symbolAnimFrameRef = useRef<Map<number, number>>(new Map());
 
   // On mount: strip positioning + decode ALL frames into Image objects immediately
   useEffect(() => {
@@ -361,6 +483,8 @@ export default function RomeSlots() {
       clearInterval(symAnimIntervalRef.current);
       symAnimIntervalRef.current = null;
     }
+    activeSymbolAnimIndicesRef.current.clear();
+    symbolAnimFrameRef.current.clear();
     for (const cv of animCanvasRefs.current) {
       if (cv) {
         cv.style.visibility = "hidden";
@@ -370,60 +494,190 @@ export default function RomeSlots() {
     }
     // Restore the static reel-strip symbols that were hidden during animation
     for (const img of cellImgRefs.current) {
-      if (img) img.style.visibility = "";
+      if (img) {
+        img.style.visibility = "";
+        img.style.opacity = "";
+        img.style.display = "";
+      }
     }
   }, []);
 
   const startSymbolAnims = useCallback((winIndices: Set<number>) => {
-    if (symAnimIntervalRef.current !== null) {
-      clearInterval(symAnimIntervalRef.current);
-      symAnimIntervalRef.current = null;
-    }
-    // Hide & clear all canvases
-    for (const cv of animCanvasRefs.current) {
-      if (!cv) continue;
-      cv.style.visibility = "hidden";
-      const ctx = cv.getContext("2d");
-      if (ctx) ctx.clearRect(0, 0, cv.width, cv.height);
-    }
-    if (winIndices.size === 0) return;
+    // Add only newly reached cells. Each cell gets its own frame cursor and
+    // completes one full 24-frame animation instead of joining a permanent
+    // shared loop with every other winning icon.
+    winIndices.forEach(idx => {
+      if (!activeSymbolAnimIndicesRef.current.has(idx)) {
+        activeSymbolAnimIndicesRef.current.add(idx);
+        symbolAnimFrameRef.current.set(idx, 0);
+      }
+      // The animation canvas owns this cell while it is playing. Hide both
+      // other layers first so a previous bright winner cannot overlap it.
+      cellImgRefs.current[idx]?.style.setProperty("visibility", "hidden");
+      cellImgRefs.current[idx]?.style.setProperty("opacity", "0");
+      cellImgRefs.current[idx]?.style.setProperty("display", "none");
+      animCanvasRefs.current[idx]?.style.setProperty("visibility", "hidden");
+      animCanvasRefs.current[idx]?.style.setProperty("opacity", "1");
+    });
+    if (activeSymbolAnimIndicesRef.current.size === 0 ||
+        symAnimIntervalRef.current !== null) return;
 
     // Draw frame — only hide static img + show canvas once we can actually draw
-    const drawFrame = (frame: number) => {
+    const drawFrame = () => {
       animCanvasRefs.current.forEach((cv, idx) => {
-        if (!cv || !winIndices.has(idx)) return;
+        if (!cv || !activeSymbolAnimIndicesRef.current.has(idx)) return;
         const sym = visibleSymsRef.current[idx];
         const frames = frameImgsRef.current.get(sym);
         if (!frames) return;
+        const frame = symbolAnimFrameRef.current.get(idx) ?? 0;
         const img = frames[frame % frames.length];
         // If image isn't decoded yet, leave static img visible and skip
         if (!img.complete || img.naturalWidth === 0) return;
         const ctx = cv.getContext("2d");
         if (!ctx) return;
         ctx.clearRect(0, 0, cv.width, cv.height);
-        ctx.drawImage(img, 0, 0, cv.width, cv.height);
+        // All Rome symbol artwork uses a 250x215 symbol viewport. Wild's
+        // animation frames are 262x224 with transparent padding around the
+        // artwork; crop that padding so the animated Wild matches the size
+        // of the static Wild symbol instead of appearing smaller.
+        if (sym === "Wild" && img.naturalWidth >= 262 && img.naturalHeight >= 224) {
+          ctx.drawImage(img, 6, 4, 250, 215, 0, 0, SYMBOL_VIEW_W, SYMBOL_VIEW_H);
+        } else {
+          ctx.drawImage(img, 0, 0, SYMBOL_VIEW_W, SYMBOL_VIEW_H);
+        }
         // Only hide the static img + reveal canvas after a successful draw
         cv.style.visibility = "visible";
         const staticImg = cellImgRefs.current[idx];
         if (staticImg) staticImg.style.visibility = "hidden";
       });
+
+      activeSymbolAnimIndicesRef.current.forEach(idx => {
+        const nextFrame = (symbolAnimFrameRef.current.get(idx) ?? 0) + 1;
+        if (nextFrame >= ANIM_FRAMES) {
+          activeSymbolAnimIndicesRef.current.delete(idx);
+          symbolAnimFrameRef.current.delete(idx);
+          const cv = animCanvasRefs.current[idx];
+          if (cv) {
+            cv.style.visibility = "hidden";
+            cv.style.opacity = "0";
+            cv.getContext("2d")?.clearRect(0, 0, cv.width, cv.height);
+          }
+          // Return to the original reel image for the persistent highlight.
+          // Do not add a second image layer over the reel symbol.
+          const sourceImg = cellImgRefs.current[idx];
+          if (sourceImg) {
+            sourceImg.style.visibility = "visible";
+            sourceImg.style.opacity = "1";
+            sourceImg.style.display = "";
+          }
+        } else {
+          symbolAnimFrameRef.current.set(idx, nextFrame);
+        }
+      });
+
+      if (activeSymbolAnimIndicesRef.current.size === 0 &&
+          symAnimIntervalRef.current !== null) {
+        clearInterval(symAnimIntervalRef.current);
+        symAnimIntervalRef.current = null;
+      }
     };
 
-    drawFrame(0);
-
-    let frame = 1;
+    drawFrame();
     const MS_PER_FRAME = Math.round(1000 / ANIM_FPS);
-    symAnimIntervalRef.current = setInterval(() => {
-      drawFrame(frame);
-      frame = (frame + 1) % ANIM_FRAMES;
-    }, MS_PER_FRAME);
+    symAnimIntervalRef.current = setInterval(drawFrame, MS_PER_FRAME);
   }, []);
+
+  const onPaylineActive = useCallback((
+    positions: Array<{ reel: number; row: number; symbol: string }>,
+  ) => {
+    // Keep every winning cell reached by the current sequence highlighted.
+    // The prefix still arrives left-to-right, but prior payline icons remain
+    // bright while the next payline is traced.
+    const indices = new Set<number>();
+    for (const { reel, row, symbol } of positions) {
+      const idx = reel * ROWS + row;
+      highlightedPaylineCellsRef.current.add(idx);
+      highlightedStaticSymbolsRef.current.set(idx, symbol);
+      const sourceImg = cellImgRefs.current[idx];
+      if (ANIM_SYMBOLS.has(symbol)) {
+        indices.add(idx);
+      } else if (sourceImg) {
+        sourceImg.style.visibility = "visible";
+        sourceImg.style.opacity = "1";
+        sourceImg.style.display = "";
+      }
+    }
+    // Add only the cells reached by the trace. startSymbolAnims keeps the
+    // existing interval alive, so newly reached icons join on the next frame
+    // instead of every winning icon starting before the trace.
+    if (indices.size > 0) startSymbolAnims(indices);
+    highlightedStaticSymbolsRef.current.forEach((symbol, idx) => {
+      if (ANIM_SYMBOLS.has(symbol)) return;
+      const sourceImg = cellImgRefs.current[idx];
+      if (sourceImg) {
+        sourceImg.style.visibility = "visible";
+      }
+    });
+  }, [startSymbolAnims]);
+
+  const onPaylineStart = useCallback((lineIndex: number) => {
+    if (paylineSoundedRef.current.has(lineIndex)) return;
+    paylineSoundedRef.current.add(lineIndex);
+    // Match Western's bonus-round presentation: the per-line "multi" cue
+    // starts exactly when the tracer begins the active payline.
+    playCustomSound("multi");
+  }, []);
+
+  const onPaylineFirstPassComplete = useCallback(() => {
+    paylineFirstPassCompleteRef.current = true;
+    paylineFirstPassResolveRef.current?.();
+    paylineFirstPassResolveRef.current = null;
+  }, []);
+
+  const dismissBonusEnd = useCallback(() => {
+    setShowBonusEnd(false);
+    setFreeSpinsTotal(0);
+    freeSpinsRef.current = 0;
+    bonusEverActiveRef.current = false;
+    setOverlayWins([]);
+    stopSymbolAnims();
+    stopWinCountSound();
+    bonusEndResolveRef.current?.();
+    bonusEndResolveRef.current = null;
+  }, [stopSymbolAnims]);
+
+  useEffect(() => {
+    highlightedPaylineCellsRef.current.clear();
+    highlightedStaticSymbolsRef.current.clear();
+    paylineSoundedRef.current.clear();
+
+    // During the payline presentation, dim only cells that do not belong to
+    // any winning payline. Winning symbols stay at their native brightness;
+    // animated winners are rendered on the undimmed canvas.
+    const winningCells = new Set<number>();
+    overlayWins.forEach(({ positions }) => {
+      positions?.forEach(({ reel, row }) => {
+        winningCells.add(reel * ROWS + row);
+      });
+    });
+    cellImgRefs.current.forEach((img, idx) => {
+      if (!img) return;
+      img.style.filter = overlayWins.length > 0 && !winningCells.has(idx)
+        ? "brightness(0.38) saturate(0.72)"
+        : "";
+    });
+
+    return () => {
+      cellImgRefs.current.forEach(img => {
+        if (img) img.style.filter = "";
+      });
+    };
+  }, [overlayWins]);
 
   // Canvas scaling — ResizeObserver on wrapper so FiveM CEF tablet sizes work correctly
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale]           = useState(1);
   const [infoScale, setInfoScale]   = useState(1);
-  const [popupScale, setPopupScale] = useState(1);
   useEffect(() => {
     const el = wrapperRef.current;
     if (!el) return;
@@ -432,7 +686,6 @@ export default function RomeSlots() {
       const availH = height - HEADER_H;
       setScale(Math.min(width / CW, availH / CH));
       setInfoScale(Math.min(width * 0.96 / 1284, availH * 0.96 / 659));
-      setPopupScale(Math.min(width * 0.7 / 698, availH * 0.7 / 742));
     });
     obs.observe(el);
     return () => obs.disconnect();
@@ -441,7 +694,11 @@ export default function RomeSlots() {
   const chips = displayChips;
 
   // ── Spin logic ──────────────────────────────────────────────────────────────
-  const spinOnce = useCallback(async (currentBet: number, isFree = false): Promise<boolean> => {
+  const spinOnce = useCallback(async (
+    currentBet: number,
+    isFree = false,
+    forceDevThreeScatters = false,
+  ): Promise<boolean> => {
     if (!sessionToken) return false;
     if (spinningRef.current) return false;
     if (freeSpinsEntryRef.current) return false; // block while bonus entry panel is open
@@ -451,7 +708,7 @@ export default function RomeSlots() {
     // Cancel any in-progress count-up and snap display to 0 immediately
     if (winRafRef.current !== null) { cancelAnimationFrame(winRafRef.current); winRafRef.current = null; }
     setDisplayedWin(0);
-    setWinPopup(null);
+    setBigWinPopup(null);
     setErrMsg(null);
     setReelsStopped(false);
     setOverlayWins([]);
@@ -464,7 +721,10 @@ export default function RomeSlots() {
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionToken}` },
-        body: isFree ? undefined : JSON.stringify({ bet: currentBet }),
+        body: isFree ? undefined : JSON.stringify({
+          bet: currentBet,
+          ...(forceDevThreeScatters ? { forceDevThreeScatters: true } : {}),
+        }),
       });
       data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Spin failed");
@@ -592,9 +852,23 @@ export default function RomeSlots() {
 
     // Track row index per reel for tick detection
     const lastRowIdx = Array(REELS).fill(0);
+    // Scatter cells are animated as soon as their reel settles, matching
+    // Western's landing presentation rather than waiting for all reels.
+    const settledScatterCells = new Set<number>();
 
     // ── Tease visual helpers — direct DOM writes, no React re-render ──────────
     const applyTeaseDim = (idx: number) => {
+      // Keep any reel with a landed Scatter bright as a whole.
+      const reelHasScatter = data.grid.some((row: string[]) => row?.[idx] === "Scatter");
+      if (reelHasScatter) {
+        const scatterReel = reelContainerRefs.current[idx];
+        if (scatterReel) {
+          scatterReel.style.transition = "filter 0.3s, box-shadow 0.3s";
+          scatterReel.style.filter = "";
+          scatterReel.style.boxShadow = "";
+        }
+        return;
+      }
       const el = reelContainerRefs.current[idx];
       if (el) { el.style.transition = "filter 0.25s"; el.style.filter = "brightness(0.42)"; el.style.boxShadow = ""; }
     };
@@ -644,6 +918,30 @@ export default function RomeSlots() {
               stopped[i] = true;
               if (el) { el.style.transition = "none"; el.style.transform = `translateY(${targets[i]}px)`; }
 
+              // Play the edited Rome reel-stop clip once for every reel landing.
+              playReelStop();
+
+              // Sync the just-settled column immediately so the first Scatter
+              // animation frame uses the symbol that actually landed. The
+              // final-grid sync below still refreshes every cell after the
+              // complete reel sequence.
+              let hasScatterInReel = false;
+              for (let r = 0; r < ROWS; r++) {
+                visibleSymsRef.current[i * ROWS + r] = data.grid[r]?.[i] ?? "BronzeCoin";
+                if (data.grid[r]?.[i] === "Scatter") {
+                  settledScatterCells.add(i * ROWS + r);
+                  hasScatterInReel = true;
+                }
+              }
+              // Match Western: one impact cue per reel containing a Scatter,
+              // and start the landed Scatter sprite on this stop callback.
+              if (hasScatterInReel) {
+                playScatterLand();
+                startSymbolAnims(new Set(
+                  Array.from(settledScatterCells).filter(idx => Math.floor(idx / ROWS) === i),
+                ));
+              }
+
               // When the focused tease reel stops — either pass focus forward or resolve
               if (i === teaseReelIdx) {
                 teaseReelIdx = -1;
@@ -663,9 +961,6 @@ export default function RomeSlots() {
                   clearTeaseEffects(); // scatter landed (resolve) or already 3 scatters
                 }
               }
-
-              // Play impact sound only for scatters in the first 3 columns
-              if (scatterInCol[i] && i < 3) playScatterLand();
 
               // Start tease exactly when the 2nd scatter lands (not on 3rd+)
               if (scatterInCol[i]) {
@@ -720,28 +1015,32 @@ export default function RomeSlots() {
           data.grid[row]?.[col] ?? "BronzeCoin";
       }
     }
-    // Compute winning cell indices (col*ROWS+row)
-    const winIndices = new Set<number>();
-    for (const lw of (data.lineWins as {lineIndex: number; count: number}[])) {
-      const payline = PAYLINES[lw.lineIndex];
-      for (let col = 0; col < lw.count; col++) {
-        winIndices.add(col * ROWS + payline[col]);
-      }
-    }
-    if ((data.scatters ?? 0) >= 3) {
-      for (let r = 0; r < ROWS; r++) {
-        for (let c = 0; c < REELS; c++) {
-          if (data.grid[r]?.[c] === "Scatter") winIndices.add(c * ROWS + r);
-        }
-      }
-    }
     setReelsStopped(true);
-    setOverlayWins(Array.isArray(data.lineWins) ? data.lineWins : []);
-    // Small delay so React renders the overlay imgs before the RAF loop touches them
-    setTimeout(() => startSymbolAnims(winIndices), 16);
+    const lineWins: PaylineWin[] = Array.isArray(data.lineWins)
+      ? data.lineWins.map((lineWin: { lineIndex: number; count: number; symbol: string; win: number }) => ({
+          ...lineWin,
+          positions: Array.from({ length: lineWin.count }, (_, reel) => ({
+            reel,
+            row: PAYLINES[lineWin.lineIndex]?.[reel] ?? 0,
+            symbol: data.grid[PAYLINES[lineWin.lineIndex]?.[reel] ?? 0]?.[reel] ?? lineWin.symbol,
+          })),
+        }))
+      : [];
+    paylineFirstPassCompleteRef.current = lineWins.length === 0;
+    setOverlayWins(lineWins);
 
     // ── 6. Show win results ──────────────────────────────────────────────────
     setLastWin(data.totalWin);
+    if (data.totalWin > 0) playResultWin();
+    const paylineWinTotal = lineWins.reduce((sum, win) => sum + Number(win.win ?? 0), 0);
+    const paylineMultiplier = currentBet > 0 ? paylineWinTotal / currentBet : 0;
+    if (paylineMultiplier >= 10) {
+      setBigWinPopup({
+        amount: data.totalWin,
+        multiplier: paylineMultiplier,
+        tier: paylineMultiplier >= 20 ? "mega" : "huge",
+      });
+    }
 
     // Update free spins counters from server response
     if (data.freeSpinsAwarded > 0) {
@@ -757,7 +1056,8 @@ export default function RomeSlots() {
       bonusEverActiveRef.current = true;
       freeSpinsEntryRef.current = true;
       setShowFreeSpinsEntry(true);
-      playBonusMusic();
+      playBonusEntryThunderstrike();
+      playBonusAmbience();
       return true;
     }
     if (isFree) {
@@ -774,23 +1074,17 @@ export default function RomeSlots() {
       }
       // Stop music immediately when the last free spin completes — don't rely on the effect alone
       if (remaining <= 0) stopBonusMusic();
+      if (remaining <= 0) stopBonusAmbience();
     }
 
     const tier = winTier(data.totalWin, currentBet);
     // Start count-up animation — runs independently of popup/balance logic
     animateWinCount(data.totalWin, tier ?? "small");
     if (tier) {
-      setWinLineBreakdown(Array.isArray(data.lineWins) ? data.lineWins : []);
-      setWinIsFree(isFree);
-      setWinPopup(tier);
-      if (tier === "mega") playMegaWin();
-      else if (tier === "huge") playHugeWin();
-      else playSmallWin();
       const duration =
         tier === "mega"    ? 3500 :
         tier === "huge"    ? 3000 : isFree ? 1500 : 2000;
       await delay(duration);
-      setWinPopup(null);
     }
 
     spinningRef.current = false;
@@ -802,6 +1096,22 @@ export default function RomeSlots() {
   useEffect(() => {
     autoSpinRef.current = autoSpin;
   }, [autoSpin]);
+
+  // Match Western Slots: once the bonus entry screen is dismissed, free spins
+  // continue automatically without requiring another tap on the spin button.
+  // Keep the entry/end screens as hard gates so a bonus cannot spin underneath
+  // either transition scene.
+  useEffect(() => {
+    if (
+      freeSpinsLeft > 0 &&
+      !showFreeSpinsEntry &&
+      !showBonusEnd &&
+      !autoSpin
+    ) {
+      autoSpinRef.current = true;
+      setAutoSpin(true);
+    }
+  }, [freeSpinsLeft, showFreeSpinsEntry, showBonusEnd, autoSpin]);
 
   useEffect(() => {
     if (!autoSpin) return;
@@ -843,6 +1153,7 @@ export default function RomeSlots() {
     if (!bonusEverActiveRef.current) return; // skip on initial mount (freeSpinsLeft starts at 0)
     // Stop music immediately (sync) — don't let it outlive a cancelled async
     stopBonusMusic();
+    stopBonusAmbience();
     // Cancel auto-spin SYNCHRONOUSLY here — if we wait until inside the async
     // IIFE, the 700 ms delay gives the while-loop time to fire a paid spin.
     setAutoSpin(false);
@@ -851,15 +1162,34 @@ export default function RomeSlots() {
     (async () => {
       await delay(700);
       if (cancelled) return;
+      if (!paylineFirstPassCompleteRef.current) {
+        await new Promise<void>(resolve => {
+          paylineFirstPassResolveRef.current = resolve;
+          window.setTimeout(resolve, 6000);
+        });
+        paylineFirstPassResolveRef.current = null;
+      }
+      if (cancelled) return;
       setBonusEndDisplayed(0);
+      bonusEndCountCompleteRef.current = bonusWinRef.current <= 0;
+      setBonusEndCountComplete(bonusEndCountCompleteRef.current);
       animateBonusEndCount(bonusWinRef.current);
+      startWinCountSound();
       setShowBonusEnd(true);
       await new Promise<void>(r => { bonusEndResolveRef.current = r; });
       if (cancelled) return;
       setShowBonusEnd(false);
+      stopWinCountSound();
       bonusWinRef.current = 0;
       setBonusWinTotal(0);
       setBonusEndDisplayed(0);
+      setFreeSpinsTotal(0);
+      freeSpinsRef.current = 0;
+      bonusEverActiveRef.current = false;
+      setOverlayWins([]);
+      stopSymbolAnims();
+      bonusEndCountCompleteRef.current = false;
+      setBonusEndCountComplete(false);
       if (bonusEndRafRef.current !== null) {
         cancelAnimationFrame(bonusEndRafRef.current);
         bonusEndRafRef.current = null;
@@ -867,12 +1197,17 @@ export default function RomeSlots() {
     })();
     return () => {
       cancelled = true;
+      paylineFirstPassResolveRef.current?.();
+      paylineFirstPassResolveRef.current = null;
       bonusEndResolveRef.current?.();
       bonusEndResolveRef.current = null;
       if (bonusEndRafRef.current !== null) {
         cancelAnimationFrame(bonusEndRafRef.current);
         bonusEndRafRef.current = null;
       }
+      stopWinCountSound();
+      bonusEndCountCompleteRef.current = false;
+      setBonusEndCountComplete(false);
     };
   }, [freeSpinsLeft === 0 ? 1 : 0]); // fires once when counter hits 0
 
@@ -881,6 +1216,46 @@ export default function RomeSlots() {
     // Free spins are played manually — no auto-play during bonus round
     spinOnce(bet, freeSpinsLeft > 0);
   };
+
+  const handleDevThreeScatters = () => {
+    if (spinning || autoSpin || freeSpinsLeft > 0 || showFreeSpinsEntry || showBonusEnd) return;
+    spinOnce(bet, false, true);
+  };
+
+  // Owner-only development shortcut: hold Shift, press O, then press P.
+  useEffect(() => {
+    if (!import.meta.env.DEV || !isOwner) return;
+    let shiftOPrimed = false;
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+    const reset = () => {
+      shiftOPrimed = false;
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = null;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.shiftKey) {
+        reset();
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "o") {
+        shiftOPrimed = true;
+        if (resetTimer) clearTimeout(resetTimer);
+        resetTimer = setTimeout(reset, 1200);
+        return;
+      }
+      if (key === "p" && shiftOPrimed) {
+        event.preventDefault();
+        reset();
+        setShowDevThreeScatters(value => !value);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      reset();
+    };
+  }, [isOwner, handleDevThreeScatters]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -937,10 +1312,6 @@ export default function RomeSlots() {
 
       </div>
 
-      {/* Backdrop — sibling to game viewport so overflow:hidden can't trap it */}
-      {showSfx && <div onClick={() => setShowSfx(false)}
-        style={{ position: "fixed", inset: 0, zIndex: 997 }} />}
-
       {/* ── Game area — remaining height ── */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", background: "#060208" }}>
 
@@ -955,10 +1326,88 @@ export default function RomeSlots() {
       >
         {/* ── Background ── */}
         <img
-          src={RS + "screen/BKG.webp"}
+          src={RS + `screen/${
+            freeSpinsLeft > 0 || freeSpinsTotal > 0 || showFreeSpinsEntry
+              ? "BKGNight.webp"
+              : "BKG.webp"
+          }`}
           draggable={false}
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", userSelect: "none" }}
         />
+        {(freeSpinsLeft > 0 || freeSpinsTotal > 0 || showFreeSpinsEntry) && (
+          <div
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              inset: 0,
+              pointerEvents: "none",
+              opacity: 0.72,
+              backgroundImage: [
+                "repeating-linear-gradient(108deg, transparent 0px, transparent 15px, rgba(190,215,255,0.24) 16px, rgba(190,215,255,0.24) 17px, transparent 18px, transparent 34px)",
+                "repeating-linear-gradient(106deg, transparent 0px, transparent 27px, rgba(145,185,245,0.18) 28px, rgba(145,185,245,0.18) 29px, transparent 30px, transparent 54px)",
+                "repeating-linear-gradient(110deg, transparent 0px, transparent 43px, rgba(220,235,255,0.14) 44px, rgba(220,235,255,0.14) 45px, transparent 46px, transparent 78px)",
+              ].join(","),
+              backgroundSize: "100px 150px, 140px 190px, 180px 240px",
+              animation: "romeBonusRain 0.95s linear infinite",
+              mixBlendMode: "screen",
+            }}
+          />
+        )}
+        {(freeSpinsLeft > 0 || freeSpinsTotal > 0 || showFreeSpinsEntry) && (
+          <>
+            {/* BKGNight storm atmosphere — kept behind the machine artwork */}
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "-12%",
+                right: "-12%",
+                top: "-18%",
+                height: "58%",
+                borderRadius: "0 0 50% 50%",
+                background: "radial-gradient(ellipse at 18% 65%, rgba(80,100,138,0.42) 0 12%, transparent 32%), radial-gradient(ellipse at 56% 48%, rgba(42,61,96,0.54) 0 16%, transparent 38%), radial-gradient(ellipse at 84% 70%, rgba(67,84,119,0.38) 0 14%, transparent 34%), linear-gradient(180deg, rgba(2,7,19,0.82), rgba(14,25,48,0.56) 72%, transparent)",
+                filter: "blur(10px)",
+                animation: "stormCloudDrift 8s ease-in-out infinite",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(170,205,255,0.34)",
+                animation: "stormLightningFlash 12s linear 1.4s infinite",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                inset: 0,
+                boxShadow: "inset 0 0 160px rgba(115,175,255,0.48)",
+                animation: "stormGlowPulse 12s linear 1.4s infinite",
+                pointerEvents: "none",
+              }}
+            />
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                left: "8%",
+                right: "8%",
+                top: "25%",
+                height: "32%",
+                borderRadius: "50%",
+                background: "radial-gradient(ellipse, rgba(158,204,255,0.34) 0%, rgba(105,166,240,0.12) 32%, transparent 72%)",
+                filter: "blur(14px)",
+                animation: "stormHorizonPulse 12s linear 1.4s infinite",
+                pointerEvents: "none",
+              }}
+            />
+          </>
+        )}
 
         {/* ── Machine frame ── */}
         <img
@@ -987,10 +1436,11 @@ export default function RomeSlots() {
               style={{ position: "absolute", top: 0, width: "100%", willChange: "transform" }}
             >
               {strips[reelIdx].map((sym, symIdx) => {
-                // Result symbols are always the last ROWS entries in the strip
-                const resultStart = strips[reelIdx].length - ROWS;
-                const isResultCell = symIdx >= resultStart;
-                const resultRow = symIdx - resultStart;
+                // The server result is placed at the beginning of each strip.
+                // The animation scrolls down to translateY=0, so these are
+                // the three images visible in the stopped result window.
+                const isResultCell = symIdx < ROWS;
+                const resultRow = symIdx;
                 const cellIdx = reelIdx * ROWS + resultRow;
                 return (
                   <div
@@ -1008,7 +1458,15 @@ export default function RomeSlots() {
                       ref={isResultCell ? el => { cellImgRefs.current[cellIdx] = el; } : undefined}
                       src={`${RS}symbols/${sym}.webp`}
                       draggable={false}
-                      style={{ width: 240, height: 210, objectFit: "contain", userSelect: "none" }}
+                       style={{
+                         width: 240,
+                         height: 210,
+                         objectFit: "contain",
+                         userSelect: "none",
+                         transform: sym === "Wild"
+                           ? `translateX(${WILD_CENTER_OFFSET_X}px)`
+                           : undefined,
+                       }}
                     />
                   </div>
                 );
@@ -1036,15 +1494,19 @@ export default function RomeSlots() {
                   alignItems: "center",
                   justifyContent: "center",
                   pointerEvents: "none",
-                  zIndex: 8,
+                   overflow: "hidden",
+                   zIndex: 27,
                 }}
               >
                 <canvas
                   ref={el => { animCanvasRefs.current[idx] = el; }}
-                  width={250}
-                  height={215}
+                    width={SYMBOL_VIEW_W}
+                    height={SYMBOL_VIEW_H}
                   style={{
-                    width: 248, height: 218,
+                     width: 240, height: 210,
+                     transform: visibleSymsRef.current[idx] === "Wild"
+                       ? `translateX(${WILD_CENTER_OFFSET_X}px)`
+                       : undefined,
                     imageRendering: "pixelated",
                     visibility: "hidden",
                   }}
@@ -1055,86 +1517,174 @@ export default function RomeSlots() {
         )}
 
         {/* ── Payline glow overlay — pointer-events:none, z-index:20 ── */}
-        <PaylineOverlay wins={overlayWins} />
-
-        {/* ── Bottom GUI panel ── */}
-        <img
-          src={RS + "screen/PanelGUI.webp"}
-          draggable={false}
-          style={{
-            position: "absolute", left: 0, top: PANEL_Y, width: CW, height: PANEL_H,
-            userSelect: "none",
-          }}
+        <PaylineOverlay
+          wins={overlayWins}
+          onLineActive={onPaylineActive}
+          onLineStart={onPaylineStart}
+          onFirstPassComplete={onPaylineFirstPassComplete}
+          hideTotalWin={freeSpinsLeft > 0 || showFreeSpinsEntry || showBonusEnd}
+          westernBonusTiming={freeSpinsLeft > 0 || showFreeSpinsEntry}
         />
 
-        {/* ── Layout: [Set][Lines][−][TotalBet][+][MaxBet] [SPIN] [AutoSpin][Balance][Win][Info] ── */}
-
-        {/* Settings button — far left (where Info was) */}
-        <div
-          onClick={() => setShowSfx(v => !v)}
-          style={{ position: "absolute", left: 112, top: PANEL_Y + 28, cursor: "pointer",
-            filter: showSfx ? "brightness(1.4) saturate(1.3)" : sfxMuted ? "brightness(0.5)" : "none",
-            transition: "filter 0.15s" }}>
-          <img src={RS + (showSfx ? "screen/ButtonSettingsHover.webp" : "screen/ButtonSettings.webp")}
-            draggable={false} style={{ width: 52, height: 89, objectFit: "contain" }} />
-        </div>
-
-        {/* Info/paytable — far right (was far left) */}
-        <div onClick={() => setShowInfo(true)}
-          style={{ position: "absolute", left: 1772, top: PANEL_Y + 28, cursor: "pointer" }}>
-          <img src={RS + "screen/ButtonInfo.webp"} draggable={false} style={{ width: 52, height: 89, objectFit: "contain" }} />
-        </div>
-
-        {/* Lines */}
-        <PanelDisplay img={RS+"screen/PanelLines.webp"} w={196} h={88} x={174} y={PANEL_Y+29}
-          label="Lines" value="20" highlight={false} />
-
-        {/* Bet ◄ arrow (left of TotalBet) */}
-        <div onClick={() => { if (!spinning) setBet(b => nextBet(b, -1, betSteps)); }}
-          style={{ position: "absolute", left: 376, top: PANEL_Y+51, cursor: "pointer", userSelect: "none" }}>
-          <img src={RS + "screen/ButtonMinus.webp"} draggable={false} style={{ width: 38, height: 44 }} />
-        </div>
-
-        {/* Total Bet */}
-        <PanelDisplay img={RS+"screen/PanelTotalBet.webp"} w={240} h={88} x={416} y={PANEL_Y+29}
-          label="Total Bet" value={bet.toLocaleString()} highlight={false} />
-
-        {/* Bet ► arrow (right of TotalBet) */}
-        <div onClick={() => { if (!spinning) setBet(b => nextBet(b, 1, betSteps)); }}
-          style={{ position: "absolute", left: 658, top: PANEL_Y+51, cursor: "pointer", userSelect: "none" }}>
-          <img src={RS + "screen/ButtonPlus.webp"} draggable={false} style={{ width: 38, height: 44 }} />
-        </div>
-
-        {/* MaxBet */}
-        <div onClick={() => { if (!spinning) setBet(betSteps[betSteps.length-1]); }}
-          style={{ position: "absolute", left: 700, top: PANEL_Y+31, cursor: "pointer" }}>
-          <img src={RS + "screen/ButtonMaxBet.webp"} draggable={false} style={{ width: 132, height: 83 }} />
-        </div>
-
-        {/* SPIN — centered at x=960 */}
-        <div onClick={handleSpin}
-          style={{ position: "absolute", left: 840, top: PANEL_Y - 22, cursor: spinning ? "default" : "pointer" }}>
-          <img
-            src={RS + (spinning ? "screen/ButtonSpinHover.webp" : "screen/ButtonSpin.webp")}
-            draggable={false}
-            style={{ width: 240, height: 168, filter: spinning ? "brightness(0.7)" : "none", transition: "filter 0.15s" }}
-          />
-        </div>
-
-        {/* AutoSpin */}
-        <div onClick={() => { if (autoSpin) setAutoSpin(false); else if (!spinning) setAutoSpin(true); }}
-          style={{ position: "absolute", left: 1092, top: PANEL_Y+31, cursor: "pointer", userSelect: "none" }}>
-          <img src={RS + "screen/ButtonAutoSpin.webp"} draggable={false}
-            style={{ width: 146, height: 83, filter: autoSpin ? "brightness(1.5) saturate(1.6)" : "none" }} />
-        </div>
-
-        {/* Balance */}
-        <PanelDisplay img={RS+"screen/PanelBalance.webp"} w={246} h={88} x={1252} y={PANEL_Y+29}
-          label="Balance" value={chips.toLocaleString()} highlight={false} />
-
-        {/* Win */}
-        <PanelDisplay img={RS+"screen/PanelWin.webp"} w={246} h={88} x={1512} y={PANEL_Y+29}
-          label="Win" value={lastWin > 0 ? displayedWin.toLocaleString() : "—"} highlight={lastWin > 0} />
+        {/* ── Compact HUD copied from Western Slots; Rome handlers/state remain bound ── */}
+        {(() => {
+          const bonusHudActive = freeSpinsLeft > 0 || freeSpinsTotal > 0 || showFreeSpinsEntry || showBonusEnd;
+          const betProgress = betSteps.length > 1
+            ? Math.max(0, Math.min(1, betSteps.indexOf(bet) / (betSteps.length - 1)))
+            : 0;
+          return (
+            <div data-western-settings-menu style={{
+              position:"absolute",left:"50%",top:900,width:"fit-content",minWidth:980,height:112,
+              transform:"translateX(-50%)",maxWidth:"calc(100% - 32px)",
+              zIndex:100,boxSizing:"border-box",display:"flex",alignItems:"center",
+              padding:"0 24px",background:"linear-gradient(180deg,rgba(24,24,28,0.92) 0%,rgba(15,15,18,0.88) 100%)",
+              border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,
+              boxShadow:"0 10px 30px rgba(0,0,0,0.42),0 0 0 1px rgba(0,0,0,0.25)",
+              fontFamily:"Oswald,sans-serif",
+            }}>
+              {import.meta.env.DEV && isOwner && showDevThreeScatters && (
+                <button
+                  type="button"
+                  onClick={handleDevThreeScatters}
+                  disabled={spinning || autoSpin || freeSpinsLeft > 0 || showFreeSpinsEntry || showBonusEnd}
+                  style={{
+                    position: "absolute", right: 12, bottom: -34,
+                    border: "1px solid rgba(255,190,60,0.55)",
+                    borderRadius: 5, padding: "4px 8px",
+                    background: "rgba(70,35,0,0.85)",
+                    color: "#fcd34d", fontFamily: "Oswald,sans-serif",
+                    fontSize: 11, letterSpacing: "0.08em", cursor: "pointer",
+                    opacity: spinning || autoSpin || freeSpinsLeft > 0 || showFreeSpinsEntry || showBonusEnd ? 0.45 : 1,
+                  }}
+                >
+                  DEV: 3 SCATTERS
+                </button>
+              )}
+              <div data-western-settings-menu onClick={()=>setShowSfx(v=>!v)}
+                aria-label={showSfx?"Close settings":"Open settings"} style={{
+                width:50,height:50,borderRadius:7,flexShrink:0,background:"transparent",border:"1px solid transparent",
+                display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",cursor:"pointer",
+              }}>
+                {showSfx
+                  ? <X size={50} strokeWidth={3.2} color="white" />
+                  : <Menu size={50} strokeWidth={3.2} color="white" />}
+              </div>
+              {showSfx && (
+                <div data-western-settings-menu style={{
+                  position:"absolute",left:0,bottom:"calc(100% - 4px)",width:210,minHeight:300,boxSizing:"border-box",
+                  padding:"18px 14px",zIndex:1000,background:"rgba(8,8,9,0.99)",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:12,boxShadow:"0 10px 24px rgba(0,0,0,0.55)",
+                  display:"flex",flexDirection:"column",gap:8,fontFamily:"Oswald,sans-serif",
+                }}>
+                  <button style={{width:"100%",boxSizing:"border-box",height:62,display:"grid",alignItems:"center",columnGap:9,
+                    gridTemplateColumns:"auto 1fr auto",gridTemplateRows:"1fr 24px",padding:"0 10px",border:"none",
+                    background:"transparent",color:"rgba(255,255,255,0.82)",cursor:"default",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left"}}
+                    onMouseEnter={e=>{e.currentTarget.style.color="#fff";}}
+                    onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.82)";}}>
+                    <span onClick={()=>{const next=!sfxMuted;setSfxMuted(next);setRomeSfxMuted(next);}} style={{display:"flex",cursor:"pointer"}}
+                      aria-label={sfxMuted?"Unmute sound":"Mute sound"}>
+                      {sfxMuted?<VolumeX size={19} strokeWidth={2}/>:<Volume2 size={19} strokeWidth={2}/>}
+                    </span>
+                    <span>SOUND</span>
+                    <span style={{fontSize:11,opacity:0.9,marginLeft:5,color:sfxMuted?"#ff5b5b":"rgba(255,255,255,0.62)"}}>{sfxMuted?"MUTED":`${Math.round(sfxVolume*100)}%`}</span>
+                    <input aria-label="Sound volume" type="range" min="0" max="1" step="0.01" value={sfxVolume}
+                      onClick={e=>e.stopPropagation()} onChange={e=>updateSfxVolume(Number(e.target.value))}
+                      style={{gridColumn:"1 / -1",width:"100%",accentColor:"#fff",cursor:"pointer"}}/>
+                  </button>
+                  <button style={{width:"100%",boxSizing:"border-box",height:62,display:"grid",alignItems:"center",columnGap:9,
+                    gridTemplateColumns:"auto 1fr auto",gridTemplateRows:"1fr 24px",padding:"0 10px",border:"none",
+                    background:"transparent",color:"rgba(255,255,255,0.82)",cursor:"default",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left"}}
+                    onMouseEnter={e=>{e.currentTarget.style.color="#fff";}}
+                    onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.82)";}}>
+                    <span onClick={toggleMusic} style={{display:"flex",cursor:"pointer"}}
+                      aria-label={musicEnabled?"Turn music off":"Turn music on"}>
+                      <Music2 size={19} strokeWidth={2}/>
+                    </span>
+                    <span>MUSIC</span>
+                    <span style={{fontSize:11,opacity:0.9,marginLeft:5,color:!musicEnabled?"#ff5b5b":"rgba(255,255,255,0.62)"}}>{!musicEnabled?"MUTED":`${Math.round(musicVolume*100)}%`}</span>
+                    <input aria-label="Music volume" type="range" min="0" max="1" step="0.01" value={musicVolume}
+                      onClick={e=>e.stopPropagation()} onChange={e=>updateMusicVolume(Number(e.target.value))}
+                      style={{gridColumn:"1 / -1",width:"100%",accentColor:"#fff",cursor:"pointer"}}/>
+                  </button>
+                  <button onClick={()=>{setShowSfx(false);setShowInfo(true)}} style={{height:48,display:"flex",alignItems:"center",gap:10,
+                    width:"100%",boxSizing:"border-box",padding:"0 10px",border:"none",borderRadius:5,background:"transparent",
+                    color:"rgba(255,255,255,0.82)",cursor:"pointer",fontFamily:"inherit",fontSize:15,fontWeight:600,letterSpacing:"0.08em",textAlign:"left"}}
+                    onMouseEnter={e=>{e.currentTarget.style.color="#fff";}}
+                    onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.82)";}}>
+                    <Info size={19} strokeWidth={2}/><span>INFO</span>
+                  </button>
+                </div>
+              )}
+              <div style={{width:24,flexShrink:0}}/>
+              <div style={{display:"flex",alignItems:"center",gap:34,flexShrink:0,padding:"0 10px"}}>
+                {[
+                  ["Balance", chips.toLocaleString(), 106],
+                  ["Win", lastWin > 0 ? displayedWin.toLocaleString() : "—", 76],
+                ].map(([label,value,minWidth])=>(
+                  <div key={String(label)} style={{minWidth:Number(minWidth)}}>
+                    <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",letterSpacing:"0.14em",textTransform:"uppercase"}}>{label}</div>
+                    <div style={{fontSize:26,fontWeight:800,color:label==="Win"&&lastWin===0?"rgba(255,255,255,0.38)":"#fff",lineHeight:1.05}}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              {bonusHudActive ? (
+                <>
+                  <div style={{display:"flex",alignItems:"center",gap:34,paddingLeft:30,marginLeft:24,borderLeft:"1px solid rgba(255,255,255,0.18)"}}>
+                    <div style={{minWidth:110}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",letterSpacing:"0.14em",textTransform:"uppercase"}}>Bet</div>
+                      <div style={{fontSize:26,fontWeight:800,color:"#fff",lineHeight:1.05}}>{bet.toLocaleString()}</div>
+                    </div>
+                    <div style={{minWidth:150}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",letterSpacing:"0.14em",textTransform:"uppercase"}}>Total Win</div>
+                      <div style={{fontSize:26,fontWeight:800,color:"#fff",lineHeight:1.05}}>{bonusWinTotal.toLocaleString()}</div>
+                    </div>
+                    <div style={{minWidth:190}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",letterSpacing:"0.10em",textTransform:"uppercase"}}>Free Spins Remaining</div>
+                      <div style={{fontSize:26,fontWeight:800,color:"#fff",lineHeight:1.05}}>{freeSpinsLeft}</div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+              <div style={{display:"flex",alignItems:"center",flex:1}}>
+                <div style={{display:"flex",alignItems:"stretch",height:64,flexShrink:0,marginLeft:"auto",background:"#222228",
+                  border:"1px solid rgba(255,255,255,0.11)",borderRadius:8,overflow:"hidden",position:"relative"}}>
+                  <div style={{padding:"0 18px",borderRight:"1px solid rgba(255,255,255,0.07)",display:"flex",flexDirection:"column",justifyContent:"center",alignItems:"center",textAlign:"center"}}>
+                    <div style={{fontSize:13,fontWeight:600,color:"rgba(255,255,255,0.42)",letterSpacing:"0.13em",textTransform:"uppercase",marginBottom:2}}>Total Bet</div>
+                    <div style={{fontSize:28,fontWeight:800,color:"#fff",lineHeight:1,minWidth:104}}>{bet.toLocaleString()}</div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",width:52}}>
+                    <button disabled={spinning} onClick={()=>changeBet("increase")} onPointerDown={()=>startBetHold("increase")} onPointerUp={stopBetHold} onPointerCancel={stopBetHold} onPointerLeave={stopBetHold}
+                      style={{flex:1,background:"transparent",border:"none",borderBottom:"1px solid rgba(255,255,255,0.07)",cursor:spinning?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                      <ChevronUp size={22} strokeWidth={2.5} color="white"/>
+                    </button>
+                    <button disabled={spinning} onClick={()=>changeBet("decrease")} onPointerDown={()=>startBetHold("decrease")} onPointerUp={stopBetHold} onPointerCancel={stopBetHold} onPointerLeave={stopBetHold}
+                      style={{flex:1,background:"transparent",border:"none",cursor:spinning?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",padding:0}}>
+                      <ChevronDown size={22} strokeWidth={2.5} color="white"/>
+                    </button>
+                  </div>
+                  <div aria-hidden="true" style={{position:"absolute",left:0,right:52,bottom:0,height:3,background:"rgba(255,255,255,0.12)",pointerEvents:"none"}}>
+                    <div style={{height:"100%",width:`${Math.max(6,betProgress*100)}%`,background:"#fff",transition:"width 160ms ease-out"}}/>
+                  </div>
+                </div>
+                <div onClick={!spinning?handleSpin:undefined} style={{width:104,height:104,borderRadius:"50%",flexShrink:0,marginLeft:18,
+                  background:spinning?"#1a1a20":"radial-gradient(circle at 38% 36%,#30303a,#16161b)",
+                  border:spinning?"2px solid rgba(255,255,255,0.06)":"2px solid rgba(255,255,255,0.22)",
+                  boxShadow:spinning?"none":"0 0 24px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.08)",
+                  display:"flex",alignItems:"center",justifyContent:"center",cursor:spinning?"not-allowed":"pointer",opacity:spinning?0.45:1,transition:"opacity 0.2s,border-color 0.2s"}}>
+                  <RotateCw size={56} strokeWidth={2} color="white"/>
+                </div>
+                <div style={{width:16}}/>
+                <div onClick={()=>setAutoSpin(a=>!a)} style={{width:64,height:64,borderRadius:"50%",flexShrink:0,background:autoSpin?"rgba(255,208,40,0.12)":"#222228",
+                  border:autoSpin?"2px solid rgba(255,208,40,0.55)":"1.5px solid rgba(255,255,255,0.14)",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>
+                  <RefreshCw size={30} strokeWidth={2} color={autoSpin?"#FFD028":"rgba(255,255,255,0.7)"}/>
+                </div>
+              </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ── Error toast ── */}
         {errMsg && (
@@ -1153,6 +1703,76 @@ export default function RomeSlots() {
 
       </div>{/* ── end scaled canvas ── */}
 
+      {/* ── Huge/Mega win popup — Rome artwork with Western-style count-up ── */}
+      {bigWinPopup && !showBonusEnd && !showFreeSpinsEntry && (
+        <div
+          role="dialog"
+          aria-label={`${bigWinPopup.tier} win`}
+          onClick={() => setBigWinPopup(null)}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9998,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "rgba(0,0,0,0.68)", cursor: "pointer",
+          }}
+        >
+          <div
+            onClick={event => event.stopPropagation()}
+            style={{
+              position: "relative",
+              width: bigWinPopup.tier === "mega" ? 331 : 349,
+              height: bigWinPopup.tier === "mega" ? 368 : 371,
+              animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
+              filter: bigWinPopup.tier === "mega"
+                ? "drop-shadow(0 0 34px rgba(255,204,0,0.82))"
+                : "drop-shadow(0 0 30px rgba(255,136,0,0.78))",
+            }}
+          >
+            <img
+              src={RS + `popups/${bigWinPopup.tier === "mega" ? "MegaWinPanel.webp" : "HugeWinPanel.webp"}`}
+              draggable={false}
+              alt=""
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+            />
+            <div style={{
+              position: "absolute", left: 0, right: 0, top: "57%",
+              display: "flex", flexDirection: "column", alignItems: "center",
+              gap: 5, animation: "bonusCountPop 0.7s ease-out 0.15s both",
+            }}>
+              <div style={{
+                fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 48,
+                lineHeight: 1, color: bigWinPopup.tier === "mega" ? "#ffe880" : "#ffd580",
+                letterSpacing: "0.02em",
+                textShadow: bigWinPopup.tier === "mega"
+                  ? "0 0 22px #ffcc00, 0 3px 8px rgba(0,0,0,0.95)"
+                  : "0 0 22px #ff8800, 0 3px 8px rgba(0,0,0,0.95)",
+              }}>
+                {displayedWin.toLocaleString()}
+              </div>
+              <div style={{
+                fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: 22,
+                color: "#fff4c2", letterSpacing: "0.08em",
+                textShadow: "0 2px 5px rgba(0,0,0,0.9)",
+              }}>
+                {bigWinPopup.multiplier.toFixed(2)}×
+              </div>
+              <div style={{
+                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 12,
+                color: "rgba(255,244,194,0.78)", letterSpacing: "0.22em",
+              }}>
+                {bigWinPopup.tier === "mega" ? "MEGA WIN" : "HUGE WIN"}
+              </div>
+            </div>
+            <div style={{
+              position: "absolute", bottom: -34, left: 0, right: 0,
+              textAlign: "center", fontFamily: "Cinzel,serif", fontSize: 11,
+              color: "rgba(255,244,194,0.45)", letterSpacing: "0.22em",
+            }}>
+              TAP TO CONTINUE
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Bonus active: screen edge glow ── */}
       {freeSpinsLeft > 0 && !showBonusEnd && (
         <div style={{ position: "fixed", inset: 0, zIndex: 9990, pointerEvents: "none",
@@ -1160,120 +1780,109 @@ export default function RomeSlots() {
           animation: "bonusEdgePulse 1.8s ease-in-out infinite" }} />
       )}
 
-      {/* ── Free spins counter pill (always visible during bonus) ── */}
-      {freeSpinsLeft > 0 && !showBonusEnd && (
-        <div style={{
-          position: "fixed", top: "3%", left: "50%", transform: "translateX(-50%)",
-          zIndex: 9996, pointerEvents: "none",
-          background: "linear-gradient(135deg, rgba(30,10,0,0.97), rgba(60,20,0,0.97))",
-          border: "2px solid rgba(245,158,11,0.65)",
-          borderRadius: 50, padding: "8px 24px",
-          display: "flex", alignItems: "center", gap: 18,
-          animation: "freeSpinPulse 1.8s ease-in-out infinite",
-        }}>
-          <span style={{ fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 13,
-            color: "rgba(252,211,77,0.75)", letterSpacing: "0.16em" }}>⚡ BONUS ROUND</span>
-          <div style={{ width: 1, height: 28, background: "rgba(245,158,11,0.3)" }} />
-          <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
-            <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 38,
-              color: "#fff", textShadow: "0 0 16px rgba(245,158,11,0.6)" }}>
-              {freeSpinsLeft}
-            </span>
-            <span style={{ fontFamily: "Oswald,sans-serif", fontSize: 16,
-              color: "rgba(255,210,80,0.5)" }}>/ {freeSpinsTotal}</span>
-          </div>
-          {bonusWinTotal > 0 && (
-            <>
-              <div style={{ width: 1, height: 28, background: "rgba(245,158,11,0.3)" }} />
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-                <span style={{ fontFamily: "Cinzel,serif", fontSize: 10,
-                  color: "rgba(252,211,77,0.5)", letterSpacing: "0.15em" }}>WON</span>
-                <span style={{ fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 22,
-                  color: "#fcd34d", textShadow: "0 0 12px rgba(245,158,11,0.5)" }}>
-                  +{bonusWinTotal.toLocaleString()}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
       {/* ── Bonus entry panel — full-screen overlay when bonus triggers ── */}
       {showFreeSpinsEntry && (
         <div
-          onClick={() => { freeSpinsEntryRef.current = false; setShowFreeSpinsEntry(false); }}
+          onClick={() => {
+            freeSpinsEntryRef.current = false;
+            setShowFreeSpinsEntry(false);
+            playBonusMusic();
+            autoSpinRef.current = true;
+            setAutoSpin(true);
+          }}
           style={{
             position: "fixed", inset: 0, zIndex: 10000, cursor: "pointer",
-            background: "radial-gradient(ellipse at 50% 48%, rgba(70,24,0,0.97) 0%, rgba(6,2,0,0.99) 72%)",
+             background: "radial-gradient(ellipse at 50% 45%, rgba(18,30,56,0.96) 0%, rgba(3,7,18,0.99) 68%, rgba(1,3,10,1) 100%)",
             display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
             overflow: "hidden",
           }}
         >
-          {/* Rotating conic rays */}
+           {/* Storm clouds */}
           <div style={{
-            position: "absolute", inset: "-50%",
-            backgroundImage: [
-              "conic-gradient(from 0deg at 50% 50%,",
-              "transparent 0deg, rgba(255,180,0,0.07) 8deg, transparent 16deg,",
-              "transparent 30deg, rgba(255,160,0,0.05) 36deg, transparent 42deg,",
-              "transparent 60deg, rgba(255,180,0,0.07) 66deg, transparent 72deg,",
-              "transparent 90deg, rgba(255,160,0,0.05) 96deg, transparent 102deg,",
-              "transparent 120deg, rgba(255,180,0,0.07) 126deg, transparent 132deg,",
-              "transparent 150deg, rgba(255,160,0,0.05) 156deg, transparent 162deg,",
-              "transparent 180deg, rgba(255,180,0,0.07) 186deg, transparent 192deg,",
-              "transparent 210deg, rgba(255,160,0,0.05) 216deg, transparent 222deg,",
-              "transparent 240deg, rgba(255,180,0,0.07) 246deg, transparent 252deg,",
-              "transparent 270deg, rgba(255,160,0,0.05) 276deg, transparent 282deg,",
-              "transparent 300deg, rgba(255,180,0,0.07) 306deg, transparent 312deg,",
-              "transparent 330deg, rgba(255,160,0,0.05) 336deg, transparent 342deg)",
-            ].join(" "),
-            animation: "bonusRayRotate 12s linear infinite",
+             position: "absolute", left: "-12%", right: "-12%", top: "-18%", height: "58%",
+             borderRadius: "0 0 50% 50%",
+             background: "radial-gradient(ellipse at 18% 65%, rgba(80,100,138,0.45) 0 12%, transparent 32%), radial-gradient(ellipse at 56% 48%, rgba(42,61,96,0.58) 0 16%, transparent 38%), radial-gradient(ellipse at 84% 70%, rgba(67,84,119,0.42) 0 14%, transparent 34%), linear-gradient(180deg, rgba(2,7,19,0.98), rgba(14,25,48,0.7) 72%, transparent)",
+             filter: "blur(10px)",
+             animation: "stormCloudDrift 8s ease-in-out infinite",
             pointerEvents: "none",
           }} />
 
-          {/* Expanding rings */}
-          {[0, 0.9, 1.8].map((delayS, i) => (
-            <div key={i} style={{
-              position: "absolute",
-              width: 320, height: 320, borderRadius: "50%",
-              border: `${i === 0 ? 2 : 1}px solid rgba(255,190,0,0.35)`,
-              animation: `bonusRingExpand 2.4s ease-out ${delayS}s infinite`,
-              pointerEvents: "none",
+           {/* Rain curtain */}
+           <div style={{
+             position: "absolute", inset: 0, pointerEvents: "none",
+             backgroundImage: [
+               "repeating-linear-gradient(108deg, transparent 0 18px, rgba(178,211,255,0.22) 19px 20px, transparent 21px 42px)",
+               "repeating-linear-gradient(106deg, transparent 0 29px, rgba(126,174,237,0.18) 30px 31px, transparent 32px 66px)",
+               "repeating-linear-gradient(110deg, transparent 0 47px, rgba(220,235,255,0.14) 48px 49px, transparent 50px 94px)",
+             ].join(","),
+             backgroundSize: "100px 180px, 150px 230px, 210px 300px",
+             animation: "stormRainFall 1.05s linear infinite",
+             mixBlendMode: "screen",
+           }} />
+
+            {/* Distant lightning flashes — no foreground bolts */}
+           <div aria-hidden="true" style={{
+             position: "absolute", inset: 0, pointerEvents: "none",
+              background: "rgba(170,205,255,0.7)",
+              animation: "stormLightningFlash 12s linear 0.35s infinite",
+           }} />
+           <div aria-hidden="true" style={{
+             position: "absolute", inset: 0, pointerEvents: "none",
+             boxShadow: "inset 0 0 160px rgba(115,175,255,0.8)",
+              animation: "stormGlowPulse 12s linear 0.35s infinite",
             }} />
-          ))}
+            <div aria-hidden="true" style={{
+              position: "absolute", left: "8%", right: "8%", top: "25%", height: "32%",
+              borderRadius: "50%", pointerEvents: "none",
+              background: "radial-gradient(ellipse, rgba(158,204,255,0.64) 0%, rgba(105,166,240,0.2) 32%, transparent 72%)",
+              filter: "blur(14px)",
+              animation: "stormHorizonPulse 12s linear 0.35s infinite",
+           }} />
 
-          {/* BONUS ROUND title */}
-          <div style={{
-            fontFamily: "'Cinzel',serif", fontWeight: 900, fontSize: 52,
-            color: "#fcd34d", letterSpacing: "0.12em",
-            textShadow: "0 0 40px rgba(255,200,0,0.9), 0 0 80px rgba(255,140,0,0.4), 0 4px 10px rgba(0,0,0,0.9)",
-            animation: "bonusTitleCrash 0.65s cubic-bezier(0.34,1.56,0.64,1) both, bonusShimmer 2.2s ease-in-out 0.65s infinite",
-          }}>⚡ BONUS ROUND ⚡</div>
+           {/* Entry text card — styled to match the bonus exit scene */}
+           <div style={{
+             display: "flex", flexDirection: "column", alignItems: "center",
+             gap: 0, padding: "40px 72px 36px",
+             background: "rgba(0,0,0,0.55)",
+             borderRadius: 22,
+             boxShadow: "0 0 90px rgba(120,180,255,0.24), inset 0 0 28px rgba(90,150,220,0.06)",
+             border: "1px solid rgba(180,215,255,0.16)",
+             animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
+           }}>
+             {/* BONUS ROUND title */}
+             <div style={{
+               fontFamily: "'Cinzel',serif", fontWeight: 900, fontSize: 52,
+               color: "#fcd34d", letterSpacing: "0.12em",
+               textShadow: "0 0 40px rgba(255,200,0,0.9), 0 0 80px rgba(255,140,0,0.4), 0 4px 10px rgba(0,0,0,0.9)",
+               animation: "bonusTitleCrash 0.65s cubic-bezier(0.34,1.56,0.64,1) both, bonusShimmer 2.2s ease-in-out 0.65s infinite",
+             }}>⚡ BONUS ROUND ⚡</div>
 
-          {/* Subtitle */}
-          <div style={{
-            fontFamily: "'Cinzel',serif", fontWeight: 400, fontSize: 15,
-            color: "rgba(252,211,77,0.55)", letterSpacing: "0.45em",
-            textTransform: "uppercase", marginTop: 10, marginBottom: 28,
-            animation: "bonusSubtitleSlide 0.45s ease-out 0.5s both",
-          }}>Free Spins Awarded</div>
+             {/* Subtitle */}
+             <div style={{
+               fontFamily: "'Cinzel',serif", fontWeight: 400, fontSize: 15,
+               color: "rgba(252,211,77,0.55)", letterSpacing: "0.45em",
+               textTransform: "uppercase", marginTop: 10, marginBottom: 28,
+               animation: "bonusSubtitleSlide 0.45s ease-out 0.5s both",
+             }}>Free Spins Awarded</div>
 
-          {/* Count */}
-          <div style={{
-            fontFamily: "'Oswald',sans-serif", fontWeight: 900, fontSize: 130,
-            color: "#fff", lineHeight: 1,
-            textShadow: "0 0 60px rgba(255,180,0,1), 0 0 120px rgba(255,120,0,0.5), 0 4px 12px rgba(0,0,0,0.9)",
-            animation: "bonusCountPop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.85s both",
-          }}>{freeSpinsTotal}</div>
+             {/* Count */}
+             <div style={{
+                position: "relative", top: -12,
+               fontFamily: "'Oswald',sans-serif", fontWeight: 900, fontSize: 130,
+               color: "#fff", lineHeight: 1,
+               textShadow: "0 0 60px rgba(255,180,0,1), 0 0 120px rgba(255,120,0,0.5), 0 4px 12px rgba(0,0,0,0.9)",
+               animation: "bonusCountPop 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.85s both",
+             }}>{freeSpinsTotal}</div>
 
-          {/* "FREE SPINS" label */}
-          <div style={{
-            fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 24,
-            color: "rgba(252,211,77,0.85)", letterSpacing: "0.28em",
-            textShadow: "0 2px 8px rgba(0,0,0,0.8)",
-            animation: "bonusSubtitleSlide 0.45s ease-out 1.1s both",
-            marginTop: 6,
-          }}>FREE SPINS</div>
+             {/* "FREE SPINS" label */}
+             <div style={{
+               fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 24,
+               color: "rgba(252,211,77,0.85)", letterSpacing: "0.28em",
+               textShadow: "0 2px 8px rgba(0,0,0,0.8)",
+               animation: "bonusSubtitleSlide 0.45s ease-out 1.1s both",
+               marginTop: 6,
+             }}>FREE SPINS</div>
+           </div>
 
           {/* Tap hint */}
           <div style={{
@@ -1295,13 +1904,24 @@ export default function RomeSlots() {
               position: "fixed", inset: 0, zIndex: 9998, pointerEvents: "all",
               background: "rgba(0,0,0,0.88)",
             }}
-            onClick={() => { bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
+            onClick={() => {
+              if (!bonusEndCountCompleteRef.current) {
+                const finalValue = bonusWinRef.current;
+                setBonusEndDisplayed(finalValue);
+                if (bonusEndRafRef.current !== null) {
+                  cancelAnimationFrame(bonusEndRafRef.current);
+                  bonusEndRafRef.current = null;
+                }
+                bonusEndCountCompleteRef.current = true;
+                setBonusEndCountComplete(true);
+                stopWinCountSound();
+                return;
+              }
+              dismissBonusEnd();
+            }}
           />
 
-          {/* Layer 2 — Bellagio chip fountain (pointer-events:none, sits behind card) */}
-          <BellagioChipsAnimation active={showBonusEnd} total={bonusWinTotal} />
-
-          {/* Layer 3 — card content; entire layer is clickable to dismiss */}
+          {/* Card content; entire layer is clickable to dismiss */}
           <div
             style={{
               position: "fixed", inset: 0, zIndex: 10001,
@@ -1310,224 +1930,82 @@ export default function RomeSlots() {
               alignItems: "center", justifyContent: "center",
               cursor: "pointer",
             }}
-            onClick={() => { bonusEndResolveRef.current?.(); bonusEndResolveRef.current = null; }}
+            onClick={(event) => {
+              event.stopPropagation();
+              if (!bonusEndCountCompleteRef.current) {
+                const finalValue = bonusWinRef.current;
+                setBonusEndDisplayed(finalValue);
+                if (bonusEndRafRef.current !== null) {
+                  cancelAnimationFrame(bonusEndRafRef.current);
+                  bonusEndRafRef.current = null;
+                }
+                bonusEndCountCompleteRef.current = true;
+                setBonusEndCountComplete(true);
+                stopWinCountSound();
+                return;
+              }
+              dismissBonusEnd();
+            }}
           >
             <div style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 16,
-              animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
-              background: "rgba(0,0,0,0.55)",
-              borderRadius: 20,
-              padding: "36px 56px 32px",
-              boxShadow: "0 0 80px rgba(245,158,11,0.18)",
+               animation: "bonusEndPop 0.65s cubic-bezier(0.34,1.56,0.64,1) both",
+               background: "rgba(0,0,0,0.55)",
+               borderRadius: 22,
+               padding: "40px 72px 36px",
+               boxShadow: "0 0 90px rgba(255,180,40,0.20)",
             }}>
-              <span style={{ fontSize: 52 }}>🏆</span>
               <div style={{
-                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 16,
-                color: "rgba(252,211,77,0.65)", letterSpacing: "0.45em", textTransform: "uppercase",
-              }}>Bonus Round Complete</div>
+                 fontFamily: "'Cinzel',serif", fontWeight: 700, fontSize: 36,
+                 color: "#FFD060", letterSpacing: "0.18em",
+                 textShadow: "0 0 30px rgba(255,200,60,0.55),0 2px 6px rgba(0,0,0,0.85)",
+               }}>
+                 Congratulations
+               </div>
+               <div style={{
+                 width: 160, height: 1, marginTop: -2,
+                 background: "linear-gradient(90deg,transparent,rgba(255,200,80,0.55),transparent)",
+               }} />
               <div style={{
-                fontFamily: "Cinzel,serif", fontWeight: 900, fontSize: 48,
-                color: "#fcd34d", letterSpacing: "0.06em",
-                animation: "bonusShimmer 1.4s ease-in-out infinite",
-              }}>TOTAL WON</div>
+                 fontFamily: "Oswald,sans-serif", fontWeight: 700, fontSize: 22,
+                 color: "rgba(255,210,120,0.75)", letterSpacing: "0.40em",
+                 textTransform: "uppercase", marginTop: -2,
+               }}>
+                 You Have Won
+               </div>
               <div style={{
-                fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 96,
+                 fontFamily: "Oswald,sans-serif", fontWeight: 900, fontSize: 110,
                 color: "#fff", lineHeight: 1,
-                textShadow: "0 0 60px rgba(245,158,11,0.8), 0 4px 12px rgba(0,0,0,0.9)",
-              }}>+{bonusEndDisplayed.toLocaleString()}</div>
+                 textShadow: "0 0 70px rgba(255,200,60,0.75),0 4px 14px rgba(0,0,0,0.9)",
+               }}>
+                 ${bonusEndDisplayed.toLocaleString(undefined, {
+                   minimumFractionDigits: 2,
+                   maximumFractionDigits: 2,
+                 })}
+               </div>
               <div style={{
-                fontFamily: "Cinzel,serif", fontSize: 18,
-                color: "rgba(252,211,77,0.45)", letterSpacing: "0.2em",
-              }}>COINS</div>
+                 fontFamily: "Oswald,sans-serif", fontSize: 20,
+                 color: "rgba(255,210,100,0.75)", letterSpacing: "0.12em",
+                 textTransform: "uppercase",
+               }}>
+                 In
+                 <span style={{
+                   fontFamily: "Oswald,sans-serif", fontWeight: 700,
+                   fontSize: 30, letterSpacing: 0, color: "#FFD060",
+                   margin: "0 12px", lineHeight: 1,
+                   textShadow: "0 0 22px rgba(255,200,60,0.7),0 2px 6px rgba(0,0,0,0.85)",
+                   verticalAlign: "-2px",
+                 }}>{freeSpinsTotal}</span>
+                 Free Spins
+               </div>
               <div style={{
-                marginTop: 18,
-                fontFamily: "Cinzel,serif", fontWeight: 700, fontSize: 15,
-                letterSpacing: "0.30em", textTransform: "uppercase",
-                color: "#fcd34d",
+                 marginTop: 8,
+                 fontFamily: "Oswald,sans-serif", fontWeight: 600, fontSize: 14,
+                 letterSpacing: "0.30em", textTransform: "uppercase",
+                 color: "rgba(255,210,120,0.45)",
                 animation: "bonusClickPulse 1.8s ease-in-out infinite",
                 userSelect: "none",
-              }}>Click Anywhere to Continue</div>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* ── Win popup — rendered OUTSIDE scaled canvas ── */}
-      {winPopup && (() => {
-        // Small win: compact SmallMessagesPanel (455×210 native, displayed at 2×)
-        if (winPopup === "small") {
-          // Clean styled win banner — no chat-box panel image
-          return (
-            <div style={{
-              position: "fixed", inset: 0, zIndex: 9998, pointerEvents: "none",
-              display: "flex", alignItems: "flex-end", justifyContent: "center",
-              paddingBottom: "7%",
-            }}>
-              <div style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
-                background: "linear-gradient(180deg, rgba(60,30,0,0.97) 0%, rgba(25,10,0,0.97) 100%)",
-                border: "2px solid #b8860b",
-                borderRadius: 6,
-                padding: "10px 36px 12px",
-                boxShadow: "0 0 24px rgba(200,140,0,0.5), 0 4px 20px rgba(0,0,0,0.8)",
-              }}>
-                <span style={{
-                  fontFamily: "'Cinzel',serif", fontWeight: 400,
-                  fontSize: 11, color: "rgba(255,210,80,0.8)",
-                  letterSpacing: "0.28em", textTransform: "uppercase",
-                }}>
-                  {winIsFree ? "Bonus Win" : "You Win"}
-                </span>
-                <span style={{
-                  fontFamily: "'Cinzel',serif", fontWeight: 900,
-                  fontSize: 38, color: "#ffd700", lineHeight: 1,
-                  textShadow: "0 0 18px rgba(255,180,0,0.9), 0 2px 6px rgba(0,0,0,0.9)",
-                  letterSpacing: "0.04em",
-                }}>
-                  +{displayedWin.toLocaleString()}
-                </span>
-                {winLineBreakdown.length > 0 && (
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,marginTop:2}}>
-                    {winLineBreakdown.map((lw,i)=>(
-                      <span key={i} style={{fontFamily:"'Cinzel',serif",fontSize:10,
-                        color:"rgba(255,220,110,0.7)",letterSpacing:"0.08em"}}>
-                        Line {lw.lineIndex+1}: {lw.count}× {lw.symbol} → +{lw.win.toLocaleString()}{winIsFree?" ×2":""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <span style={{
-                  fontFamily: "'Cinzel',serif", fontWeight: 500,
-                  fontSize: 10, color: "rgba(200,160,60,0.75)",
-                  letterSpacing: "0.22em", textTransform: "uppercase",
-                  marginTop: 2,
-                }}>
-                  BET Coins
-                </span>
-              </div>
-            </div>
-          );
-        }
-        // Big wins: full overlay — textTop targets the dark red plaque area in each image
-        const cfg = winPopup === "mega"
-          ? { file: "MegaWinPanel",    w: 331, h: 368, textTop: "63%" }
-          : { file: "HugeWinPanel",    w: 349, h: 371, textTop: "63%" };
-        const pw = cfg.w * 2, ph = cfg.h * 2;
-        return (
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 9998,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.65)",
-          }}
-            onClick={() => setWinPopup(null)}
-          >
-            <div style={{
-              position: "relative", width: pw, height: ph,
-              transform: `scale(${popupScale})`, transformOrigin: "center center",
-            }}>
-              <img
-                src={RS + `popups/${cfg.file}.webp`}
-                draggable={false}
-                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", userSelect: "none" }}
-              />
-              <div style={{
-                position: "absolute", left: 0, right: 0, top: cfg.textTop,
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
-              }}>
-                <span style={{
-                  fontFamily: "'Cinzel',serif", fontWeight: 900,
-                  fontSize: 80, color: "#ffd700",
-                  textShadow: "0 0 30px rgba(255,180,0,0.9), 0 0 60px rgba(255,120,0,0.5), 0 3px 8px rgba(0,0,0,0.9)",
-                  letterSpacing: "0.04em", lineHeight: 1,
-                }}>
-                  +{displayedWin.toLocaleString()}
-                </span>
-                <span style={{
-                  fontFamily: "'Cinzel',serif", fontWeight: 600,
-                  fontSize: 24, color: "rgba(255,220,100,0.85)",
-                  textShadow: "0 2px 6px rgba(0,0,0,0.8)",
-                  letterSpacing: "0.18em", textTransform: "uppercase",
-                }}>
-                  BET Coins
-                </span>
-                {winLineBreakdown.length > 0 && (
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,marginTop:4}}>
-                    {winLineBreakdown.map((lw,i)=>(
-                      <span key={i} style={{fontFamily:"'Cinzel',serif",fontSize:11,
-                        color:"rgba(255,230,130,0.75)",letterSpacing:"0.08em"}}>
-                        Line {lw.lineIndex+1}: {lw.count}× {lw.symbol} → +{lw.win.toLocaleString()}{winIsFree?" ×2":""}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── Sound settings panel — rome SettingsPanel image ── */}
-      {showSfx && (
-        <>
-          {/* Panel: 551×601 image → rendered at 240×261 (same ratio) */}
-          <div onClick={e => e.stopPropagation()}
-            style={{ position: "fixed", bottom: 72, left: 8, zIndex: 998,
-              width: 240, height: 261, userSelect: "none" }}>
-            <img src={RS + "popups/SettingsPanel.webp"} draggable={false}
-              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
-
-            {/* Exit button — top-right corner */}
-            <img
-              src={RS + "popups/ExitButton.webp"} draggable={false}
-              onClick={() => setShowSfx(false)}
-              style={{ position: "absolute", top: "4%", right: "4%", width: 28, height: 28,
-                cursor: "pointer", zIndex: 2 }}
-              onMouseEnter={e => (e.currentTarget.src = RS + "popups/ExitButtonHover.webp")}
-              onMouseLeave={e => (e.currentTarget.src = RS + "popups/ExitButton.webp")}
-            />
-
-            {/* Content area: dark panel starts at ~24% top, ~7% sides, ~5% bottom */}
-            <div style={{
-              position: "absolute",
-              top: "26%", bottom: "6%", left: "9%", right: "9%",
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "flex-start",
-              paddingTop: 10, gap: 12, fontFamily: "Oswald, sans-serif",
-            }}>
-              {/* Sound label */}
-              <span style={{ color: "#fbbf24", fontSize: 20, fontWeight: 700,
-                letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 2,
-                textShadow: "0 0 8px rgba(251,191,36,0.5)" }}>
-                Sound
-              </span>
-
-              {/* Mute — ON/OFF button image */}
-              <div style={{ display: "flex", alignItems: "center",
-                justifyContent: "space-between", width: "100%" }}>
-                <span style={{ color: "#fde68a", fontSize: 13, fontWeight: 600,
-                  letterSpacing: "0.05em" }}>Mute</span>
-                <img
-                  src={RS + (sfxMuted ? "popups/ButtonOff.webp" : "popups/ButtonOn.webp")}
-                  draggable={false}
-                  onClick={() => { const m = !sfxMuted; setSfxMuted(m); setRomeSfxMuted(m); }}
-                  style={{ width: 80, height: 38, cursor: "pointer", transition: "opacity 0.15s" }}
-                />
-              </div>
-
-              {/* Volume row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, width: "100%" }}>
-                <span style={{ color: sfxMuted ? "rgba(253,230,138,0.3)" : "#fde68a",
-                  fontSize: 12, fontWeight: 600, letterSpacing: "0.05em",
-                  minWidth: 30, flexShrink: 0 }}>Vol</span>
-                <input type="range" min={0} max={1} step={0.05} value={sfxVolume}
-                  disabled={sfxMuted}
-                  onChange={e => { const v = parseFloat(e.target.value); setSfxVolume(v); setRomeSfxVolume(v); }}
-                  style={{ flex: 1, accentColor: "#dc2626", opacity: sfxMuted ? 0.25 : 1 }} />
-                <span style={{ color: sfxMuted ? "rgba(253,230,138,0.3)" : "#fbbf24",
-                  fontSize: 11, minWidth: 30, textAlign: "right", flexShrink: 0 }}>
-                  {sfxMuted ? "—" : Math.round(sfxVolume * 100) + "%"}
-                </span>
-              </div>
+               }}>Tap to Continue</div>
             </div>
           </div>
         </>
@@ -1714,9 +2192,9 @@ export default function RomeSlots() {
                 </div>
                 <div style={{ marginLeft: "auto", display: "flex", gap: 20, alignItems: "center", paddingRight: 12 }}>
                   {([
-                    ["3×", "× 2 bet", "8 Free Spins"],
+                    ["3×", "× 2 bet", "10 Free Spins"],
                     ["4×", "× 10 bet", "12 Free Spins"],
-                    ["5×", "× 50 bet", "18 Free Spins"],
+                    ["5×", "× 50 bet", "15 Free Spins"],
                   ] as const).map(([cnt, pay, fs]) => (
                     <div key={cnt} style={{ textAlign: "center", minWidth: 80 }}>
                       <div style={{ fontFamily: "'Cinzel',serif", fontSize: 13, fontWeight: 700,

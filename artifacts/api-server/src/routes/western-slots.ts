@@ -65,7 +65,7 @@ const PAYTABLE: Record<string, Record<number, number>> = {
 // scatterWin = SCATTER_PAY[sc] × scale, scale = totalBet/20
 // So SCATTER_PAY[3]=40 → 40 × (totalBet/20) = 2 × totalBet ✓
 const SCATTER_PAY: Record<number, number> = { 3: 40, 4: 200, 5: 1000 };
-const FREE_SPINS_MAP: Record<number, number> = { 3: 8, 4: 12, 5: 18 };
+const FREE_SPINS_MAP: Record<number, number> = { 3: 10, 4: 12, 5: 15 };
 
 const PAYLINES: number[][] = [
   [1,1,1,1,1], // 1  middle straight
@@ -123,31 +123,19 @@ function buildFreePool(): string[] {
 const FREE_POOL = buildFreePool();
 
 // Returns cols[col][row] — column-major, matching the client's result format
-// ── DEV-ONLY TEST HELPER ────────────────────────────────────────────────────
-// Forces exactly 3 Scatters in cols 0, 2, 4 so the tease chain reliably
-// fires during local testing: the 2nd landing in col 2 arms the teaser
-// (pulses col 3 + dims stopped reels), and the 3rd landing in col 4
-// resolves it. Non-scatter cells are drawn from the supplied pool with
-// "Scatter" filtered out so a 4th scatter can never slip in. MUST be
-// gated to dev — leave the call-site `process.env.NODE_ENV !== "production"`
-// check in place so production spins remain RNG-only.
-function forceScatterGrid(pool: string[]): string[][] {
-  const nonS = pool.filter(s => s !== "Scatter");
-  const r = () => nonS[Math.floor(Math.random() * nonS.length)];
-  return [
-    [r(), r(), "Scatter"],
-    [r(), r(), r()],
-    ["Scatter", r(), r()],
-    [r(), r(), r()],
-    [r(), r(), "Scatter"],
-  ];
-}
-
 export function spinCols(free = false): string[][] {
   const pool = free ? FREE_POOL : POOL;
   return Array.from({ length: 5 }, () =>
     Array.from({ length: 3 }, () => pool[Math.floor(Math.random() * pool.length)])
   );
+}
+
+function buildDevThreeScatterCols(): string[][] {
+  const cols = spinCols(false);
+  cols[0][0] = "Scatter";
+  cols[1][1] = "Scatter";
+  cols[2][2] = "Scatter";
+  return cols;
 }
 
 interface WinPosition {
@@ -276,7 +264,11 @@ router.post("/spin", requirePlayer, async (req, res) => {
     return res.status(400).json({ error: "Insufficient chips" });
   }
 
-  const cols = process.env.NODE_ENV !== "production" ? forceScatterGrid(POOL) : spinCols();
+  const forceDevThreeScatters =
+    process.env.NODE_ENV !== "production" &&
+    req.body?.forceDevThreeScatters === true &&
+    ((req as any).playerSession?.staffRoles ?? []).some((role: string) => role.toLowerCase() === "owner");
+  const cols = forceDevThreeScatters ? buildDevThreeScatterCols() : spinCols();
   const { lineWins, scatterWin, scatters, freeSpinsAwarded, totalWin } = evalCols(cols, totalBet);
   const net = totalWin - totalBet;
 
@@ -337,12 +329,19 @@ router.post("/free-spin", requirePlayer, async (req, res) => {
   const cols = spinCols(true); // boosted free-spin pool (RNG-only, even in dev)
   const { lineWins, scatterWin, scatters, totalWin: rawWin } = evalCols(cols, bonusBet);
   const totalWin = rawWin * FREE_SPIN_MULTIPLIER;
+  // Scatter combinations during the bonus round retrigger the same number
+  // of spins as their initial bonus awards: 3→10, 4→12, 5→15. This is
+  // added after the current spin is consumed.
+  const retriggeredFreeSpins = scatters >= 3
+    ? (FREE_SPINS_MAP[Math.min(scatters, 5)] ?? 0)
+    : 0;
+  const updatedRemaining = remaining + retriggeredFreeSpins;
 
   await db.update(playersTable)
     .set({
       chips: totalWin > 0 ? sql`chips + ${totalWin}` : sql`chips`,
-      bonusSpins: remaining,
-      ...(remaining <= 0 ? { bonusGame: null } : {}),
+      bonusSpins: updatedRemaining,
+      ...(updatedRemaining <= 0 ? { bonusGame: null } : {}),
     })
     .where(eq(playersTable.id, playerId));
 
@@ -368,7 +367,8 @@ router.post("/free-spin", requirePlayer, async (req, res) => {
     scatters,
     totalWin,
     bonusBet,
-    freeSpinsRemaining: remaining,
+    freeSpinsRemaining: updatedRemaining,
+    freeSpinsAwarded: retriggeredFreeSpins,
     newBalance,
     multiplier: FREE_SPIN_MULTIPLIER,
   });

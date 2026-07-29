@@ -8,6 +8,7 @@ export function requirePlayer(req: Request, res: Response, next: NextFunction): 
   const ps = validatePlayerToken(token);
   if (!ps) { res.status(401).json({ error: "Invalid or expired session — please log in again" }); return; }
   (req as any).authenticatedPlayerId = ps.playerId;
+  (req as any).playerSession = ps;
   (req as any).isBanker = false;
   next();
 }

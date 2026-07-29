@@ -191,3 +191,15 @@ id = "DM5zYaxpFzuijgKHmtzBg"
 uri = "file://artifacts/casino/public/babalari-coin.png"
 type = "image"
 title = "Babalari Gold Coin"
+
+[[outputs]]
+id = "JDNLHZa2gZV_EsxT07GH-"
+uri = "file://attached_assets/edited/image_1785210531688_edited.png"
+type = "image"
+title = "Updated slot spin text"
+
+[[outputs]]
+id = "QL5p9ocBWXyOumaPlV4g5"
+uri = "file://artifacts/casino/public/sounds/thunderstrike_bonus_1785311410208.webm"
+type = "video"
+title = "Trimmed Thunderstrike Bonus WebM"

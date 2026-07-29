@@ -1,0 +1,54 @@
+Redesign my current bottom slot UI to match the style and layout of the reference image.
+
+Goal:
+Keep my existing functionality, but restyle the bottom control panel so it visually matches the second image’s modern dark casino UI. Ignore the actual balance values/content — this is a visual/layout redesign only.
+
+Requirements:
+- Do not change any game logic, betting logic, spin logic, balances, win calculations, button actions, or functionality.
+- Only redesign the bottom HUD / control bar.
+
+Target style:
+- Modern dark UI instead of the current wooden/western bar.
+- Use a black / very dark gray horizontal footer panel.
+- Clean, compact, polished casino look.
+- Flat/dark panels with subtle borders, soft shadows, and slightly rounded corners.
+- White labels and values with strong contrast.
+- Keep the interface minimal and close to the reference.
+
+Layout to match:
+1. Far left:
+   - Small menu/hamburger button in a square dark button.
+2. Left info area:
+   - Show BALANCE and WIN text/value in a compact stacked layout similar to the reference.
+   - Keep whatever existing labels/data bindings I already use.
+3. Center/right bet control:
+   - A dark rectangular bet box showing the bet amount.
+   - Place up/down arrow controls vertically on the right side of that box, like the reference.
+4. Right side:
+   - Large circular spin button styled like the reference.
+   - Add the small secondary circular-arrow icon beside it if an existing control already maps to that function.
+5. Overall:
+   - Everything should sit in one clean bottom bar aligned horizontally like the reference.
+
+Visual details:
+- Remove the wood/plank styling from the bottom control area only.
+- Replace with dark charcoal/black panels.
+- Use subtle inner shadows or borders to separate sections.
+- Make text crisp and readable.
+- Keep spacing tight and balanced.
+- Make the spin button the most visually prominent element.
+- Use a circular spin button with a white rotating-arrow icon on a dark background.
+- The bet box should have a clean dark panel look with the amount on the left and arrow controls on the right.
+- Keep the icon buttons visually consistent with the target.
+
+Constraints:
+- Do not redesign the reels or the rest of the slot machine unless necessary for alignment.
+- Do not change any values, just the appearance.
+- Do not hardcode fake balances.
+- Preserve responsive behavior.
+- Make the smallest possible change to the current files while matching the target look as closely as possible.
+
+If needed:
+- Rebuild only the bottom HUD markup/CSS structure.
+- Reuse existing event handlers and state.
+- Report which files were modified.

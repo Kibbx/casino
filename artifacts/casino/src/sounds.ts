@@ -60,9 +60,9 @@ function makeSound(path: string, gain: number) {
   return { load, play };
 }
 
-const gunshot  = makeSound("/mob-tower-gunshot.mp3",  0.40);
-const siren    = makeSound("/mob-tower-siren.mp3",    0.30);
-const cashout  = makeSound("/mob-tower-cashout.mp3",  0.30);
+const gunshot  = makeSound("/mob-tower-gunshot.webm",  0.40);
+const siren    = makeSound("/mob-tower-siren.webm",    0.30);
+const cashout  = makeSound("/mob-tower-cashout.webm",  0.30);
 
 export function soundSafe()    { gunshot.play(); }
 export function soundBust()    { siren.play(); }

@@ -5,12 +5,13 @@ import { usePageTracker } from "../lib/usePageTracker";
 import { awardXP } from "../lib/rewardsState";
 import { fireChallengeEvent } from "../lib/challengeEventService";
 import { WesternPaylineOverlay, type PaylineWin } from "./western-payline-overlay";
-import { playCustomSound, stopCustomSound, startWinCountSound, stopWinCountSound, updateWinCountPitch, startLoop, stopLoop, setCustomSoundsVolume, setCustomSoundsMuted } from "../lib/customSounds";
+import { playCustomSound, playBetClickSound, stopCustomSound, startWinCountSound, stopWinCountSound, updateWinCountPitch, startLoop, stopLoop, setCustomSoundsVolume, setCustomMusicVolume, setCustomSoundsMuted, preloadCustomSounds } from "../lib/customSounds";
 
 import { usePlayerSocket } from "../lib/usePlayerSocket";
 import { isGameUnlocked, usePasswordGuard } from "../lib/gamePasswordGuard";
-import buttonClickUrl  from "@assets/buttonclick_1777322204907.mp3";
+import buttonClickUrl  from "@assets/buttonclick_1777322204907.webm";
 import { useGameClosedRedirect } from "../lib/useGameClosedRedirect";
+import { Menu, X, ChevronUp, ChevronDown, RotateCw, RefreshCw, Volume2, VolumeX, Music2, Info } from "lucide-react";
 
 const WS   = import.meta.env.BASE_URL + "western-slots/";
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -116,7 +117,7 @@ const PAYTABLE: Record<SymId, Partial<Record<number,number>>> = {
 };
 // Scatter pays TOTAL BET × multiplier: 3=2×, 4=10×, 5=50×
 const SCATTER_PAY: Record<number,number> = {3:2, 4:10, 5:50};
-const FREE_SPINS:  Record<number,number> = {3:8,4:12,5:18};
+const FREE_SPINS:  Record<number,number> = {3:10,4:12,5:15};
 
 // PAYTABLE values = multiplier on bet at minimum stake (BET_STEPS[0]=20).
 // evalResult scales proportionally: win × (bet / BET_STEPS[0])
@@ -198,6 +199,7 @@ function useWesternSounds() {
 
   // Pre-fetch click + win audio as soon as the component mounts
   useEffect(() => {
+    preloadCustomSounds();
     fetch(buttonClickUrl)
       .then(r => r.arrayBuffer())
       .then(arr => { rawBytesRef.current = arr; })
@@ -494,7 +496,8 @@ function Panel({img,x,y,w,h,label,value,zIndex=10}:{
 export default function WesternSlots() {
   useGameClosedRedirect("deadwood-dollars", "/slots");
   const [,navigate] = useLocation();
-  const {sessionToken, playerId} = useStore();
+  const {sessionToken, playerId, playerStaffRoles} = useStore();
+  const isOwner = playerStaffRoles.some(role => role.toLowerCase() === "owner");
   usePageTracker("western-slots");
   usePasswordGuard("slots");
   useEffect(()=>{ if(!isGameUnlocked("slots")) navigate("/lobby"); },[]);
@@ -512,6 +515,33 @@ export default function WesternSlots() {
   const [showSfx, setShowSfx] = useState(false);
   const [sfxMuted, setSfxMuted] = useState(() => sounds.mutedRef.current);
   const [sfxVolume, setSfxVolume] = useState(() => sounds.volRef.current);
+  const [musicVolume, setMusicVolume] = useState(() =>
+    Number(localStorage.getItem("western-slots-music-volume") ?? "1")
+  );
+  const [musicEnabled, setMusicEnabled] = useState(
+    () => localStorage.getItem("western-slots-music-enabled") !== "false"
+  );
+  const toggleMusic = () => {
+    const next = !musicEnabled;
+    setMusicEnabled(next);
+    localStorage.setItem("western-slots-music-enabled", String(next));
+    if (!next) stopLoop("western_bonus");
+    else if (freeLeftRef.current > 0) startLoop("western_bonus");
+  };
+  const updateSfxVolume = (value: number) => {
+    setSfxVolume(value);
+    sounds.setVolume(value);
+    setCustomSoundsVolume(value);
+  };
+  const updateMusicVolume = (value: number) => {
+    setMusicVolume(value);
+    localStorage.setItem("western-slots-music-volume", String(value));
+    setCustomMusicVolume(value);
+  };
+  useEffect(() => {
+    setCustomSoundsVolume(sfxVolume);
+    setCustomMusicVolume(musicVolume);
+  }, []);
 
   // ── Scale — use ResizeObserver on the wrapper so FiveM CEF tablet sizes work ──
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -547,6 +577,8 @@ export default function WesternSlots() {
 
   // ── Game state ─────────────────────────────────────────────────────────────
   const [bet,setBet]           = useState(DEFAULT_BET_STEPS[0]);
+  const betHoldTimerRef = useRef<ReturnType<typeof setTimeout>|null>(null);
+  const betHoldIntervalRef = useRef<ReturnType<typeof setInterval>|null>(null);
   const [spinning,setSpinning] = useState(false);
   const spinningRef = useRef(false);
   useEffect(() => { if (!spinning) setDisplayChips(liveChips ?? 0); }, [liveChips, spinning]);
@@ -559,6 +591,7 @@ export default function WesternSlots() {
   const [bonusWinTotal,setBonusWinTotal] = useState(0);
   const bonusWinRef = useRef(0);
   const [showBonusEnd,setShowBonusEnd] = useState(false);
+  const [showDevThreeScatters,setShowDevThreeScatters] = useState(false);
   const [bonusEndCountComplete,setBonusEndCountComplete] = useState(false);
   const bonusEndCountCompleteRef = useRef(false);
   const bonusEndResolveRef = useRef<(()=>void)|null>(null);
@@ -575,7 +608,52 @@ export default function WesternSlots() {
   const lastWinRef = useRef(0);
   const [showInfo,setShowInfo]   = useState(false);
   const [errMsg,setErrMsg]       = useState<string|null>(null);
-  const [winPopup,setWinPopup]   = useState<{amount:number;bet:number;isJackpot:boolean;lineWins:any[];isFree:boolean;grid:SymId[][]}|null>(null);
+  const [winPopup,setWinPopup]   = useState<{amount:number;tierAmount:number;bet:number;isJackpot:boolean;lineWins:any[];isFree:boolean;grid:SymId[][]}|null>(null);
+
+  const changeBet = (direction: "increase" | "decrease") => {
+    setBet(b => {
+      const i = betSteps.indexOf(b);
+      if (direction === "increase") {
+        if (i >= betSteps.length - 1) return b;
+        playBetClickSound(direction);
+        return betSteps[i + 1];
+      }
+      if (i <= 0) return b;
+      playBetClickSound(direction);
+      return betSteps[i - 1];
+    });
+  };
+  const stopBetHold = () => {
+    if (betHoldTimerRef.current) clearTimeout(betHoldTimerRef.current);
+    if (betHoldIntervalRef.current) clearInterval(betHoldIntervalRef.current);
+    betHoldTimerRef.current = null;
+    betHoldIntervalRef.current = null;
+  };
+  const startBetHold = (direction: "increase" | "decrease") => {
+    if (spinning) return;
+    stopBetHold();
+    betHoldTimerRef.current = setTimeout(() => {
+      betHoldIntervalRef.current = setInterval(() => changeBet(direction), 120);
+    }, 350);
+  };
+  useEffect(() => () => stopBetHold(), []);
+
+  useEffect(() => {
+    if (!showSfx) return;
+    const closeMenu = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest("[data-western-settings-menu]")) setShowSfx(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowSfx(false);
+    };
+    document.addEventListener("mousedown", closeMenu);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", closeMenu);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [showSfx]);
   // Mega wins get a two-step reveal: start on the Huge Win artwork, then
   // replace it with the final Mega Win artwork after the first beat lands.
   const [megaPopupStage,setMegaPopupStage] = useState<"huge"|"mega">("mega");
@@ -593,12 +671,22 @@ export default function WesternSlots() {
   const [overlayWins, setOverlayWins] = useState<PaylineWin[]>([]);
   const autoRef = useRef(autoSpin);
   useEffect(()=>{ autoRef.current=autoSpin; },[autoSpin]);
+  useEffect(()=>{
+    if (freeLeft > 0 && !showFreeSpinsBanner && !showBonusEnd && !autoSpin) {
+      autoRef.current = true;
+      setAutoSpin(true);
+    }
+  },[freeLeft,showFreeSpinsBanner,showBonusEnd,autoSpin]);
   // betRef / freeLeftRef avoid stale closures in spinOnce without adding those values to deps
   const betRef = useRef(bet);
   useEffect(()=>{ betRef.current=bet; },[bet]);
   const freeLeftRef = useRef(freeLeft);
   useEffect(()=>{ freeLeftRef.current=freeLeft; },[freeLeft]);
   const chips = displayChips;
+  const bonusHudActive = freeLeft > 0 || freeTotal > 0 || showFreeSpinsBanner || showBonusEnd;
+  const betProgress = betSteps.length > 1
+    ? Math.max(0, Math.min(1, betSteps.indexOf(bet) / (betSteps.length - 1)))
+    : 0;
 
   // ── Reel strip refs (DOM mutation, same as rome-slots) ─────────────────────
   // visibleSymsRef[col*N_ROWS+row] = symbol currently displayed
@@ -747,7 +835,7 @@ export default function WesternSlots() {
     // Only 10×+ wins get a popup. Smaller wins remain represented by
     // the payline animation on the reels and must not start a hidden
     // counter animation.
-    const counterMult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+    const counterMult = winPopup.bet > 0 ? winPopup.tierAmount / winPopup.bet : 0;
     if (!winPopup.isJackpot && counterMult < 10) {
       setPopCounterValue(0);
       return;
@@ -762,7 +850,17 @@ export default function WesternSlots() {
     if (!winPopup.amount || winPopup.amount <= 0) { setPopCounterValue(0); return; }
     const startCents = 0;
     const finalCents = Math.round(winPopup.amount * 100);
-    const durationMs = getWinCountDuration(finalCents, Math.round(winPopup.bet * 100));
+    // Match the Total Won exit scene: use the same multiplier-aware duration
+    // and ease curve so the popup amount has the same deliberate count-up.
+    const durationMs = getWinCountDuration(
+      finalCents,
+      Math.round(winPopup.bet * 100),
+    ) * BONUS_EXIT_DURATION_MULTIPLIER;
+    if (typeof window !== "undefined"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setPopCounterValue(winPopup.amount);
+      return;
+    }
     const startTime = performance.now();
     popCounterAnimRef.current = { startCents, finalCents, startTime, durationMs };
     const frame = (now: number) => {
@@ -800,7 +898,7 @@ export default function WesternSlots() {
   // stage.
   useEffect(() => {
     if (popupRevealed && winPopup && !showBonusEnd) {
-      const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+      const mult = winPopup.bet > 0 ? winPopup.tierAmount / winPopup.bet : 0;
       const eligible = winPopup.isJackpot || mult >= 10;
       const countFinished = popCounterValue >= winPopup.amount;
       if (eligible && !countFinished) {
@@ -841,7 +939,7 @@ export default function WesternSlots() {
     }
     setMegaPopupStage("mega");
     if (!popupRevealed || !winPopup || winPopup.isJackpot) return;
-    const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+    const mult = winPopup.bet > 0 ? winPopup.tierAmount / winPopup.bet : 0;
     // Match the Rome tier thresholds: 10×+ is Huge, 20×+ is Mega.
     // Only the 10×–19.99× range gets the Huge → Mega reveal. Lower
     // wins stay on the Huge-style artwork and must never flash Mega.
@@ -920,7 +1018,7 @@ export default function WesternSlots() {
   );
 
   // ── Spin ───────────────────────────────────────────────────────────────────
-  const spinOnce = useCallback(async()=>{
+  const spinOnce = useCallback(async(forceDevThreeScatters = false)=>{
     if(spinningRef.current) return;
     spinningRef.current = true;
     setSpinning(true);
@@ -942,11 +1040,17 @@ export default function WesternSlots() {
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type":"application/json", Authorization:`Bearer ${sessionToken}` },
-        body: isFree ? undefined : JSON.stringify({ bet: betRef.current }),
+        body: isFree ? undefined : JSON.stringify({
+          bet: betRef.current,
+          ...(forceDevThreeScatters ? { forceDevThreeScatters: true } : {}),
+        }),
       });
       data = await r.json();
       if (!r.ok) throw new Error(data.error ?? "Spin failed");
-      if (isFree) setFreeLeft(data.freeSpinsRemaining ?? 0);
+       if (isFree) {
+         setFreeLeft(data.freeSpinsRemaining ?? 0);
+         awardedFreeSpins = Number(data.freeSpinsAwarded ?? 0);
+       }
       else {
         awardXP(betRef.current);
         if (data.freeSpinsAwarded > 0) awardedFreeSpins = data.freeSpinsAwarded;
@@ -1260,6 +1364,13 @@ export default function WesternSlots() {
       const resultBet = isFree
         ? (Number(data.bonusBet) > 0 ? Number(data.bonusBet) : betRef.current)
         : betRef.current;
+      // Popup tiers are based on winning paylines only. Scatter awards are
+      // included in the displayed total, but must not push a win into Huge or
+      // Mega when the paylines themselves did not reach that threshold.
+      const paylineWinTotal = lws.reduce(
+        (sum: number, lineWin: any) => sum + Number(lineWin.payout ?? lineWin.win ?? 0),
+        0,
+      );
       const isJackpot = lws.some((lw: any) =>
         lw.symbol === "Wild" && lw.matchCount === 5
       );
@@ -1267,7 +1378,15 @@ export default function WesternSlots() {
       // payline-animation level: multi on each unique payline shape, and
       // win_end_bet exactly once after every distinct payline in the
       // sequence has been shown. Spin-result site is cue-free.
-      setWinPopup({ amount: totalWin, bet: resultBet, isJackpot, lineWins: lws, isFree, grid: result });
+      setWinPopup({
+        amount: totalWin,
+        tierAmount: paylineWinTotal,
+        bet: resultBet,
+        isJackpot,
+        lineWins: lws,
+        isFree,
+        grid: result,
+      });
     }
 
     // Track cumulative bonus winnings
@@ -1277,9 +1396,12 @@ export default function WesternSlots() {
     }
 
     // Free spins triggered — show banner NOW (after reels land)
-    if (awardedFreeSpins > 0) {
+    // Initial bonus entry is click-gated. Bonus-round retriggers already
+    // arrive with the updated remaining count from the server and must not
+    // add the spins a second time or interrupt the automated bonus sequence.
+    if (awardedFreeSpins > 0 && !isFree) {
       setBonusWinTotal(0); bonusWinRef.current = 0;
-      // Stop auto-spin so free spins are played manually (prevents race conditions)
+      // Bonus free spins always use the existing auto-spin loop.
       setAutoSpin(false); autoRef.current = false;
       setFreeLeft(f => f + awardedFreeSpins);
       freeLeftRef.current += awardedFreeSpins;
@@ -1291,9 +1413,7 @@ export default function WesternSlots() {
       // engine pulse was deliberately retired here so the sting reads
       // as the single bonus-arrival cue, not a stack of two.)
       playCustomSound("bonus_entry");
-      // Bonus entry scene stays up until the user clicks to continue —
-      // no auto-dismiss timer. Mirrors rome-slots behavior so the player
-      // can read the count + tap at their own pace.
+      // The entry scene stays up until the player clicks to continue.
       setShowFreeSpinsBanner(true);
     }
 
@@ -1392,6 +1512,8 @@ export default function WesternSlots() {
             bonusEndCountCompleteRef.current = true;
             setBonusEndCountComplete(true);
             stopWinCountSound();
+            // Keep the exit scene visible after an early click so the player
+            // can see the completed total before dismissing it.
             return;
           }
           r();
@@ -1440,6 +1562,46 @@ export default function WesternSlots() {
     spinOnce();
   };
 
+  const handleDevThreeScatters = () => {
+    if (spinning || autoSpin || freeLeft > 0 || showFreeSpinsBanner || showBonusEnd) return;
+    spinOnce(true);
+  };
+
+  // Owner-only development shortcut: hold Shift, press O, then press P.
+  useEffect(() => {
+    if (!import.meta.env.DEV || !isOwner) return;
+    let shiftOPrimed = false;
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+    const reset = () => {
+      shiftOPrimed = false;
+      if (resetTimer) clearTimeout(resetTimer);
+      resetTimer = null;
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!event.shiftKey) {
+        reset();
+        return;
+      }
+      const key = event.key.toLowerCase();
+      if (key === "o") {
+        shiftOPrimed = true;
+        if (resetTimer) clearTimeout(resetTimer);
+        resetTimer = setTimeout(reset, 1200);
+        return;
+      }
+      if (key === "p" && shiftOPrimed) {
+        event.preventDefault();
+        reset();
+        setShowDevThreeScatters(value => !value);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      reset();
+    };
+  }, [isOwner]);
+
   // ── Control bar centred on SPIN at x=960 ──────────────────────────────────
   const BAR_Y = 960;
   // Left of SPIN:  [Menu]60  [Info]164  [Lines]268  [−]452  [Bet]502  [+]676  [Max]726
@@ -1474,9 +1636,6 @@ export default function WesternSlots() {
       </div>
 
       {/* Backdrop — sibling to game viewport so overflow:hidden can't trap it */}
-      {showSfx&&<div onClick={()=>setShowSfx(false)}
-        style={{position:"fixed",inset:0,zIndex:997}}/>}
-
       {/* Game viewport */}
       <div style={{flex:1,display:"flex",alignItems:"center",
         justifyContent:"center",overflow:"hidden",background:"#0D0804"}}>
@@ -1627,62 +1786,127 @@ export default function WesternSlots() {
 
           {/* Free spins counter — now rendered outside canvas as fixed overlay */}
 
-          {/* ════════════════════════════════ CONTROL BAR (z:10) ═══════════════
-              All centred on SPIN at x=960
-              [Menu]60 [Set]164 [Lines]268 [−]452 [Bet]502 [+]676 [Max]726
-              [SPIN] x=862,y=861,w=196,h=198
-              [Auto]1078 [Bal]1214 [Win]1438 [Info]1622
+          {bonusHudActive && (
+            <div data-western-settings-menu style={{
+              position:"absolute",left:"50%",top:900,width:"fit-content",minWidth:980,height:112,
+              transform:"translateX(-50%)",
+              maxWidth:"calc(100% - 32px)",
+              zIndex:100,boxSizing:"border-box",display:"flex",alignItems:"center",
+              padding:"0 24px",
+              background:"linear-gradient(180deg,rgba(24,24,28,0.92) 0%,rgba(15,15,18,0.88) 100%)",
+              border:"1px solid rgba(255,255,255,0.08)",borderRadius:10,
+              boxShadow:"0 10px 30px rgba(0,0,0,0.42),0 0 0 1px rgba(0,0,0,0.25)",
+              fontFamily:"Oswald,sans-serif",
+            }}>
+              <button data-western-settings-menu onClick={()=>setShowSfx(v=>!v)}
+                aria-label={showSfx?"Close settings":"Open settings"} style={{
+                  width:50,height:50,borderRadius:7,flexShrink:0,
+                  background:"transparent",border:"1px solid transparent",
+                  display:"flex",alignItems:"center",justifyContent:"center",
+                  color:"#fff",cursor:"pointer",
+                }}>
+                {showSfx ? <X size={50} strokeWidth={3.2}/> : <Menu size={50} strokeWidth={3.2}/>}
+              </button>
+              {showSfx && (
+                <div data-western-settings-menu style={{
+                  position:"absolute",left:0,bottom:"calc(100% - 4px)",
+                  width:210,minHeight:300,boxSizing:"border-box",padding:"18px 14px",
+                  zIndex:1000,background:"rgba(8,8,9,0.99)",
+                  border:"1px solid rgba(255,255,255,0.10)",borderRadius:12,
+                  boxShadow:"0 10px 24px rgba(0,0,0,0.55)",
+                  display:"flex",flexDirection:"column",gap:8,fontFamily:"Oswald,sans-serif",
+                }}>
+                  <button style={{
+                    width:"100%",boxSizing:"border-box",height:62,display:"grid",
+                    alignItems:"center",columnGap:9,gridTemplateColumns:"auto 1fr auto",
+                    gridTemplateRows:"1fr 24px",padding:"0 10px",border:"none",
+                    background:"transparent",color:"rgba(255,255,255,0.82)",
+                     cursor:"default",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left",
+                  }}>
+                    <span onClick={()=>{
+                      const next=!sfxMuted;
+                      setSfxMuted(next); sounds.setMuted(next); setCustomSoundsMuted(next);
+                    }} style={{display:"flex",cursor:"pointer"}}
+                      aria-label={sfxMuted?"Unmute sound":"Mute sound"}>
+                      {sfxMuted?<VolumeX size={19} strokeWidth={2}/>:<Volume2 size={19} strokeWidth={2}/>}
+                    </span>
+                    <span>SOUND</span>
+                    <span style={{fontSize:11,opacity:0.9,marginLeft:5,color:sfxMuted?"#ff5b5b":"rgba(255,255,255,0.62)"}}>{sfxMuted?"MUTED":`${Math.round(sfxVolume*100)}%`}</span>
+                    <input aria-label="Sound volume" type="range" min="0" max="1" step="0.01"
+                      value={sfxVolume} onClick={e=>e.stopPropagation()}
+                      onChange={e=>updateSfxVolume(Number(e.target.value))}
+                      style={{gridColumn:"1 / -1",width:"100%",accentColor:"#fff",cursor:"pointer"}}/>
+                  </button>
+                  <button style={{
+                    width:"100%",boxSizing:"border-box",height:62,display:"grid",
+                    alignItems:"center",columnGap:9,gridTemplateColumns:"auto 1fr auto",
+                    gridTemplateRows:"1fr 24px",padding:"0 10px",border:"none",
+                    background:"transparent",color:"rgba(255,255,255,0.82)",
+                     cursor:"default",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left",
+                  }}>
+                    <span onClick={toggleMusic} style={{display:"flex",cursor:"pointer"}}
+                      aria-label={musicEnabled?"Turn music off":"Turn music on"}>
+                      <Music2 size={19} strokeWidth={2}/>
+                    </span>
+                    <span>MUSIC</span>
+                    <span style={{fontSize:11,opacity:0.9,marginLeft:5,color:!musicEnabled?"#ff5b5b":"rgba(255,255,255,0.62)"}}>{!musicEnabled?"MUTED":`${Math.round(musicVolume*100)}%`}</span>
+                    <input aria-label="Music volume" type="range" min="0" max="1" step="0.01"
+                      value={musicVolume} onClick={e=>e.stopPropagation()}
+                      onChange={e=>updateMusicVolume(Number(e.target.value))}
+                      style={{gridColumn:"1 / -1",width:"100%",accentColor:"#fff",cursor:"pointer"}}/>
+                  </button>
+                  <button onClick={()=>{setShowSfx(false);setShowInfo(true)}} style={{
+                    height:48,display:"flex",alignItems:"center",gap:10,width:"100%",
+                    boxSizing:"border-box",padding:"0 10px",border:"none",borderRadius:5,
+                    background:"transparent",color:"rgba(255,255,255,0.82)",cursor:"pointer",
+                     fontFamily:"inherit",fontSize:15,fontWeight:600,letterSpacing:"0.08em",textAlign:"left",
+                  }}>
+                    <Info size={19} strokeWidth={2}/><span>INFO</span>
+                  </button>
+                </div>
+              )}
+              <div style={{width:24,flexShrink:0}}/>
+              <div style={{display:"flex",alignItems:"center",gap:34,flex:1,minWidth:0}}>
+                {[
+                  ["Balance", chips.toLocaleString(), 170],
+                  ["Bet", bet.toLocaleString(), 110],
+                  ["Win", lastWin.toLocaleString(), 110],
+                ].map(([label,value,minWidth])=>(
+                  <div key={String(label)} style={{minWidth:Number(minWidth)}}>
+                    <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",
+                      letterSpacing:"0.14em",textTransform:"uppercase"}}>{label}</div>
+                    <div style={{fontSize:26,fontWeight:800,
+                      color:label==="Win"&&lastWin===0?"rgba(255,255,255,0.38)":"#fff",
+                      lineHeight:1.05}}>{value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:34,paddingLeft:30,
+                marginLeft:24,borderLeft:"1px solid rgba(255,255,255,0.18)"}}>
+                <div style={{minWidth:150}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",
+                    letterSpacing:"0.14em",textTransform:"uppercase"}}>Total Win</div>
+                  <div style={{fontSize:26,fontWeight:800,color:"#fff",lineHeight:1.05}}>
+                    {bonusWinTotal.toLocaleString()}
+                  </div>
+                </div>
+                <div style={{minWidth:190}}>
+                  <div style={{fontSize:12,fontWeight:600,color:"rgba(255,255,255,0.55)",
+                    letterSpacing:"0.10em",textTransform:"uppercase"}}>Free Spins Remaining</div>
+                  <div style={{fontSize:26,fontWeight:800,color:"#fff",lineHeight:1.05}}>{freeLeft}</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════ CONTROL BAR (dark modern redesign) ═══
+              Dark horizontal footer bar matching reference UI.
+              All handlers, state, and logic are unchanged.
           ═══════════════════════════════════════════════════════════════════════ */}
 
-          {/* Settings button — far left (where Info was) */}
-          <HoverBtn normal={WS+"screen/Settings Button Normal.webp"}
-            hover={WS+"screen/Settings Button Hover.webp"}
-            x={164} y={BAR_Y-42} w={84} h={84}
-            onClick={()=>setShowSfx(v=>!v)}
-            active={showSfx}/>
-
-          {/* Info/paytable — far right (was far left) */}
-          <HoverBtn normal={WS+"screen/Info Button Normal.webp"}
-            hover={WS+"screen/Info Button Hover.webp"}
-            x={1622} y={BAR_Y-42} w={84} h={84}
-            onClick={()=>setShowInfo(true)}/>
-
-          <Panel img={WS+"screen/Lines Button.webp"}
-            x={268} y={BAR_Y} w={164} h={55} label="Lines" value="20"/>
-
-          <HoverBtn normal={WS+"screen/Minus Button Normal.webp"}
-            hover={WS+"screen/Minus Button Hover.webp"}
-            x={452} y={BAR_Y-28} w={40} h={56} disabled={spinning}
-            onClick={()=>setBet(b=>{
-              const i=betSteps.indexOf(b);
-              return i>0?betSteps[i-1]:betSteps[0];
-            })}/>
-
-          <Panel img={WS+"screen/Total Bet Button.webp"}
-            x={502} y={BAR_Y} w={164} h={55} label="Total Bet" value={bet}/>
-
-          <HoverBtn normal={WS+"screen/Plus Button Normal.webp"}
-            hover={WS+"screen/Plus Button Hover.webp"}
-            x={676} y={BAR_Y-28} w={40} h={56} disabled={spinning}
-            onClick={()=>setBet(b=>{
-              const i=betSteps.indexOf(b);
-              return i<betSteps.length-1?betSteps[i+1]:betSteps[betSteps.length-1];
-            })}/>
-
-          <HoverBtn normal={WS+"screen/Max Bet Button Normal.webp"}
-            hover={WS+"screen/Max Bet Button Hover.webp"}
-            x={726} y={BAR_Y-47} w={116} h={95} disabled={spinning}
-            label="Max Bet"
-            onClick={()=>setBet(betSteps[betSteps.length-1])}/>
-
-          {/* SPIN — centre at x=960 */}
-          <HoverBtn normal={WS+"screen/Spin Button Normal.webp"}
-            hover={WS+"screen/Spin Button Hover.webp"}
-            x={862} y={BAR_Y-99} w={196} h={198}
-            disabled={spinning}
-            onClick={handleSpin}/>
-
-          {/* Error toast */}
+          {/* Error toast — sits above the bar */}
           {errMsg&&(
             <div onClick={()=>setErrMsg(null)} style={{
               position:"absolute",left:"50%",top:BAR_Y-160,zIndex:30,
@@ -1695,18 +1919,292 @@ export default function WesternSlots() {
             }}>{errMsg} — tap to dismiss</div>
           )}
 
-          <HoverBtn normal={WS+"screen/Auto Spin Button Normal.webp"}
-            hover={WS+"screen/Auto Spin Button Hover.webp"}
-            x={1078} y={BAR_Y-47} w={116} h={95}
-            active={autoSpin}
-            label={autoSpin?"Auto ON":"Auto"}
-            onClick={()=>setAutoSpin(a=>!a)}/>
+          {/* Dark bar background */}
+          <div style={{
+            position:"absolute",left:"50%",top:900,width:"fit-content",minWidth:980,height:112,
+            transform:"translateX(-50%)",
+            background:"linear-gradient(180deg,rgba(24,24,28,0.92) 0%,rgba(15,15,18,0.88) 100%)",
+            border:"1px solid rgba(255,255,255,0.08)",
+            borderRadius:10,
+            boxShadow:"0 10px 30px rgba(0,0,0,0.42),0 0 0 1px rgba(0,0,0,0.25)",
+            display:bonusHudActive?"none":"flex",alignItems:"center",
+            padding:"0 24px",gap:0,
+            maxWidth:"calc(100% - 32px)",
+            zIndex:100,boxSizing:"border-box",
+          }}>
+             {import.meta.env.DEV && isOwner && showDevThreeScatters && (
+               <button
+                 type="button"
+                 onClick={handleDevThreeScatters}
+                 disabled={spinning || autoSpin || freeLeft > 0 || showFreeSpinsBanner || showBonusEnd}
+                 style={{
+                   position:"absolute", right:12, bottom:-34,
+                   border:"1px solid rgba(255,190,60,0.55)",
+                   borderRadius:5, padding:"4px 8px",
+                   background:"rgba(70,35,0,0.85)",
+                   color:"#fcd34d", fontFamily:"Oswald,sans-serif",
+                   fontSize:11, letterSpacing:"0.08em", cursor:"pointer",
+                   opacity:spinning || autoSpin || freeLeft > 0 || showFreeSpinsBanner || showBonusEnd ? 0.45 : 1,
+                 }}
+               >
+                 DEV: 3 SCATTERS
+               </button>
+             )}
 
-          <Panel img={WS+"screen/Balance Button.webp"}
-            x={1214} y={BAR_Y} w={204} h={55} label="Balance" value={chips}/>
+            {/* ── 1. Menu / Settings button ── */}
+            <div
+              data-western-settings-menu
+              onClick={()=>setShowSfx(v=>!v)}
+              style={{
+                width:50,height:50,borderRadius:7,flexShrink:0,
+                background:"transparent",
+                border:"1px solid transparent",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                cursor:"pointer",
+              }}
+            >
+              {showSfx
+                ? <X size={50} strokeWidth={3.2} color="white" />
+                : <Menu size={50} strokeWidth={3.2} color="white" />}
+            </div>
+            {showSfx&&(
+              <div data-western-settings-menu style={{
+                 position:"absolute",left:0,bottom:"calc(100% - 4px)",
+                  width:210,minHeight:300,boxSizing:"border-box",padding:"18px 14px",zIndex:1000,
+                 background:"rgba(8,8,9,0.99)",
+                 border:"1px solid rgba(255,255,255,0.10)",
+                 borderRadius:12,boxShadow:"0 10px 24px rgba(0,0,0,0.55)",
+                  display:"flex",flexDirection:"column",gap:8,
+                fontFamily:"Oswald,sans-serif",
+              }}>
+                <button
+                  style={{
+                    width:"100%",boxSizing:"border-box",height:62,display:"grid",alignItems:"center",gap:0,
+                    columnGap:9,
+                    gridTemplateColumns:"auto 1fr auto",gridTemplateRows:"1fr 24px",
+                    padding:"0 10px",border:"none",borderRadius:3,
+                    background:"transparent",
+                     color:"rgba(255,255,255,0.82)",
+                     cursor:"default",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.color="#fff";}}
+                   onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.82)";}}
+                >
+                  <span
+                    onClick={()=>{
+                      const next=!sfxMuted;
+                      setSfxMuted(next);
+                      sounds.setMuted(next);
+                      setCustomSoundsMuted(next);
+                    }}
+                    style={{display:"flex",cursor:"pointer"}}
+                    aria-label={sfxMuted?"Unmute sound":"Mute sound"}
+                  >
+                    {sfxMuted?<VolumeX size={19} strokeWidth={2}/>:<Volume2 size={19} strokeWidth={2}/>}
+                  </span>
+                  <span>SOUND</span>
+                  <span style={{fontSize:11,opacity:0.9,marginLeft:5,color:sfxMuted?"#ff5b5b":"rgba(255,255,255,0.62)"}}>{sfxMuted?"MUTED":`${Math.round(sfxVolume*100)}%`}</span>
+                  <input
+                    aria-label="Sound volume"
+                    type="range" min="0" max="1" step="0.01" value={sfxVolume}
+                    onClick={e=>e.stopPropagation()}
+                    onChange={e=>updateSfxVolume(Number(e.target.value))}
+                    style={{gridColumn:"1 / -1",width:"100%",accentColor:"#fff",cursor:"pointer"}}
+                  />
+                </button>
+                <button
+                  style={{
+                    width:"100%",boxSizing:"border-box",height:62,display:"grid",alignItems:"center",gap:0,
+                    columnGap:9,
+                    gridTemplateColumns:"auto 1fr auto",gridTemplateRows:"1fr 24px",
+                    padding:"0 10px",border:"none",borderRadius:3,
+                    background:"transparent",
+                     color:"rgba(255,255,255,0.82)",
+                     cursor:"default",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.color="#fff";}}
+                   onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.82)";}}
+                >
+                  <span
+                    onClick={toggleMusic}
+                    style={{display:"flex",cursor:"pointer"}}
+                    aria-label={musicEnabled?"Turn music off":"Turn music on"}
+                  >
+                    <Music2 size={19} strokeWidth={2}/>
+                  </span>
+                  <span>MUSIC</span>
+                  <span style={{fontSize:11,opacity:0.9,marginLeft:5,color:!musicEnabled?"#ff5b5b":"rgba(255,255,255,0.62)"}}>{!musicEnabled?"MUTED":`${Math.round(musicVolume*100)}%`}</span>
+                  <input
+                    aria-label="Music volume"
+                    type="range" min="0" max="1" step="0.01" value={musicVolume}
+                    onClick={e=>e.stopPropagation()}
+                    onChange={e=>updateMusicVolume(Number(e.target.value))}
+                    style={{gridColumn:"1 / -1",width:"100%",accentColor:"#fff",cursor:"pointer"}}
+                  />
+                </button>
+                <button
+                  onClick={()=>{setShowSfx(false);setShowInfo(true);}}
+                  style={{
+                    height:48,display:"flex",alignItems:"center",gap:10,
+                    width:"100%",boxSizing:"border-box",padding:"0 10px",border:"none",borderRadius:5,
+                    background:"transparent",color:"rgba(255,255,255,0.82)",
+                     cursor:"pointer",fontFamily:"inherit",fontSize:15,fontWeight:600,
+                    letterSpacing:"0.08em",textAlign:"left",
+                  }}
+                  onMouseEnter={e=>{e.currentTarget.style.color="#fff";}}
+                  onMouseLeave={e=>{e.currentTarget.style.color="rgba(255,255,255,0.82)";}}
+                >
+                  <Info size={19} strokeWidth={2}/>
+                  <span>INFO</span>
+                </button>
+              </div>
+            )}
 
-          <Panel img={WS+"screen/Win Button.webp"}
-            x={1438} y={BAR_Y} w={164} h={55} label="Win" value={lastWin||"—"} zIndex={25}/>
+            <div style={{width:24}}/>
+
+            {/* ── 2. Balance + Win info ── */}
+            <div style={{display:"flex",gap:30,flexShrink:0,padding:"0 10px"}}>
+              <div style={{minWidth:106}}>
+                <div style={{fontFamily:"Oswald,sans-serif",fontSize:12,fontWeight:600,
+                  color:"rgba(255,255,255,0.42)",letterSpacing:"0.13em",
+                  textTransform:"uppercase",marginBottom:2}}>Balance</div>
+                <div style={{fontFamily:"Oswald,sans-serif",fontSize:28,fontWeight:800,
+                  color:"#fff",letterSpacing:"0.01em",lineHeight:1}}>
+                  {chips.toLocaleString()}
+                </div>
+              </div>
+              <div style={{minWidth:76}}>
+                <div style={{fontFamily:"Oswald,sans-serif",fontSize:12,fontWeight:600,
+                  color:"rgba(255,255,255,0.42)",letterSpacing:"0.13em",
+                  textTransform:"uppercase",marginBottom:2}}>Win</div>
+                <div style={{fontFamily:"Oswald,sans-serif",fontSize:28,fontWeight:800,
+                  color:lastWin>0?"#FFD060":"rgba(255,255,255,0.28)",
+                  letterSpacing:"0.01em",lineHeight:1}}>
+                  {lastWin>0?lastWin.toLocaleString():"—"}
+                </div>
+              </div>
+            </div>
+
+            {/* ── 3. Bet control box ── */}
+            <div style={{
+              display:"flex",alignItems:"stretch",height:64,flexShrink:0,
+              marginLeft:"auto",
+              background:"#222228",
+              border:"1px solid rgba(255,255,255,0.11)",
+              borderRadius:8,overflow:"hidden",
+              position:"relative",
+            }}>
+              {/* Label + value */}
+              <div style={{
+                 padding:"0 18px",
+                borderRight:"1px solid rgba(255,255,255,0.07)",
+                 display:"flex",flexDirection:"column",justifyContent:"center",
+                 alignItems:"center",textAlign:"center",
+              }}>
+                 <div style={{fontFamily:"Oswald,sans-serif",fontSize:13,fontWeight:600,
+                  color:"rgba(255,255,255,0.42)",letterSpacing:"0.13em",
+                  textTransform:"uppercase",marginBottom:2}}>Total Bet</div>
+                 <div style={{fontFamily:"Oswald,sans-serif",fontSize:28,fontWeight:800,
+                    color:"#fff",letterSpacing:"0.01em",lineHeight:1,minWidth:104}}>
+                  {bet.toLocaleString()}
+                </div>
+              </div>
+              {/* ▲ ▼ arrows */}
+               <div style={{display:"flex",flexDirection:"column",width:52}}>
+                <button
+                  disabled={spinning}
+                    onClick={()=>changeBet("increase")}
+                   onPointerDown={()=>startBetHold("increase")}
+                   onPointerUp={stopBetHold}
+                   onPointerCancel={stopBetHold}
+                   onPointerLeave={stopBetHold}
+                  style={{flex:1,background:"transparent",border:"none",
+                    borderBottom:"1px solid rgba(255,255,255,0.07)",
+                    cursor:spinning?"not-allowed":"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    color:"rgba(255,255,255,0.65)",fontSize:13,padding:0}}
+                  onMouseEnter={e=>{if(!spinning)(e.currentTarget as HTMLButtonElement).style.background="rgba(255,255,255,0.06)";}}
+                   onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="transparent";}}
+                 >
+                    <ChevronUp size={22} strokeWidth={2.5} color="white" />
+                </button>
+                <button
+                  disabled={spinning}
+                    onClick={()=>changeBet("decrease")}
+                   onPointerDown={()=>startBetHold("decrease")}
+                   onPointerUp={stopBetHold}
+                   onPointerCancel={stopBetHold}
+                   onPointerLeave={stopBetHold}
+                  style={{flex:1,background:"transparent",border:"none",
+                    cursor:spinning?"not-allowed":"pointer",
+                    display:"flex",alignItems:"center",justifyContent:"center",
+                    color:"rgba(255,255,255,0.65)",fontSize:13,padding:0}}
+                  onMouseEnter={e=>{if(!spinning)(e.currentTarget as HTMLButtonElement).style.background="rgba(255,255,255,0.06)";}}
+                   onMouseLeave={e=>{(e.currentTarget as HTMLButtonElement).style.background="transparent";}}
+                 >
+                    <ChevronDown size={22} strokeWidth={2.5} color="white" />
+                </button>
+              </div>
+              <div aria-hidden="true" style={{
+                position:"absolute",left:0,right:52,bottom:0,height:3,
+                background:"rgba(255,255,255,0.12)",pointerEvents:"none",
+              }}>
+                <div style={{
+                  height:"100%",width:`${Math.max(6, betProgress*100)}%`,background:"#fff",
+                  transition:"width 160ms ease-out",
+                }} />
+              </div>
+            </div>
+
+            {/* ── 4. SPIN button — circle ── */}
+            <div
+              onClick={!spinning?handleSpin:undefined}
+              style={{
+                 width:104,height:104,borderRadius:"50%",flexShrink:0,
+                 marginLeft:18,marginTop:0,
+                background:spinning
+                  ?"#1a1a20"
+                  :"radial-gradient(circle at 38% 36%,#30303a,#16161b)",
+                border:spinning
+                  ?"2px solid rgba(255,255,255,0.06)"
+                  :"2px solid rgba(255,255,255,0.22)",
+                boxShadow:spinning
+                  ?"none"
+                  :"0 0 24px rgba(0,0,0,0.6),inset 0 1px 0 rgba(255,255,255,0.08)",
+                display:"flex",alignItems:"center",justifyContent:"center",
+                cursor:spinning?"not-allowed":"pointer",
+                opacity:spinning?0.45:1,
+                transition:"opacity 0.2s,border-color 0.2s",
+              }}
+              onMouseEnter={e=>{if(!spinning)(e.currentTarget as HTMLDivElement).style.borderColor="rgba(255,255,255,0.40)";}}
+              onMouseLeave={e=>{(e.currentTarget as HTMLDivElement).style.borderColor=spinning?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.22)";}}
+            >
+               <RotateCw size={56} strokeWidth={2} color="white" />
+            </div>
+
+            <div style={{width:16}}/>
+
+            {/* ── 5. Repeat / auto button ── */}
+            <div
+              onClick={()=>setAutoSpin(a=>!a)}
+              style={{
+                 width:64,height:64,borderRadius:"50%",flexShrink:0,
+                background:autoSpin?"rgba(255,208,40,0.12)":"#222228",
+                border:autoSpin?"2px solid rgba(255,208,40,0.55)":"1.5px solid rgba(255,255,255,0.14)",
+                display:"flex",flexDirection:"column",
+                alignItems:"center",justifyContent:"center",gap:2,
+                cursor:"pointer",
+              }}
+            >
+               <RefreshCw size={30} strokeWidth={2} color={autoSpin?"#FFD028":"rgba(255,255,255,0.7)"} />
+            </div>
+
+            <div style={{width:10}}/>
+
+            {/* ── 6. Menu-owned utility controls ── */}
+          </div>{/* end dark bar */}
 
 
         </div>{/* end canvas */}
@@ -1714,7 +2212,7 @@ export default function WesternSlots() {
         {/* ── Win popup — rendered OUTSIDE scaled canvas (same pattern as Rome slots) ── */}
          {winPopup && popupRevealed && !showBonusEnd && (() => {
           const PP = WS + "popups/";
-          const mult = winPopup.bet > 0 ? winPopup.amount / winPopup.bet : 0;
+          const mult = winPopup.bet > 0 ? winPopup.tierAmount / winPopup.bet : 0;
 
            // Suppress sub-10× wins; the reel payline animation already
            // communicates those smaller payouts.
@@ -1774,11 +2272,9 @@ export default function WesternSlots() {
                   position:"absolute",left:0,right:0,top:cfg.textTop,
                   display:"flex",flexDirection:"column",alignItems:"center",gap:6,
                 }}>
-                   {/* Animated total — popCounterValue ramps 0 → winPopup.amount
-                           over ~5.5 s with easeOutCubic, gated on popupRevealed
-                          so the roll coincides with the popup becoming visible
-                          (not with winPopup being set). Final value lands on
-                          winPopup.amount as a snap in the last frame. */}
+                   {/* Animated total — popCounterValue uses the same
+                           multiplier-aware duration and ease curve as the
+                           Total Won exit scene. */}
                    <span style={{
                     fontFamily:"Oswald,sans-serif",fontWeight:900,
                     fontSize:72,color:cfg.amtColor,lineHeight:1,
@@ -1801,7 +2297,12 @@ export default function WesternSlots() {
             same click. */}
         {showFreeSpinsBanner && (
         <div
-          onClick={() => { setShowFreeSpinsBanner(false); startLoop("western_bonus"); }}
+          onClick={() => {
+            setShowFreeSpinsBanner(false);
+            startLoop("western_bonus");
+            autoRef.current = true;
+            setAutoSpin(true);
+          }}
           style={{
             position:"fixed",inset:0,zIndex:10000,cursor:"pointer",
             background:"radial-gradient(ellipse at 50% 48%, rgba(70,24,0,0.97) 0%, rgba(6,2,0,0.99) 72%)",
@@ -1860,6 +2361,7 @@ export default function WesternSlots() {
 
           {/* Count */}
           <div style={{
+             position:"relative",top:-12,
             fontFamily:"'Oswald',sans-serif", fontWeight:900, fontSize:130,
             color:"#fff", lineHeight:1,
             textShadow:"0 0 60px rgba(255,180,0,1), 0 0 120px rgba(255,120,0,0.5), 0 4px 12px rgba(0,0,0,0.9)",
@@ -1893,34 +2395,6 @@ export default function WesternSlots() {
             animation:"bonusEdgePulse 1.8s ease-in-out infinite"}} />
         )}
 
-        {/* ── Free spins counter (enhanced) ── */}
-        {freeTotal>0&&!showFreeSpinsBanner&&!showBonusEnd&&(
-          <div style={{
-            position:"fixed",top:"3%",left:"50%",transform:"translateX(-50%)",
-            zIndex:9996,pointerEvents:"none",
-            background:"linear-gradient(135deg,rgba(40,15,0,0.97),rgba(80,30,0,0.97))",
-            border:"2px solid rgba(255,180,40,0.65)",borderRadius:50,
-            padding:"8px 24px",display:"flex",alignItems:"center",gap:18,
-            animation:"freeSpinPulse 1.8s ease-in-out infinite",
-          }}>
-            <span style={{fontFamily:"Oswald,sans-serif",fontWeight:700,fontSize:13,
-              color:"rgba(255,200,100,0.75)",letterSpacing:"0.18em",textTransform:"uppercase"}}>
-              🤠 BONUS ROUND
-            </span>
-            <div style={{width:1,height:28,background:"rgba(255,180,0,0.3)"}}/>
-            <div style={{display:"flex",alignItems:"baseline",gap:6}}>
-              <span style={{fontFamily:"Oswald,sans-serif",fontWeight:900,fontSize:38,
-                color:"#fff",textShadow:"0 0 16px rgba(255,200,60,0.6)"}}>
-                {freeLeft}
-              </span>
-              <span style={{fontFamily:"Oswald,sans-serif",fontSize:16,
-                color:"rgba(255,200,80,0.5)"}}>
-                / {freeTotal}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* ── Bonus round end screen ── */}
         {showBonusEnd&&(
           <>
@@ -1929,9 +2403,13 @@ export default function WesternSlots() {
               style={{position:"fixed",inset:0,zIndex:9996,pointerEvents:"all",
                 background:"rgba(0,0,0,0.88)"}}
               onClick={()=>{
-                if (bonusEndCountCompleteRef.current) {
-                  soundsRef.current.playWin(bonusEndDisplayed, betRef.current);
+                const wasComplete = bonusEndCountCompleteRef.current;
+                if (!wasComplete) {
+                  bonusEndResolveRef.current?.();
+                  return;
                 }
+                soundsRef.current.playWin(bonusEndDisplayed, betRef.current);
+                setShowBonusEnd(false);
                 bonusEndResolveRef.current?.();
                 bonusEndResolveRef.current=null;
               }}
@@ -1944,10 +2422,15 @@ export default function WesternSlots() {
                 display:"flex",flexDirection:"column",
                 alignItems:"center",justifyContent:"center",
                 cursor:"pointer"}}
-              onClick={()=>{
-                if (bonusEndCountCompleteRef.current) {
-                  soundsRef.current.playWin(bonusEndDisplayed, betRef.current);
+              onClick={e=>{
+                e.stopPropagation();
+                const wasComplete = bonusEndCountCompleteRef.current;
+                if (!wasComplete) {
+                  bonusEndResolveRef.current?.();
+                  return;
                 }
+                soundsRef.current.playWin(bonusEndDisplayed, betRef.current);
+                setShowBonusEnd(false);
                 bonusEndResolveRef.current?.();
                 bonusEndResolveRef.current=null;
               }}
@@ -2008,73 +2491,6 @@ export default function WesternSlots() {
                   userSelect:"none",
                 }}>
                   Tap to Continue
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* ── Sound settings panel — western Settings Pop Up image ── */}
-        {showSfx&&(
-          <>
-            {/* Panel: 589×588 image rendered at 250×250 */}
-            <div onClick={e=>e.stopPropagation()}
-              style={{position:"fixed", bottom:72, left:8, zIndex:998,
-                width:250, height:250, userSelect:"none"}}>
-              <img src={WS+"popups/Settings Pop Up.webp"} draggable={false}
-                style={{position:"absolute",inset:0,width:"100%",height:"100%",pointerEvents:"none"}}/>
-
-              {/* Exit button — top-right corner of the parchment frame */}
-              <img
-                src={WS+"popups/Exit Button Normal.webp"} draggable={false}
-                onClick={()=>setShowSfx(false)}
-                style={{position:"absolute",top:"17%",right:"5%",width:28,height:28,
-                  cursor:"pointer",zIndex:2}}
-                onMouseEnter={e=>(e.currentTarget.src=WS+"popups/Exit Button Hover.webp")}
-                onMouseLeave={e=>(e.currentTarget.src=WS+"popups/Exit Button Normal.webp")}
-              />
-
-              {/* Content area: parchment starts at ~21% top, ~8% sides, ~7% bottom */}
-              <div style={{
-                position:"absolute",
-                top:"23%", bottom:"7%", left:"11%", right:"11%",
-                display:"flex", flexDirection:"column",
-                alignItems:"center", justifyContent:"flex-start",
-                paddingTop:10, gap:10, fontFamily:"Oswald,sans-serif",
-              }}>
-                {/* Sound label */}
-                <span style={{color:"#4A1E00",fontSize:20,fontWeight:700,
-                  letterSpacing:"0.14em",textTransform:"uppercase",marginBottom:2}}>
-                  Sound
-                </span>
-
-                {/* Mute — ON/OFF button image */}
-                <div style={{display:"flex",alignItems:"center",
-                  justifyContent:"space-between",width:"100%"}}>
-                  <span style={{color:"#3D1500",fontSize:13,fontWeight:600,
-                    letterSpacing:"0.05em"}}>Mute</span>
-                  <img
-                    src={WS+(sfxMuted?"popups/Radio Button Off.webp":"popups/Radio Button On.webp")}
-                    draggable={false}
-                    onClick={()=>{ const m=!sfxMuted; setSfxMuted(m); sounds.setMuted(m); setCustomSoundsMuted(m); }}
-                    style={{width:76,height:36,cursor:"pointer",
-                      opacity:1,transition:"opacity 0.15s"}}
-                  />
-                </div>
-
-                {/* Volume row */}
-                <div style={{display:"flex",alignItems:"center",gap:6,width:"100%"}}>
-                  <span style={{color:sfxMuted?"rgba(61,21,0,0.35)":"#3D1500",
-                    fontSize:12,fontWeight:600,letterSpacing:"0.05em",minWidth:30,
-                    flexShrink:0}}>Vol</span>
-                  <input type="range" min={0} max={1} step={0.05} value={sfxVolume}
-                    disabled={sfxMuted}
-                    onChange={e=>{const v=parseFloat(e.target.value);setSfxVolume(v);sounds.setVolume(v);setCustomSoundsVolume(v);}}
-                    style={{flex:1,accentColor:"#7B3500",opacity:sfxMuted?0.25:1}}/>
-                  <span style={{color:sfxMuted?"rgba(61,21,0,0.3)":"#5D2800",
-                    fontSize:11,minWidth:30,textAlign:"right",flexShrink:0}}>
-                    {sfxMuted?"—":Math.round(sfxVolume*100)+"%"}
-                  </span>
                 </div>
               </div>
             </div>

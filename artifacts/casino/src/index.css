@@ -618,6 +618,28 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+@keyframes stormCloudDrift {
+  0% { transform: translate3d(-4%, 0, 0) scale(1.08); }
+  50% { transform: translate3d(2%, 2%, 0) scale(1.12); }
+  100% { transform: translate3d(-4%, 0, 0) scale(1.08); }
+}
+@keyframes stormRainFall {
+  0% { background-position: 0 -180px, 34px -360px, 78px -540px; opacity: 0.15; }
+  35% { opacity: 0.42; }
+  100% { background-position: -130px 780px, -70px 620px, -20px 460px; opacity: 0.24; }
+}
+@keyframes stormLightningFlash {
+  0%, 25%, 29%, 52%, 56%, 100% { opacity: 0; }
+  26%, 28%, 53%, 55% { opacity: 0.74; }
+}
+@keyframes stormGlowPulse {
+  0%, 25%, 29%, 52%, 56%, 100% { opacity: 0; }
+  26%, 28%, 53%, 55% { opacity: 0.3; }
+}
+@keyframes stormHorizonPulse {
+  0%, 24%, 30%, 51%, 57%, 100% { opacity: 0; transform: scaleX(0.7); }
+  26%, 28%, 53%, 55% { opacity: 0.7; transform: scaleX(1); }
+}
 @keyframes bonusRingExpand {
   0%   { transform: scale(0.1); opacity: 0.8; }
   100% { transform: scale(4);   opacity: 0; }
@@ -655,6 +677,10 @@
 @keyframes bonusShimmer {
   0%, 100% { text-shadow: 0 0 30px rgba(255,200,0,0.5), 0 4px 8px rgba(0,0,0,0.9); }
   50%       { text-shadow: 0 0 70px rgba(255,230,80,1), 0 0 120px rgba(255,180,0,0.5), 0 4px 8px rgba(0,0,0,0.9); }
+}
+@keyframes romeBonusRain {
+  0% { background-position: 0 0, 18px -140px, 42px -280px; }
+  100% { background-position: -90px 520px, -72px 380px, -48px 240px; }
 }
 @keyframes bonusToastIn {
   0%   { opacity: 0; transform: translateX(-50%) translateY(20px) scale(0.88); }

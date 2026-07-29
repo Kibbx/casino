@@ -51,14 +51,21 @@ const COLOR_GLOW  = "#FFC928";   // deeper gold — glow layer stroke
 const COLOR_DOT   = "#FFE782";   // dot center fill
 
 // ── Timing (ms) ───────────────────────────────────────────────────────────────
-const DRAW_MS      = 220;   // left-to-right draw animation
-const HIGHLIGHT_MS = 160;   // traveling highlight sweep after draw
-const HOLD_MS      = 280;   // hold / pulse duration per line
-const FADE_MS      = 120;   // fade-out before moving to next line
-const ALL_OPACITY  = 0.58;  // each line's opacity in the "all lines" phase
+const DRAW_MS      = 1220;  // deliberately slow left-to-right draw animation
+const HIGHLIGHT_MS = 360;   // slower traveling highlight sweep after draw
+const HOLD_MS      = 900;   // longer active-line hold / pulse duration
+const FADE_MS      = 260;   // slower fade-out before moving to next line
+const ICON_CYCLE_MS = 1200; // Rome's 24 frames at 20 FPS
+const FIRST_DRAW_MS = 680;
+const FIRST_HIGHLIGHT_MS = 90;
+const FIRST_HOLD_MS = 140;
+const FIRST_FADE_MS = 100;
+const FIRST_PASS_GAP_MS = 20;
 
 // Gap added after each line's full sequence before the next starts
 const SEQ_STEP_MS = DRAW_MS + HIGHLIGHT_MS + HOLD_MS + FADE_MS + 30;
+const FIRST_SEQ_STEP_MS =
+  FIRST_DRAW_MS + FIRST_HIGHLIGHT_MS + FIRST_HOLD_MS + FIRST_FADE_MS + FIRST_PASS_GAP_MS;
 
 // ── Per-instance unique IDs (prevents filter/clip conflicts between mounts) ───
 let _instanceCounter = 0;
@@ -69,6 +76,7 @@ export interface PaylineWin {
   count: number;
   symbol: string;
   win: number;
+  positions?: Array<{ reel: number; row: number; symbol: string }>;
 }
 
 // ── Geometry helpers ──────────────────────────────────────────────────────────
@@ -94,28 +102,11 @@ function paylinePoints(
   return Array.from({ length: count }, (_, col) => getSymbolCenter(col, pl[col]));
 }
 
-/**
- * Clamped Catmull-Rom → cubic Bezier SVG path string.
- * The curve passes exactly through every control point.
- */
+/** Straight point-to-point SVG path string for a sharper tracer. */
 function catmullRomPath(pts: { x: number; y: number }[]): string {
   if (pts.length === 0) return "";
   if (pts.length === 1) return `M ${pts[0].x},${pts[0].y}`;
-  if (pts.length === 2) {
-    return `M ${pts[0].x},${pts[0].y} L ${pts[1].x},${pts[1].y}`;
-  }
-  // Extend with phantom duplicate endpoints for clamped Catmull-Rom
-  const p = [pts[0], ...pts, pts[pts.length - 1]];
-  let d = `M ${p[1].x},${p[1].y}`;
-  for (let i = 1; i < p.length - 2; i++) {
-    const p0 = p[i - 1], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2];
-    const cp1x = +(p1.x + (p2.x - p0.x) / 20).toFixed(2);
-    const cp1y = +(p1.y + (p2.y - p0.y) / 20).toFixed(2);
-    const cp2x = +(p2.x - (p3.x - p1.x) / 20).toFixed(2);
-    const cp2y = +(p2.y - (p3.y - p1.y) / 20).toFixed(2);
-    d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
-  }
-  return d;
+  return `M ${pts.map(({ x, y }) => `${x},${y}`).join(" L ")}`;
 }
 
 /** Legacy polyline-points string (kept for API compatibility). */
@@ -132,6 +123,7 @@ function svgEl<K extends keyof SVGElementTagNameMap>(tag: K): SVGElementTagNameM
 // ── Easing ────────────────────────────────────────────────────────────────────
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
+const easeLinear = (t: number) => t;
 
 // ── Generic RAF animator ──────────────────────────────────────────────────────
 /**
@@ -190,8 +182,8 @@ function buildLineGroup(
   glowPath.setAttribute("fill",            "none");
   glowPath.setAttribute("stroke",          COLOR_GLOW);
   glowPath.setAttribute("stroke-width",    "9");
-  glowPath.setAttribute("stroke-linecap",  "round");
-  glowPath.setAttribute("stroke-linejoin", "round");
+  glowPath.setAttribute("stroke-linecap",  "butt");
+  glowPath.setAttribute("stroke-linejoin", "miter");
   glowPath.setAttribute("opacity",         "0.32");
   glowPath.setAttribute("filter",          `url(#${filterId})`);
 
@@ -201,8 +193,8 @@ function buildLineGroup(
   corePath.setAttribute("fill",            "none");
   corePath.setAttribute("stroke",          COLOR_CORE);
   corePath.setAttribute("stroke-width",    "3");
-  corePath.setAttribute("stroke-linecap",  "round");
-  corePath.setAttribute("stroke-linejoin", "round");
+  corePath.setAttribute("stroke-linecap",  "butt");
+  corePath.setAttribute("stroke-linejoin", "miter");
   corePath.setAttribute("opacity",         "0.92");
 
   // Dot markers — small gold circles at each symbol center
@@ -224,7 +216,7 @@ function buildLineGroup(
   hlPath.setAttribute("fill",           "none");
   hlPath.setAttribute("stroke",         "#FFFFFF");
   hlPath.setAttribute("stroke-width",   "3.5");
-  hlPath.setAttribute("stroke-linecap", "round");
+  hlPath.setAttribute("stroke-linecap", "butt");
   hlPath.setAttribute("opacity",        "0");
 
   g.appendChild(glowPath);  // [0]
@@ -234,6 +226,25 @@ function buildLineGroup(
   return g;
 }
 
+function buildLabel(pts: { x: number; y: number }[], win: number): SVGTextElement {
+  const point = pts[Math.min(1, pts.length - 1)] ?? pts[0] ?? { x: 0, y: 0 };
+  const label = svgEl("text");
+  label.setAttribute("x", String(point.x));
+  label.setAttribute("y", String(point.y - 24));
+  label.setAttribute("text-anchor", "middle");
+  label.setAttribute("font-family", "'Oswald','Impact',sans-serif");
+  label.setAttribute("font-weight", "700");
+  label.setAttribute("font-size", "34");
+  label.setAttribute("fill", COLOR_CORE);
+  label.setAttribute("stroke", "#3a1800");
+  label.setAttribute("stroke-width", "3.5");
+  label.setAttribute("paint-order", "stroke fill");
+  label.setAttribute("style", "letter-spacing:0.03em;filter:drop-shadow(0 2px 6px rgba(0,0,0,0.85));");
+  label.textContent = `${win.toLocaleString()}.00`;
+  label.style.opacity = "0";
+  return label;
+}
+
 // ── Animation sequences ───────────────────────────────────────────────────────
 
 /** Draw both paths left-to-right, then sweep the highlight, then call onDone. */
@@ -241,6 +252,8 @@ function animateDraw(
   g: SVGGElement,
   cancels: (() => void)[],
   reducedMotion: boolean,
+  drawMs: number,
+  highlightMs: number,
   onDone: () => void,
 ): void {
   g.style.opacity = "1";
@@ -267,7 +280,7 @@ function animateDraw(
   });
 
   // Phase 1 — draw left to right
-  cancels.push(animate(len, 0, DRAW_MS, easeOutCubic, v => {
+  cancels.push(animate(len, 0, drawMs, easeOutCubic, v => {
     const s = String(v);
     glowPath.setAttribute("stroke-dashoffset", s);
     corePath.setAttribute("stroke-dashoffset", s);
@@ -284,7 +297,7 @@ function animateDraw(
     cancels.push(animate(
       len + hlSegLen,
       -hlSegLen,
-      HIGHLIGHT_MS,
+      highlightMs,
       easeOutCubic,
       v => { hlPath.setAttribute("stroke-dashoffset", String(v)); },
       () => {
@@ -301,9 +314,10 @@ function animateDraw(
 function animatePulse(
   g: SVGGElement,
   cancels: (() => void)[],
+  holdMs: number,
   onDone: () => void,
 ): void {
-  const HALF = HOLD_MS / 2;
+  const HALF = holdMs / 2;
   cancels.push(animate(1, 0.68, HALF, easeInOutSine, v => {
     g.style.opacity = String(v);
   }, () => {
@@ -313,16 +327,36 @@ function animatePulse(
   }));
 }
 
-/** Fade a group's opacity to 0 over FADE_MS. */
-function animateFadeOut(
+/** Erase the traced line from left to right after the icon animation finishes. */
+function animateEraseTrail(
   g: SVGGElement,
   cancels: (() => void)[],
+  fadeMs: number,
   onDone: () => void,
 ): void {
-  const from = parseFloat(g.style.opacity) || 1;
-  cancels.push(animate(from, 0, FADE_MS, easeOutCubic, v => {
-    g.style.opacity = String(v);
-  }, onDone));
+  const glowPath = g.children[0] as SVGPathElement;
+  const corePath = g.children[1] as SVGPathElement;
+  const length = corePath.getTotalLength();
+
+  [glowPath, corePath].forEach(path => {
+    path.setAttribute("stroke-dasharray", String(length));
+    path.setAttribute("stroke-dashoffset", "0");
+  });
+
+  // A negative dash offset retracts the visible stroke from the final reel
+  // back toward the origin, reversing the erase direction from the draw.
+  cancels.push(animate(0, -length, fadeMs, easeLinear, value => {
+    const offset = String(value);
+    glowPath.setAttribute("stroke-dashoffset", offset);
+    corePath.setAttribute("stroke-dashoffset", offset);
+  }, () => {
+    g.style.opacity = "0";
+    [glowPath, corePath].forEach(path => {
+      path.removeAttribute("stroke-dasharray");
+      path.removeAttribute("stroke-dashoffset");
+    });
+    onDone();
+  }));
 }
 
 // ── Internal clear helper ─────────────────────────────────────────────────────
@@ -333,15 +367,20 @@ function clearOverlayContent(
 ): void {
   timers.forEach(clearTimeout);
   cancels.forEach(fn => fn());
-  // Remove <g> direct children (line groups); <defs> is left intact
+  // Remove transient dimming content; <defs> is left intact.
   Array.from(svg.children).forEach(child => {
-    if (child.tagName === "g") svg.removeChild(child);
+    if (child.tagName === "g" || child.tagName === "rect") svg.removeChild(child);
   });
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
 interface PaylineOverlayProps {
   wins: PaylineWin[];
+  onLineActive?: (positions: Array<{ reel: number; row: number; symbol: string }>) => void;
+  onLineStart?: (lineIndex: number) => void;
+  onFirstPassComplete?: () => void;
+  hideTotalWin?: boolean;
+  westernBonusTiming?: boolean;
 }
 
 /**
@@ -349,8 +388,16 @@ interface PaylineOverlayProps {
  * pointer-events: none — never blocks any game control.
  * Clears automatically when wins becomes [].
  */
-export function PaylineOverlay({ wins }: PaylineOverlayProps) {
+export function PaylineOverlay({
+  wins,
+  onLineActive,
+  onLineStart,
+  onFirstPassComplete,
+  hideTotalWin = false,
+  westernBonusTiming = false,
+}: PaylineOverlayProps) {
   const svgRef       = useRef<SVGSVGElement>(null);
+  const lineSvgRef   = useRef<SVGSVGElement>(null);
   const timersRef    = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cancelsRef   = useRef<(() => void)[]>([]);
   const cancelledRef = useRef(false);
@@ -363,9 +410,11 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
   useEffect(() => {
     cancelledRef.current = false;
     const svg = svgRef.current;
-    if (!svg) return;
+    const lineSvg = lineSvgRef.current;
+    if (!svg || !lineSvg) return;
 
     clearOverlayContent(svg, timersRef.current, cancelsRef.current);
+    while (lineSvg.firstChild) lineSvg.removeChild(lineSvg.firstChild);
     timersRef.current  = [];
     cancelsRef.current = [];
 
@@ -378,9 +427,50 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
       const pts = paylinePoints(lineIndex, count);
       const d   = catmullRomPath(pts);
       const g   = buildLineGroup(d, pts, clipId, filterId);
-      svg.appendChild(g);
+      lineSvg.appendChild(g);
       return g;
     });
+
+    const labels = wins.map(({ lineIndex, count, win }) => {
+      const label = buildLabel(paylinePoints(lineIndex, count), win);
+      lineSvg.appendChild(label);
+      return label;
+    });
+
+    if (!hideTotalWin) {
+      const totalWin = wins.reduce((sum, win) => sum + win.win, 0);
+      const totalLabel = svgEl("text");
+      totalLabel.setAttribute("x", "960");
+      totalLabel.setAttribute("y", "560");
+      totalLabel.setAttribute("text-anchor", "middle");
+      totalLabel.setAttribute("dominant-baseline", "middle");
+      totalLabel.setAttribute("font-family", "Oswald, sans-serif");
+      totalLabel.setAttribute("font-weight", "900");
+      totalLabel.setAttribute("font-size", "50");
+      totalLabel.setAttribute("fill", COLOR_CORE);
+      totalLabel.setAttribute("stroke", "#3a1800");
+      totalLabel.setAttribute("stroke-width", "8");
+      totalLabel.setAttribute("paint-order", "stroke fill");
+      totalLabel.setAttribute("style", "letter-spacing:0.06em;filter:drop-shadow(0 6px 18px rgba(0,0,0,0.95));");
+      totalLabel.textContent = `${totalWin.toLocaleString()}.00`;
+      totalLabel.style.opacity = "0";
+      lineSvg.appendChild(totalLabel);
+
+      // Match Western's centered win presentation during normal spins.
+      cancelsRef.current.push(animate(0, 1, 220, easeOutCubic, v => {
+        totalLabel.style.opacity = String(v);
+      }));
+      cancelsRef.current.push(animate(50, 130, 1000, easeOutCubic, v => {
+        totalLabel.setAttribute("font-size", String(Math.round(v)));
+      }, () => {
+        cancelsRef.current.push(animate(1, 0, 700, easeInOutSine, v => {
+          totalLabel.style.opacity = String(v);
+        }));
+        cancelsRef.current.push(animate(130, 30, 700, easeInOutSine, v => {
+          totalLabel.setAttribute("font-size", String(Math.round(v)));
+        }));
+      }));
+    }
 
     // Ensure all non-active paths are fully drawn (no dasharray) for the "all" phase
     function resetPathDash(g: SVGGElement) {
@@ -391,31 +481,42 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
       (g.children[2] as SVGGElement).style.opacity = "1";
     }
 
-    // "All lines" phase — show every line at reduced opacity, then loop
-    function showAll() {
+    // Sequential phase — draw each line, then loop visually until cleanup.
+    function runSequence(firstPass = false) {
       if (cancelledRef.current) return;
-      groups.forEach((g, j) => {
-        const t = setTimeout(() => {
-          if (cancelledRef.current) return;
-          resetPathDash(g);
-          g.style.opacity = String(ALL_OPACITY);
-        }, j * 60);
-        timersRef.current.push(t);
+       const drawMs = westernBonusTiming
+         ? 180
+         : firstPass ? FIRST_DRAW_MS : DRAW_MS;
+       const highlightMs = westernBonusTiming
+         ? 70
+         : firstPass ? FIRST_HIGHLIGHT_MS : HIGHLIGHT_MS;
+       const holdMs = westernBonusTiming
+         ? 600
+         : firstPass ? FIRST_HOLD_MS : HOLD_MS;
+       const fadeMs = westernBonusTiming
+         ? 110
+         : firstPass ? FIRST_FADE_MS : FADE_MS;
+       const sequenceStepMs = westernBonusTiming
+         ? 180 + 70 + 600 + 110 + 30
+         : firstPass ? FIRST_SEQ_STEP_MS : SEQ_STEP_MS;
+      // Each visual pass starts from a clean state. This is important for
+      // looping overlays: no path or label may retain the previous pass's
+      // completed state, so every payline traces from reel 1 to the right.
+      groups.forEach(g => {
+        g.style.opacity = "0";
+        const glowPath = g.children[0] as SVGPathElement;
+        const corePath = g.children[1] as SVGPathElement;
+        const dots = g.children[2] as SVGGElement;
+        [glowPath, corePath].forEach(path => {
+          path.removeAttribute("stroke-dasharray");
+          path.removeAttribute("stroke-dashoffset");
+        });
+        dots.style.opacity = "0";
       });
-      // After a brief pause showing all lines, restart the sequence
-      const ALL_HOLD_MS = 500;
-      const loopT = setTimeout(() => {
-        if (cancelledRef.current) return;
-        runSequence();
-      }, groups.length * 60 + ALL_HOLD_MS);
-      timersRef.current.push(loopT);
-    }
+      labels.forEach(label => { label.style.opacity = "0"; });
 
-    // Sequential phase — draw each line one at a time, then loop via showAll
-    function runSequence() {
-      if (cancelledRef.current) return;
       let cursor = 0;
-      wins.forEach(({ lineIndex, count }, i) => {
+      wins.forEach((_win, i) => {
         const startT = setTimeout(() => {
           if (cancelledRef.current) return;
 
@@ -423,30 +524,51 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
           groups.forEach((g, j) => {
             if (j !== i) g.style.opacity = "0";
           });
+          labels.forEach((label, j) => { label.style.opacity = j === i ? "1" : "0"; });
+          onLineStart?.(wins[i].lineIndex);
+           const positions = wins[i].positions ?? [];
+           if (westernBonusTiming) {
+             // Western starts the complete winning-symbol animation and its
+             // per-line cue together, at the exact moment the line begins.
+             onLineActive?.(positions);
+           } else {
+             // Rome's normal presentation reveals the winning cells
+             // progressively from left to right.
+             positions.forEach((_position, cellIndex) => {
+               const cellT = setTimeout(() => {
+                 if (!cancelledRef.current) {
+                   onLineActive?.(positions.slice(0, cellIndex + 1));
+                 }
+               }, Math.round((drawMs * cellIndex) / Math.max(positions.length - 1, 1)));
+               timersRef.current.push(cellT);
+             });
+           }
 
-          animateDraw(groups[i], cancelsRef.current, reducedMotion, () => {
+          animateDraw(groups[i], cancelsRef.current, reducedMotion, drawMs, highlightMs, () => {
             if (cancelledRef.current) return;
 
-            animatePulse(groups[i], cancelsRef.current, () => {
+            animatePulse(groups[i], cancelsRef.current, holdMs, () => {
               if (cancelledRef.current) return;
 
-              if (i === wins.length - 1) {
-                // Last line — transition to "all" phase, which loops back
-                showAll();
-              } else {
-                // Fade out; next line is already scheduled via cursor
-                animateFadeOut(groups[i], cancelsRef.current, () => { /* cursor handles next */ });
-              }
+              labels[i].style.opacity = "0";
+              animateEraseTrail(groups[i], cancelsRef.current, fadeMs, () => { /* cursor handles next */ });
             });
           });
         }, cursor);
 
         timersRef.current.push(startT);
-        cursor += SEQ_STEP_MS;
+        cursor += sequenceStepMs;
       });
+      const loopT = setTimeout(() => {
+        if (firstPass) onFirstPassComplete?.();
+        if (!cancelledRef.current) runSequence(false);
+      }, firstPass ? cursor : cursor + ICON_CYCLE_MS);
+      timersRef.current.push(loopT);
     }
 
-    runSequence();
+    // Let the centered total-win reveal land before the first payline trace.
+     const initialT = setTimeout(() => runSequence(true), westernBonusTiming ? 60 : 900);
+    timersRef.current.push(initialT);
 
     return () => {
       cancelledRef.current = true;
@@ -455,9 +577,10 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
       timersRef.current  = [];
       cancelsRef.current = [];
     };
-  }, [wins, filterId, clipId]);
+  }, [wins, filterId, clipId, onLineActive, onFirstPassComplete, hideTotalWin, westernBonusTiming]);
 
   return (
+    <>
     <svg
       ref={svgRef}
       className="payline-overlay"
@@ -467,7 +590,7 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
         width:         "100%",
         height:        "100%",
         pointerEvents: "none",
-        zIndex:        30,
+         zIndex:        20,
         overflow:      "visible",
       }}
       viewBox={`0 0 ${CW} ${CH}`}
@@ -492,8 +615,23 @@ export function PaylineOverlay({ wins }: PaylineOverlayProps) {
           />
         </clipPath>
       </defs>
-      {/* Line groups are appended imperatively inside the useEffect */}
     </svg>
+      <svg
+        ref={lineSvgRef}
+        className="payline-overlay-lines"
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          pointerEvents: "none",
+          zIndex: 29,
+          overflow: "visible",
+        }}
+        viewBox={`0 0 ${CW} ${CH}`}
+        xmlns="http://www.w3.org/2000/svg"
+      />
+    </>
   );
 }
 

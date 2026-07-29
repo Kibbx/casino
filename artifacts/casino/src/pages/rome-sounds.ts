@@ -1,6 +1,11 @@
 // Rome Slots — Web Audio API sound engine
-import buttonClickUrl    from "@assets/buttonclick_1777322204907.mp3";
-import bonusMusicUrl     from "@assets/onecinematicstudio-the-great-arena-_-epic-roman-gladiator-batt_1784861486450.mp3";
+import buttonClickUrl    from "@assets/buttonclick_1777322204907.webm";
+import bonusMusicUrl     from "@assets/onecinematicstudio-the-great-arena-_-epic-roman-gladiator-batt_1784861486450.webm";
+
+const reelStopUrl = `${import.meta.env.BASE_URL}sounds/rome_reel_stop_pitched.webm`;
+const resultWinUrl = `${import.meta.env.BASE_URL}sounds/rome_result_win_low.webm`;
+const thunderstrikeUrl = `${import.meta.env.BASE_URL}sounds/thunderstrike_bonus_1785311410208.webm`;
+const bonusAmbienceUrl = `${import.meta.env.BASE_URL}sounds/romebonusambience_1785312240948.webm`;
 
 let ac: AudioContext | null = null;
 
@@ -8,23 +13,75 @@ let ac: AudioContext | null = null;
 let clickBuffer: AudioBuffer | null = null;
 // Raw bytes fetched eagerly at module load (no AudioContext required)
 let rawClickBytes: ArrayBuffer | null = null;
+let reelStopBuffer: AudioBuffer | null = null;
+let rawReelStopBytes: ArrayBuffer | null = null;
+let resultWinBuffer: AudioBuffer | null = null;
+let rawResultWinBytes: ArrayBuffer | null = null;
+let thunderstrikeBuffer: AudioBuffer | null = null;
+let rawThunderstrikeBytes: ArrayBuffer | null = null;
+let bonusAmbienceBuffer: AudioBuffer | null = null;
+let rawBonusAmbienceBytes: ArrayBuffer | null = null;
 
 // Bonus round background music (decoded + open AudioBufferSource so we can loop)
 let bonusBuffer: AudioBuffer | null = null;
 let rawBonusBytes: ArrayBuffer | null = null;
 let bonusSource: AudioBufferSourceNode | null = null;
 let bonusGain: GainNode | null = null;
+let bonusAmbienceSource: AudioBufferSourceNode | null = null;
+let bonusAmbienceGain: GainNode | null = null;
 
 // Start fetching immediately when this module is imported
 fetch(buttonClickUrl)
   .then(r => r.arrayBuffer())
-  .then(arr => { rawClickBytes = arr; })
+  .then(arr => {
+    rawClickBytes = arr;
+    if (ac && !clickBuffer) {
+      ac.decodeAudioData(arr.slice(0))
+        .then(buf => { clickBuffer = buf; })
+        .catch(() => {});
+    }
+  })
   .catch(() => {});
 
 fetch(bonusMusicUrl)
   .then(r => r.arrayBuffer())
   .then(arr => { rawBonusBytes = arr; })
   .catch(e => console.warn("[rome-sounds] bonus music fetch failed:", e));
+
+fetch(reelStopUrl)
+  .then(r => r.arrayBuffer())
+  .then(arr => {
+    rawReelStopBytes = arr;
+    if (ac && !reelStopBuffer) {
+      ac.decodeAudioData(arr.slice(0))
+        .then(buf => { reelStopBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] reel stop decode failed:", e));
+    }
+  })
+  .catch(e => console.warn("[rome-sounds] reel stop fetch failed:", e));
+
+fetch(resultWinUrl)
+  .then(r => r.arrayBuffer())
+  .then(arr => {
+    rawResultWinBytes = arr;
+    if (ac && !resultWinBuffer) {
+      ac.decodeAudioData(arr.slice(0))
+        .then(buf => { resultWinBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] result win decode failed:", e));
+    }
+  })
+  .catch(e => console.warn("[rome-sounds] result win fetch failed:", e));
+
+fetch(thunderstrikeUrl)
+  .then(r => r.arrayBuffer())
+  .then(arr => { rawThunderstrikeBytes = arr; })
+  .catch(e => console.warn("[rome-sounds] thunderstrike fetch failed:", e));
+
+fetch(bonusAmbienceUrl)
+  .then(r => r.arrayBuffer())
+  .then(arr => { rawBonusAmbienceBytes = arr; })
+  .catch(e => console.warn("[rome-sounds] bonus ambience fetch failed:", e));
+
 
 // Bonus music sits at 10% of the master volume so it's ambient, not overpowering
 const BONUS_BASE_VOL = 0.10;
@@ -39,20 +96,47 @@ function bonusTargetGain() {
   return masterMuted ? 0 : BONUS_BASE_VOL * masterVolume;
 }
 
+function bonusAmbienceTargetGain() {
+  return masterMuted ? 0 : 0.22 * masterVolume;
+}
+
 export function setRomeSfxVolume(v: number) {
   masterVolume = Math.max(0, Math.min(1, v)) * SLOTS_GAIN_SCALE;
   localStorage.setItem("fortuna-sfx-volume", String(Math.max(0, Math.min(1, v))));
   // Live-update bonus music gain — bonusGain stays alive while music plays
   if (bonusGain) bonusGain.gain.setTargetAtTime(bonusTargetGain(), bonusGain.context.currentTime, 0.05);
+  if (bonusAmbienceGain) bonusAmbienceGain.gain.setTargetAtTime(bonusAmbienceTargetGain(), bonusAmbienceGain.context.currentTime, 0.05);
 }
 export function setRomeSfxMuted(m: boolean) {
   masterMuted = m;
   localStorage.setItem("fortuna-sfx-muted", String(m));
   // Mute/unmute by ramping gain to 0 or back — never stop the source so bonusGain stays valid
   if (bonusGain) bonusGain.gain.setTargetAtTime(bonusTargetGain(), bonusGain.context.currentTime, 0.05);
+  if (bonusAmbienceGain) bonusAmbienceGain.gain.setTargetAtTime(bonusAmbienceTargetGain(), bonusAmbienceGain.context.currentTime, 0.05);
 }
 export function getRomeSfxVolume() { return masterVolume; }
 export function getRomeSfxMuted()  { return masterMuted; }
+
+// Decode short interaction audio ahead of the first spin. This only prepares
+// an AudioBuffer; it does not start playback or bypass browser autoplay rules.
+export function preloadRomeSounds() {
+  const ctx = getCtx();
+  if (rawClickBytes) {
+    ctx.decodeAudioData(rawClickBytes.slice(0))
+      .then(buf => { clickBuffer = buf; })
+      .catch(() => {});
+  }
+  if (rawReelStopBytes && !reelStopBuffer) {
+    ctx.decodeAudioData(rawReelStopBytes.slice(0))
+      .then(buf => { reelStopBuffer = buf; })
+      .catch(() => {});
+  }
+  if (rawResultWinBytes && !resultWinBuffer) {
+    ctx.decodeAudioData(rawResultWinBytes.slice(0))
+      .then(buf => { resultWinBuffer = buf; })
+      .catch(() => {});
+  }
+}
 
 function getCtx(): AudioContext {
   if (!ac || ac.state === "closed") {
@@ -67,6 +151,26 @@ function getCtx(): AudioContext {
       ac.decodeAudioData(rawBonusBytes.slice(0))
         .then(buf => { bonusBuffer = buf; })
         .catch(e => console.warn("[rome-sounds] bonus decode failed:", e));
+    }
+    if (rawReelStopBytes && !reelStopBuffer) {
+      ac.decodeAudioData(rawReelStopBytes.slice(0))
+        .then(buf => { reelStopBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] reel stop decode failed:", e));
+    }
+    if (rawResultWinBytes && !resultWinBuffer) {
+      ac.decodeAudioData(rawResultWinBytes.slice(0))
+        .then(buf => { resultWinBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] result win decode failed:", e));
+    }
+    if (rawThunderstrikeBytes && !thunderstrikeBuffer) {
+      ac.decodeAudioData(rawThunderstrikeBytes.slice(0))
+        .then(buf => { thunderstrikeBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] thunderstrike decode failed:", e));
+    }
+    if (rawBonusAmbienceBytes && !bonusAmbienceBuffer) {
+      ac.decodeAudioData(rawBonusAmbienceBytes.slice(0))
+        .then(buf => { bonusAmbienceBuffer = buf; })
+        .catch(e => console.warn("[rome-sounds] bonus ambience decode failed:", e));
     }
   }
   if (ac.state === "suspended") ac.resume().catch(() => {});
@@ -123,6 +227,85 @@ export function stopBonusMusic() {
   try { bonusGain?.disconnect(); } catch {}
   bonusSource = null;
   bonusGain = null;
+}
+
+export function playBonusAmbience() {
+  if (masterMuted || masterVolume === 0) return;
+  if (bonusAmbienceSource && bonusAmbienceGain) {
+    if (bonusAmbienceSource.context.state === "suspended") bonusAmbienceSource.context.resume().catch(() => {});
+    return;
+  }
+  const ctx = getCtx();
+  const play = (buf: AudioBuffer) => {
+    try {
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.loop = true;
+      const gain = ctx.createGain();
+      gain.gain.value = bonusAmbienceTargetGain();
+      src.connect(gain).connect(ctx.destination);
+      src.start(0);
+      bonusAmbienceSource = src;
+      bonusAmbienceGain = gain;
+    } catch (e) {
+      console.warn("[rome-sounds] playBonusAmbience error:", e);
+    }
+  };
+  if (bonusAmbienceBuffer) { play(bonusAmbienceBuffer); return; }
+  if (rawBonusAmbienceBytes) {
+    ctx.decodeAudioData(rawBonusAmbienceBytes.slice(0))
+      .then(buf => { bonusAmbienceBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] bonus ambience decode-on-play failed:", e));
+  } else {
+    fetch(bonusAmbienceUrl)
+      .then(r => r.arrayBuffer())
+      .then(arr => {
+        rawBonusAmbienceBytes = arr;
+        return ctx.decodeAudioData(arr.slice(0));
+      })
+      .then(buf => { bonusAmbienceBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] bonus ambience inline fetch failed:", e));
+  }
+}
+
+export function stopBonusAmbience() {
+  if (!bonusAmbienceSource) return;
+  try { if (bonusAmbienceGain) bonusAmbienceGain.gain.setValueAtTime(0, bonusAmbienceGain.context.currentTime); } catch {}
+  try { bonusAmbienceSource.stop(); } catch {}
+  try { bonusAmbienceSource.disconnect(); } catch {}
+  try { bonusAmbienceGain?.disconnect(); } catch {}
+  bonusAmbienceSource = null;
+  bonusAmbienceGain = null;
+}
+
+export function playBonusEntryThunderstrike() {
+  if (masterMuted || masterVolume === 0) return;
+  const ctx = getCtx();
+  const play = (buf: AudioBuffer) => {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.7 * masterVolume;
+    src.connect(gain).connect(ctx.destination);
+    src.start(ctx.currentTime);
+  };
+  if (thunderstrikeBuffer) {
+    play(thunderstrikeBuffer);
+  } else if (rawThunderstrikeBytes) {
+    ctx.decodeAudioData(rawThunderstrikeBytes.slice(0))
+      .then(buf => { thunderstrikeBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] thunderstrike decode-on-demand failed:", e));
+  } else {
+    fetch(thunderstrikeUrl)
+      .then(r => r.arrayBuffer())
+      .then(arr => {
+        rawThunderstrikeBytes = arr;
+        return ctx.decodeAudioData(arr.slice(0));
+      })
+      .then(buf => { thunderstrikeBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] thunderstrike inline fetch failed:", e));
+  }
 }
 
 function playOsc(
@@ -226,78 +409,71 @@ export function playReelTick() {
 }
 
 // ── Individual reel stops (call once per reel landing) ───────────────────────
-// Synthesized to match reel_stop_1.webm:
-//   212 ms total · 12 ms pre-onset · 18 ms attack to peak at 30 ms
-//   Core band: 70-130 Hz thud · sub sweep 88→42 Hz · 67 Hz resonance ring · 480 Hz click
+// Uses the uploaded reel-stop clip with a small pitch shift applied offline so
+// Rome has its own variation rather than playing the source recording directly.
 export function playReelStop() {
   if (masterMuted || masterVolume === 0) return;
   const ctx = getCtx();
-  const now = ctx.currentTime;
-
-  // Layer A — primary impact: bandpass noise 70-130 Hz, 18 ms attack, multi-stage decay
-  {
-    const n = Math.ceil(ctx.sampleRate * 0.190);
-    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filt = ctx.createBiquadFilter();
-    filt.type = "bandpass"; filt.frequency.value = 95; filt.Q.value = 1.0;
+  const play = (buf: AudioBuffer) => {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
     const gain = ctx.createGain();
-    const t0 = now + 0.012;
-    gain.gain.setValueAtTime(0.001, t0);
-    gain.gain.linearRampToValueAtTime(0.90 * masterVolume, t0 + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.28 * masterVolume, t0 + 0.033);
-    gain.gain.exponentialRampToValueAtTime(0.06 * masterVolume, t0 + 0.100);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.155);
-    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
-    src.start(t0); src.stop(t0 + 0.190);
-  }
+    gain.gain.value = 0.2625 * masterVolume;
+    src.connect(gain).connect(ctx.destination);
+    src.start(ctx.currentTime);
+  };
 
-  // Layer B — sub-bass pitch drop: sine sweep 88 → 42 Hz (the "weight" of the stop)
-  {
-    const osc = ctx.createOscillator(); osc.type = "sine";
-    const t0 = now + 0.015;
-    osc.frequency.setValueAtTime(88, t0);
-    osc.frequency.exponentialRampToValueAtTime(42, t0 + 0.100);
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.001, t0);
-    gain.gain.linearRampToValueAtTime(0.55 * masterVolume, t0 + 0.018);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.120);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t0); osc.stop(t0 + 0.125);
-  }
-
-  // Layer C — resonance ring: 67 Hz damped sine (produces the bumpy body at 45-115 ms)
-  {
-    const osc = ctx.createOscillator(); osc.type = "sine";
-    osc.frequency.value = 67;
-    const t0 = now + 0.040;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.001, t0);
-    gain.gain.linearRampToValueAtTime(0.38 * masterVolume, t0 + 0.020);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.100);
-    osc.connect(gain); gain.connect(ctx.destination);
-    osc.start(t0); osc.stop(t0 + 0.110);
-  }
-
-  // Layer D — definition click: bandpass noise ~480 Hz, 35 ms (mechanical impact edge)
-  {
-    const n = Math.ceil(ctx.sampleRate * 0.040);
-    const buf = ctx.createBuffer(1, n, ctx.sampleRate);
-    const d = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
-    const src = ctx.createBufferSource(); src.buffer = buf;
-    const filt = ctx.createBiquadFilter();
-    filt.type = "bandpass"; filt.frequency.value = 480; filt.Q.value = 3.0;
-    const gain = ctx.createGain();
-    const t0 = now + 0.018;
-    gain.gain.setValueAtTime(0.28 * masterVolume, t0);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + 0.035);
-    src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
-    src.start(t0); src.stop(t0 + 0.042);
+  if (reelStopBuffer) {
+    play(reelStopBuffer);
+  } else if (rawReelStopBytes) {
+    ctx.decodeAudioData(rawReelStopBytes.slice(0))
+      .then(buf => { reelStopBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] reel stop decode-on-demand failed:", e));
+  } else {
+    fetch(reelStopUrl)
+      .then(r => r.arrayBuffer())
+      .then(arr => {
+        rawReelStopBytes = arr;
+        return ctx.decodeAudioData(arr.slice(0));
+      })
+      .then(buf => { reelStopBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] reel stop inline fetch failed:", e));
   }
 }
+
+// ── Result-wide win cue ──────────────────────────────────────────────────────
+// This is intentionally much quieter than the reel and payline cues. The
+// source clip is pitch-shifted offline for Rome before being served here.
+export function playResultWin() {
+  if (masterMuted || masterVolume === 0) return;
+  const ctx = getCtx();
+  const play = (buf: AudioBuffer) => {
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const gain = ctx.createGain();
+    gain.gain.value = 0.429 * masterVolume;
+    src.connect(gain).connect(ctx.destination);
+    src.start(ctx.currentTime);
+  };
+
+  if (resultWinBuffer) {
+    play(resultWinBuffer);
+  } else if (rawResultWinBytes) {
+    ctx.decodeAudioData(rawResultWinBytes.slice(0))
+      .then(buf => { resultWinBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] result win decode-on-demand failed:", e));
+  } else {
+    fetch(resultWinUrl)
+      .then(r => r.arrayBuffer())
+      .then(arr => {
+        rawResultWinBytes = arr;
+        return ctx.decodeAudioData(arr.slice(0));
+      })
+      .then(buf => { resultWinBuffer = buf; play(buf); })
+      .catch(e => console.warn("[rome-sounds] result win inline fetch failed:", e));
+  }
+}
+
 
 // ── Win sounds ───────────────────────────────────────────────────────────────
 // Small win: quick 4-note coin arpeggio

@@ -1,0 +1,55 @@
+Copy the complete payline win-animation system from `western-slots` into `rome-slots`, but do not copy any Western Slots game assets.
+
+Before editing:
+- Identify the Western Slots files responsible for payline rendering, win overlays, symbol animation triggers, payout labels, sound timing, looping, and cleanup.
+- Identify the equivalent Rome Slots files and data structures.
+- Report the source and target files before making changes.
+
+Copy only:
+- Animation logic
+- Timing and easing
+- Payline tracing
+- Dimming/highlight behavior
+- Layer ordering
+- Payout-label behavior
+- Sound-trigger logic
+- Looping and cleanup logic
+- Reusable CSS/keyframes that do not reference Western-specific assets
+
+Do not copy:
+- Images, sprites, textures, backgrounds, logos, fonts, audio files, video files, JSON asset manifests, symbol sheets, or any files inside Western Slots asset/media folders
+- Western symbol IDs, reel strips, paytables, paylines, payouts, or bonus data
+- Any import or file path pointing to `western-slots`
+- Any Western-specific class names or CSS background-image URLs unless renamed and rewritten generically
+
+Required behavior in Rome Slots:
+- Show the large total win centered first.
+- Hide it when the total-win animation ends.
+- Cycle through each Rome winning payline one at a time.
+- Trace each line from left to right.
+- Trigger and loop Rome’s existing winning-symbol animations as the line reaches each cell.
+- Dim non-winning content while keeping active winning symbols fully bright.
+- Show the individual line payout near the active line.
+- Play Rome’s existing mapped win-line sound once per payline, synchronized with the animation.
+- Repeat paylines until the next spin.
+
+Asset handling:
+- Use only Rome Slots’ existing images, symbol sprites, animation assets, sounds, and fonts.
+- If Rome lacks an equivalent asset, keep its static symbol or create the effect with CSS/canvas only; do not substitute a Western asset.
+- Verify the final Rome build contains no imports, URLs, copied files, or runtime requests from `western-slots`.
+
+Adaptation:
+- Use Rome’s own reel count, rows, paylines, winning-cell coordinates, payouts, symbol IDs, responsive sizing, and state handlers.
+- Do not hard-code screen coordinates.
+- Do not change Rome’s game logic, reel results, payouts, balance calculations, bonus rules, HUD, or controls.
+
+Cleanup on every new spin:
+- Cancel all timeouts, intervals, audio, and `requestAnimationFrame` calls.
+- Clear paylines, payout labels, dim overlays, temporary symbol layers, and animation classes.
+- Restore hidden symbols and reset the active-line state.
+- Prevent stale callbacks and duplicate animation loops.
+
+After editing:
+- List all modified files.
+- Confirm that no Western Slots assets were copied or referenced.
+- Confirm that Rome Slots still uses only its own asset directories.

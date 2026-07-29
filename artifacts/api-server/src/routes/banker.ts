@@ -24,17 +24,18 @@ type StaffRole = typeof VALID_ROLES[number];
 
 // ── Seed initial admin on startup ──────────────────────────────────────────────
 export async function seedBankerAdmin() {
-  const username = process.env.BANKER_ADMIN_USERNAME || "admin";
+  const username = process.env.BANKER_ADMIN_USERNAME;
+  const password = process.env.BANKER_ADMIN_PASSWORD;
+
+  if (!username || !password) {
+    console.error("[Staff] BANKER_ADMIN_USERNAME and BANKER_ADMIN_PASSWORD secrets are required — cannot create or promote an owner account.");
+    return;
+  }
 
   const existing = await db.select().from(bankerAccountsTable).where(eq(bankerAccountsTable.username, username));
 
   if (existing.length === 0) {
     // Only set password on first creation
-    const password = process.env.BANKER_ADMIN_PASSWORD;
-    if (!password) {
-      console.error("[Staff] BANKER_ADMIN_PASSWORD secret is not set — cannot create owner account.");
-      return;
-    }
     const hash = await bcrypt.hash(password, 12);
     await db.insert(bankerAccountsTable).values({
       username,

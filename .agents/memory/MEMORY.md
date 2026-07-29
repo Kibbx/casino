@@ -4,3 +4,7 @@
 - [Casino game launcher & password gating](casino-game-launcher.md) — game launching/password-gating is centralized in the casino artifact; invariants that must hold.
 - [FiveM CEF render constraints](fivem-cef-constraints.md) — CSS properties and Tailwind patterns that break inside FiveM's CEF (Chromium) browser.
 - [Preview stale-render trap](preview-stale-render.md) — app_preview screenshot tab can render stale JS (CSS HMR applies, Fast Refresh fails); verify served output via curl to Vite port/proxy, don't chase a phantom.
+- [Western bonus-end overlay ordering](western-bonus-end-overlay.md) — final free-spin summary must clear and gate win overlays after the last payline sequence.
+- [Rome payline overlay layering](rome-payline-overlay-layering.md) — keep dimming below Rome symbol canvases and traced lines above them; active-line callbacks own symbol animation cleanup.
+- [Rome payline presentation](rome-payline-presentation.md) — show one winning payline at a time, reveal left-to-right, clear the prior line, and trigger its sound at line start.
+- [Rome Scatter landing timing](rome-scatter-landing.md) — start Scatter sprites and one impact cue per reel at the reel-stop callback, using that reel's landed symbols.
