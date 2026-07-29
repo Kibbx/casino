@@ -6,10 +6,9 @@ description: How to commit/push the backalleybets casino repo and deploy to the 
 # Git commit/push (bash git is blocked)
 
 Direct `git add/commit/push` via the bash tool is blocked in this environment.
-Commit and push from the JS code-execution sandbox instead, using
-`child_process.execSync` with `cwd: "/home/runner/workspace"`. Clear a stale
-lock first: `rm -f .git/index.lock`, then `git add -A` → `git commit -m ...` →
-`git push origin master`. Repo: GitHub `rhatttv/backalleybets`, branch `master`.
+The configured Git integration can push `master` to GitHub after committing,
+without shell credentials. If using shell commit from JS, set the local author
+identity first and clear a stale lock with `rm -f .git/index.lock`.
 
 # Build-before-commit
 
